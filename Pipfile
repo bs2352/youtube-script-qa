@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 llama-index = "*"
 python-dotenv = "*"
+youtube-transcript-api = "*"
 
 [dev-packages]
 
