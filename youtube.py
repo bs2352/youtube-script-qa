@@ -17,7 +17,7 @@ INDEX_STORAGE_DIR = "./indexes"
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 
 dotenv.load_dotenv()
-service_context: ServiceContext | None = None
+service_context: Optional[ServiceContext] = None
 
 
 class ChunkModel (BaseModel):
@@ -37,7 +37,7 @@ class YoutubeScriptType (TypedDict):
 def setup () -> Optional[ServiceContext]:
     if "OPENAI_API_KEY" in os.environ.keys():
         openai.api_key = os.environ['OPENAI_API_KEY']
-        return None
+        return ServiceContext.from_defaults()
 
     llm_predictor: LLMPredictor = LLMPredictor(
         llm=AzureOpenAI(
@@ -76,7 +76,7 @@ def create_or_load_index (video_id: str) -> GPTVectorStoreIndex:
         from llama_index import StorageContext, load_index_from_storage
         print(f'load index from {index_dir} ...', end="", flush=True)
         storage_context: StorageContext = StorageContext.from_defaults(persist_dir=index_dir)
-        index: GPTVectorStoreIndex = load_index_from_storage(storage_context) # type: ignore
+        index: GPTVectorStoreIndex = load_index_from_storage(storage_context, service_context=service_context) # type: ignore
         print("fin", flush=True)
         return index
 
@@ -158,8 +158,7 @@ def create_or_load_index (video_id: str) -> GPTVectorStoreIndex:
         Document(text=chunk.text.replace("\n", " "), doc_id=chunk.id) for chunk in chunks
     ]
 
-    index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(documents) if service_context is None \
-        else GPTVectorStoreIndex.from_documents(documents, service_context=service_context)
+    index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(documents, service_context=service_context)
 
     print("fin", flush=True)
 
