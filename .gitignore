@@ -1,3 +1,4 @@
 .env
 .venv
 indexes
+__pycache__
