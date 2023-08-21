@@ -3,15 +3,16 @@ import argparse
 from yqa.qa import YoutubeQA
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
+DEFAULT_REF_SOURCE = 3
 
 dotenv.load_dotenv()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Youtube動画に対するQAを行うスクリプト')
-    parser.add_argument('--vid', default=DEFAULT_VIDEO_ID, help='Youtube動画のID')
-    parser.add_argument('--source', default=3, type=int, help='回答を生成する際に参照する検索結果の数')
-    parser.add_argument('--detail', action='store_true', help='回答の根拠を表示する')
+    parser.add_argument('--vid', default=DEFAULT_VIDEO_ID, help=f'Youtube動画のID（default:{DEFAULT_VIDEO_ID}）')
+    parser.add_argument('--source', default=DEFAULT_REF_SOURCE, type=int, help=f'回答を生成する際に参照する検索結果の数を指定する（default:{DEFAULT_REF_SOURCE}）')
+    parser.add_argument('--detail', action='store_true', help='回答生成する際に参照した検索結果を表示する')
     parser.add_argument('--debug', action='store_true', help='デバッグ情報を出力する')
     args = parser.parse_args()
 
