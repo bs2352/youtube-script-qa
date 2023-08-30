@@ -1,6 +1,6 @@
-# youtube-script-qa
+# youtube-supporter
 
-Youtube動画に対してQAを実行するプログラム
+Youtube動画の視聴を支援するプログラム
 
 ## 準備
 
@@ -43,7 +43,7 @@ INDEX_STORE_DIR=./indexe
 ### 簡易実行
 
 ```
-$ python -m yqa
+$ python -m yqs
 Query: <クエリを入力>
 Answer: <回答が出力される>
 ```
@@ -51,7 +51,7 @@ Answer: <回答が出力される>
 ### その他オプション
 
 ```
-$ python -m yqa --help
+$ python -m yqs --help
 usage: __main__.py [-h] [--vid VID] [--source SOURCE] [--detail] [--debug]
 
 Youtube動画に対するQAを行うスクリプト

@@ -1,6 +1,6 @@
 import dotenv
 import argparse
-from yqa.qa import YoutubeQA
+from yts.qa import YoutubeQA
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 DEFAULT_REF_SOURCE = 3
