@@ -1,6 +1,7 @@
-from typing import Optional, List, TypedDict, Generator, Tuple
-from pydantic import BaseModel
+from typing import Optional, List, Generator, Tuple
 import os
+import sys
+import logging
 from llama_index import download_loader, GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
 from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.response.schema import RESPONSE_TYPE
@@ -9,26 +10,12 @@ from langchain.llms import AzureOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
-import sys
-import logging
-from collections import deque
+
+from .types import TranscriptChunkModel, YoutubeTranscriptType
+from .utils import divide_transcriptions_into_chunks
 
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
-
-
-class ChunkModel (BaseModel):
-    id: str
-    text: str
-    start: float
-    duration: float
-    overlap: int
-
-
-class YoutubeScriptType (TypedDict):
-    text: str
-    start: float
-    duration: float
 
 
 class YoutubeQA:
@@ -120,67 +107,17 @@ class YoutubeQA:
         # for doc in documents:
         #     print(doc.text, '-------------------')
 
-
-        def _overlap_chunk (overlaps: deque[YoutubeScriptType]) -> ChunkModel|None:
-            if len(overlaps) == 0:
-                return None
-            new_chunk: ChunkModel = ChunkModel(id="", text="", start=0.0, duration=0.0, overlap=0)
-            for s in overlaps:
-                new_chunk.text += s['text']
-                new_chunk.duration += s['duration']
-                if new_chunk.start == 0.0:
-                    new_chunk.start = s['start']
-            return new_chunk
-
-
         self._debug("creating index ...", end="", flush=True)
 
         MAXLENGTH = 300
         OVERLAP_LENGTH = 3
-        scripts: List[YoutubeScriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja"])
-        chunks: List[ChunkModel] = []
-        chunk: ChunkModel | None = None
-        overlaps: deque[YoutubeScriptType] = deque([])
-        for script in scripts:
-            if chunk is None:
-                chunk = ChunkModel(
-                    id=f"{self.vid}-{script['start']}",
-                    text=script['text'],
-                    start=script['start'],
-                    duration=script['duration'],
-                    overlap=0
-                )
-            elif len(chunk.text) - chunk.overlap + len(script["text"]) > MAXLENGTH:
-                chunks.append(chunk)
-                overlap_chunk: ChunkModel | None = _overlap_chunk(overlaps)
-                chunk = ChunkModel(
-                    id=f'{self.vid}-{overlap_chunk.start}',
-                    text=overlap_chunk.text + script["text"],
-                    start=overlap_chunk.start,
-                    duration=overlap_chunk.duration,
-                    overlap=len(overlap_chunk.text)
-                ) if overlap_chunk is not None else ChunkModel(
-                    id=f'{self.vid}-{script["start"]}',
-                    text=script['text'],
-                    start=script['start'],
-                    duration=script['duration'],
-                    overlap=0
-                )
-            else:
-                chunk.text += script["text"]
-                chunk.duration += script["duration"]
-
-            if len(overlaps) < OVERLAP_LENGTH:
-                overlaps.append(script)
-            else:
-                overlaps.popleft()
-                overlaps.append(script)
-        if chunk is not None:
-            chunks.append(chunk)
-
-        # for chunk in chunks:
-        #     print(chunk)
-        # sys.exit(0)
+        transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en"])
+        chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+            transcriptions,
+            maxlength = MAXLENGTH,
+            overlap_length = OVERLAP_LENGTH,
+            id_prefix = self.vid
+        )
 
         documents = [
             Document(text=chunk.text.replace("\n", " "), doc_id=chunk.id) for chunk in chunks
