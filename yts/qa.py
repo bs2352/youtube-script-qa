@@ -6,7 +6,8 @@ from llama_index import download_loader, GPTVectorStoreIndex, Document, ServiceC
 from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
-from langchain.llms import AzureOpenAI
+from langchain.llms import AzureOpenAI, OpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
@@ -40,7 +41,13 @@ class YoutubeQA:
     def _setup_llm (self) -> ServiceContext:
         if "OPENAI_API_KEY" in os.environ.keys():
             openai.api_key = os.environ['OPENAI_API_KEY']
-            return ServiceContext.from_defaults()
+            is_chat = os.environ['OPENAI_LLM_MODEL_NAME'].startswith("gpt-3.5-")
+            llm = ChatOpenAI(client=None, model=os.environ['OPENAI_LLM_MODEL_NAME']) if is_chat \
+                  else OpenAI(client=None, model=os.environ['OPENAI_LLM_MODEL_NAME'])
+
+            return ServiceContext.from_defaults(
+                llm_predictor=LLMPredictor(llm=llm)
+            )
 
         llm_predictor: LLMPredictor = LLMPredictor(
             llm=AzureOpenAI(

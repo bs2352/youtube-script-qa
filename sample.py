@@ -78,20 +78,20 @@ combine_prompt = map_prompt
 
 
 chain_type = "map_reduce"
-llm = OpenAI(
-    client=None,
-    model="text-davinci-003",
-    temperature=0.0,
-    # verbose=True,
-    max_tokens=1024,
-)
-# llm = ChatOpenAI(
+# llm = OpenAI(
 #     client=None,
-#     model="gpt-3.5-turbo-16k",
+#     model="text-davinci-003",
 #     temperature=0.0,
+#     # verbose=True,
 #     max_tokens=1024,
-#     verbose=True,
 # )
+llm = ChatOpenAI(
+    client=None,
+    model="gpt-3.5-turbo-16k",
+    temperature=0.0,
+    max_tokens=1024,
+    verbose=True,
+)
 chain = load_summarize_chain(
     llm=llm,
     chain_type=chain_type,
