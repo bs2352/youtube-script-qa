@@ -1,19 +1,14 @@
-from typing import List, Optional
+from typing import List
 import os
 
-from langchain.llms import OpenAI, AzureOpenAI
-from langchain.chat_models import ChatOpenAI
 from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
 from langchain.docstore.document import Document
-import openai
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from .types import TranscriptChunkModel, YoutubeTranscriptType
-from .utils import divide_transcriptions_into_chunks
+from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
+from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
 
-
-DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 
 MAP_PROMPT_TEMPLATE = """以下の内容を簡潔にまとめてください。:
 
@@ -23,7 +18,7 @@ MAP_PROMPT_TEMPLATE = """以下の内容を簡潔にまとめてください。:
 
 簡潔な要約:"""
 
-REDUCE_PROMPT_TEMPLATE = """以下の内容を簡潔にまとめてください。:
+REDUCE_PROMPT_TEMPLATE = """以下の内容を日本語で簡潔にまとめてください。:
 
 
 "{text}"
@@ -34,33 +29,20 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を簡潔にまとめてください�
 
 class YoutubeSummarize:
     def __init__(self,
-                 vid: str = DEFAULT_VIDEO_ID,
+                 vid: str = "",
                  debug: bool = False
     ) -> None:
+        if vid == "":
+            raise ValueError("video id is invalid.")
+
         self.vid: str = vid
         self.debug: bool = debug
 
+        self.summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{self.vid}'
+
         self.chain_type: str = 'map_reduce'
-        self.llm: OpenAI|ChatOpenAI|AzureOpenAI = self._setup_llm()
+        self.llm: LLMType = setup_llm_from_environment()
         self.chunks: List[TranscriptChunkModel] = []
-
-
-    def _setup_llm (self) -> OpenAI|ChatOpenAI|AzureOpenAI:
-        if "OPENAI_API_KEY" in os.environ.keys():
-            openai.api_key = os.environ['OPENAI_API_KEY']
-            if os.environ['OPENAI_LLM_MODEL_NAME'].startswith("gpt-3.5-"):
-                return ChatOpenAI(client=None, model=os.environ['OPENAI_LLM_MODEL_NAME'])
-            return OpenAI(client=None, model=os.environ['OPENAI_LLM_MODEL_NAME'])
-
-        return AzureOpenAI(
-                openai_api_type=os.environ['AZURE_OPENAI_API_TYPE'],
-                openai_api_base=os.environ['AZURE_OPENAI_API_BASE'],
-                openai_api_version=os.environ['AZURE_OPENAI_API_VERSION'],
-                openai_api_key=os.environ['AZURE_OPENAI_API_KEY'],
-                model=os.environ['AZURE_LLM_MODEL_NAME'],
-                deployment_name=os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
-                client=None
-            )
 
 
     def _debug (self, message: str, end: str = "\n", flush: bool = False) -> None:
@@ -83,17 +65,19 @@ class YoutubeSummarize:
 
 
     def run (self) -> str:
-        map_prompt = PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"])
-        combine_prompt = PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"])
         chain = load_summarize_chain(
             llm=self.llm,
             chain_type=self.chain_type,
-            map_prompt=map_prompt,
-            combine_prompt=combine_prompt,
-            verbose=True
+            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
+            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
+            verbose=self.debug
         )
-
         docs: List[Document] = [Document(page_content=chunk.text) for chunk in self.chunks]
         summary = chain.run(docs)
+
+        if not os.path.isdir(os.path.dirname(self.summary_file)):
+            os.makedirs(os.path.dirname(self.summary_file))
+        with open(self.summary_file, "w") as f:
+            f.write(summary)
 
         return summary

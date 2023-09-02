@@ -1,9 +1,67 @@
-from typing import List
+from typing import List, Dict, Any, Type
 from collections import deque
 import sys
+import os
 
-from .types import TranscriptChunkModel, YoutubeTranscriptType
+from langchain.llms import OpenAI, AzureOpenAI
+from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
+from langchain.embeddings import OpenAIEmbeddings
 
+from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
+
+
+
+def setup_llm_from_environment () -> LLMType:
+    llm_class: Type[LLMType] = OpenAI
+    llm_args: Dict[str, Any] = {
+        "client": None,
+        "temperature": float(os.environ['LLM_TEMPERATURE']),
+    }
+    if "OPENAI_API_KEY" in os.environ.keys():
+        llm_args = {
+            **llm_args,
+            "openai_api_key": os.environ['OPENAI_API_KEY'],
+            "model":          os.environ['OPENAI_LLM_MODEL_NAME']
+        }
+        if os.environ['OPENAI_LLM_MODEL_NAME'].startswith("gpt-"):
+            llm_class = ChatOpenAI
+    else:
+        llm_args ={
+            **llm_args,
+            "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
+            "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
+            "openai_api_base=":   os.environ['AZURE_OPENAI_API_BASE'],
+            "openai_api_version": os.environ['AZURE_OPENAI_API_VERSION'],
+            "model":              os.environ['AZURE_LLM_MODEL_NAME'],
+            "deployment_name":    os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
+        }
+        llm_class = AzureOpenAI
+        if os.environ['AZURE_LLM_DEPLOYMENT_NAME'].startswith("gpt-"):
+            llm_class = AzureChatOpenAI
+
+    return  llm_class(**llm_args)
+
+
+def setup_embedding_from_environment () -> OpenAIEmbeddings:
+    llm_args: Dict[str, Any] = {
+        "client": None
+    }
+    if "OPENAI_API_KEY" in os.environ.keys():
+        llm_args = {
+            **llm_args,
+            "openai_api_key": os.environ['OPENAI_API_KEY'],
+        }
+    else:
+        llm_args = {
+            **llm_args,
+            "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
+            "openai_api_base":    os.environ['AZURE_OPENAI_API_BASE'],
+            "openai_api_version": os.environ['AZURE_OPENAI_API_VERSION'],
+            "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
+            "model":              os.environ['AZURE_EMBEDDING_LLM_MODEL_NAME'],
+            "deployment":         os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
+        }
+    return OpenAIEmbeddings(**llm_args)
 
 
 def divide_transcriptions_into_chunks (

@@ -1,31 +1,27 @@
 from typing import Optional, List, Generator, Tuple
 import os
-import sys
 import logging
+
 from llama_index import download_loader, GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
 from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
-from langchain.llms import AzureOpenAI, OpenAI
-from langchain.chat_models import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
 from youtube_transcript_api import YouTubeTranscriptApi
-import openai
 
 from .types import TranscriptChunkModel, YoutubeTranscriptType
-from .utils import divide_transcriptions_into_chunks
-
-
-DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
+from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
 
 
 class YoutubeQA:
     def __init__(self,
-                 vid: str = DEFAULT_VIDEO_ID,
+                 vid: str = "",
                  ref_sources: int = 3,
                  detail: bool = False,
                  debug: bool = False
     ) -> None:
+        if vid == "":
+            raise ValueError("video id is invalid.")
+
         self.vid: str = vid
         self.ref_source: int = ref_sources
         self.detail: bool = detail
@@ -39,45 +35,16 @@ class YoutubeQA:
 
 
     def _setup_llm (self) -> ServiceContext:
-        if "OPENAI_API_KEY" in os.environ.keys():
-            openai.api_key = os.environ['OPENAI_API_KEY']
-            is_chat = os.environ['OPENAI_LLM_MODEL_NAME'].startswith("gpt-3.5-")
-            llm = ChatOpenAI(client=None, model=os.environ['OPENAI_LLM_MODEL_NAME']) if is_chat \
-                  else OpenAI(client=None, model=os.environ['OPENAI_LLM_MODEL_NAME'])
-
-            return ServiceContext.from_defaults(
-                llm_predictor=LLMPredictor(llm=llm)
-            )
-
-        llm_predictor: LLMPredictor = LLMPredictor(
-            llm=AzureOpenAI(
-                openai_api_type=os.environ['AZURE_OPENAI_API_TYPE'],
-                openai_api_base=os.environ['AZURE_OPENAI_API_BASE'],
-                openai_api_version=os.environ['AZURE_OPENAI_API_VERSION'],
-                openai_api_key=os.environ['AZURE_OPENAI_API_KEY'],
-                model=os.environ['AZURE_LLM_MODEL_NAME'],
-                deployment_name=os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
-                client=None
-            )
-        )
-        embedding_llm = LangchainEmbedding(
-            OpenAIEmbeddings(
-                openai_api_type=os.environ['AZURE_OPENAI_API_TYPE'],
-                openai_api_base=os.environ['AZURE_OPENAI_API_BASE'],
-                openai_api_version=os.environ['AZURE_OPENAI_API_VERSION'],
-                openai_api_key=os.environ['AZURE_OPENAI_API_KEY'],
-                model=os.environ['AZURE_EMBEDDING_LLM_MODEL_NAME'],
-                deployment=os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
-                client=None
-            )
-        )
+        llm = setup_llm_from_environment()
+        embedding = setup_embedding_from_environment()
+        llm_predictor: LLMPredictor = LLMPredictor(llm=llm)
+        embedding_llm: LangchainEmbedding = LangchainEmbedding(embedding)
         service_context: ServiceContext = ServiceContext.from_defaults(
-            llm_predictor=llm_predictor,
-            embed_model=embedding_llm,
+            llm_predictor = llm_predictor,
+            embed_model = embedding_llm,
         )
-    
         return service_context
-    
+
 
     def _debug (self, message: str, end: str = "\n", flush: bool = False) -> None:
         if self.debug is False:

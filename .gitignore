@@ -1,6 +1,7 @@
 .env
 .venv
 indexes
+summaries
 __pycache__
 xxx
 yyy
