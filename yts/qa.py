@@ -129,7 +129,7 @@ class YoutubeQA:
             return None
 
         def _id2time (id: str) -> str:
-            sec: int = int(float(id.split('-')[1]))
+            sec: int = int(float(id.rsplit('-', 1)[1]))
             s = sec % 60
             m = (sec // 60) % 60
             h = (sec // 60) // 60
