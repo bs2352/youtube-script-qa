@@ -1,5 +1,7 @@
 import dotenv
 import argparse
+import os
+
 from yts.qa import YoutubeQA
 from yts.summarize import YoutubeSummarize
 
@@ -12,6 +14,12 @@ dotenv.load_dotenv()
 def qa (args):
     yqa = YoutubeQA(args.vid, args.source, args.detail, args.debug)
     yqa.prepare_query()
+
+    # ちょっとサービス（要約があれば表示する）
+    if os.path.exists(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}'):
+        with open(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}', 'r') as f:
+            summary = f.read()
+        print(f'(Summary) {summary}\n')
 
     while True:
         query = input("Query: ").strip()

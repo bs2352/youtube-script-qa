@@ -30,7 +30,7 @@ def setup_llm_from_environment () -> LLMType:
             **llm_args,
             "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
-            "openai_api_base=":   os.environ['AZURE_OPENAI_API_BASE'],
+            "openai_api_base":    os.environ['AZURE_OPENAI_API_BASE'],
             "openai_api_version": os.environ['AZURE_OPENAI_API_VERSION'],
             "model":              os.environ['AZURE_LLM_MODEL_NAME'],
             "deployment_name":    os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
