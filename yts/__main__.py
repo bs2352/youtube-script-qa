@@ -1,6 +1,7 @@
 import dotenv
 import argparse
 import os
+import json
 
 from yts.qa import YoutubeQA
 from yts.summarize import YoutubeSummarize
@@ -18,8 +19,8 @@ def qa (args):
     # ちょっとサービス（要約があれば表示する）
     if os.path.exists(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}'):
         with open(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}', 'r') as f:
-            summary = f.read()
-        print(f'(Summary) {summary}\n')
+            summary = json.load(f)
+        print(f'(Summary) {summary["concise"]}\n')
 
     while True:
         query = input("Query: ").strip()
@@ -39,7 +40,11 @@ def summary (args):
     ys = YoutubeSummarize(args.vid, args.debug)
     ys.prepare()
     summary = ys.run()
-    print(summary)
+
+    print('[詳細な要約]')
+    for s in summary["detail"]:
+        print(f'・{s}\n')
+    print("\n", "[簡潔な要約]\n", summary["concise"])
 
 
 if __name__ == "__main__":
