@@ -28,11 +28,10 @@ def setup_llm_from_environment () -> LLMType:
     else:
         llm_args ={
             **llm_args,
-            "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
+            "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
             "openai_api_base":    os.environ['AZURE_OPENAI_API_BASE'],
-            "openai_api_version": os.environ['AZURE_OPENAI_API_VERSION'],
-            "model":              os.environ['AZURE_LLM_MODEL_NAME'],
+            "openai_api_version": os.environ['AZURE_LLM_OPENAI_API_VERSION'],
             "deployment_name":    os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
         }
         llm_class = AzureOpenAI
@@ -55,10 +54,9 @@ def setup_embedding_from_environment () -> OpenAIEmbeddings:
         llm_args = {
             **llm_args,
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
-            "openai_api_base":    os.environ['AZURE_OPENAI_API_BASE'],
-            "openai_api_version": os.environ['AZURE_OPENAI_API_VERSION'],
             "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
-            "model":              os.environ['AZURE_EMBEDDING_LLM_MODEL_NAME'],
+            "openai_api_base":    os.environ['AZURE_OPENAI_API_BASE'],
+            "openai_api_version": os.environ['AZURE_EMBEDDING_OPENAI_API_VERSION'],
             "deployment":         os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
         }
     return OpenAIEmbeddings(**llm_args)
