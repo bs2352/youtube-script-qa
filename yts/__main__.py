@@ -41,10 +41,14 @@ def summary (args):
     ys.prepare()
     summary = ys.run()
 
-    print('[詳細な要約]')
-    for s in summary["detail"]:
-        print(f'・{s}\n')
-    print("\n", "[簡潔な要約]\n", summary["concise"])
+    if "title" in summary.keys():
+        print('[Title]\n', summary['title'], '\n')
+    if "detail" in summary.keys():
+        print('[Detail Summary]')
+        for s in summary["detail"]:
+            print(f'・{s}\n')
+    if "concise" in summary.keys():
+        print("\n", "[Concise Summary]\n", summary["concise"])
 
 
 if __name__ == "__main__":

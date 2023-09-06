@@ -8,6 +8,7 @@ llama-index = "*"
 python-dotenv = "*"
 youtube-transcript-api = "*"
 langchain = "*"
+pytube = "*"
 
 [dev-packages]
 

@@ -7,6 +7,7 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
 from langchain.docstore.document import Document
 from youtube_transcript_api import YouTubeTranscriptApi
+from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
@@ -20,7 +21,7 @@ MAP_PROMPT_TEMPLATE = """以下の内容を簡潔にまとめてください。:
 
 簡潔な要約:"""
 
-REDUCE_PROMPT_TEMPLATE = """以下の内容を日本語で簡潔にまとめてください。:
+REDUCE_PROMPT_TEMPLATE = """以下の内容を300字以内の日本語で簡潔にまとめてください。:
 
 
 "{text}"
@@ -39,6 +40,8 @@ class YoutubeSummarize:
 
         self.vid: str = vid
         self.debug: bool = debug
+        self.url: str = f'https://www.youtube.com/watch?v={vid}'
+        self.title: str = ""
 
         self.summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{self.vid}'
 
@@ -55,6 +58,8 @@ class YoutubeSummarize:
 
 
     def prepare (self) -> None:
+        self.title = YouTube(self.url).vid_info["videoDetails"]["title"]
+
         MAXLENGTH = 1000
         OVERLAP_LENGTH = 5
         transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en"])
@@ -101,6 +106,8 @@ class YoutubeSummarize:
         concise_summary: str = chain.run([Document(page_content=s) for s in detail_summary])
 
         summary: Dict[str, str|List[str]] = {
+            "url": self.url,
+            "title": self.title,
             "detail": detail_summary,
             "concise": concise_summary,
         }
