@@ -9,6 +9,7 @@ python-dotenv = "*"
 youtube-transcript-api = "*"
 langchain = "*"
 pytube = "*"
+nltk = "*"
 
 [dev-packages]
 
