@@ -7,6 +7,7 @@ from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
 from youtube_transcript_api import YouTubeTranscriptApi
+from pytube import YouTube
 
 from .types import TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
@@ -26,6 +27,8 @@ class YoutubeQA:
         self.ref_source: int = ref_sources
         self.detail: bool = detail
         self.debug: bool = debug
+        self.url: str = f'https://www.youtube.com/watch?v={vid}'
+        self.title: str = ""
 
         self.index_dir: str = f'{os.environ["INDEX_STORE_DIR"]}/{self.vid}'
         self.service_context: ServiceContext = self._setup_llm()
@@ -54,6 +57,7 @@ class YoutubeQA:
 
 
     def prepare_query (self) -> None:
+        self.title = YouTube(self.url).vid_info["videoDetails"]["title"]
         self.index = self._load_index() if os.path.isdir(self.index_dir) else \
                      self._create_index()
 

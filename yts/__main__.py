@@ -16,7 +16,8 @@ def qa (args):
     yqa = YoutubeQA(args.vid, args.source, args.detail, args.debug)
     yqa.prepare_query()
 
-    # ちょっとサービス（要約があれば表示する）
+    # ちょっとサービス（要約はあれば表示する）
+    print(f'(Title) {yqa.title}')
     if os.path.exists(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}'):
         with open(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}', 'r') as f:
             summary = json.load(f)
@@ -43,12 +44,12 @@ def summary (args):
 
     if "title" in summary.keys():
         print('[Title]\n', summary['title'], '\n')
+    if "concise" in summary.keys():
+        print("\n", "[Concise Summary]\n", summary["concise"])
     if "detail" in summary.keys():
         print('[Detail Summary]')
         for s in summary["detail"]:
             print(f'・{s}\n')
-    if "concise" in summary.keys():
-        print("\n", "[Concise Summary]\n", summary["concise"])
 
 
 if __name__ == "__main__":

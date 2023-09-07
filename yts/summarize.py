@@ -13,15 +13,15 @@ from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
 
 
-MAP_PROMPT_TEMPLATE = """以下の内容を簡潔にまとめてください。:
+MAP_PROMPT_TEMPLATE = """以下の内容を重要な情報はできるだけ残して要約してください。:
 
 
 "{text}"
 
 
-簡潔な要約:"""
+要約:"""
 
-REDUCE_PROMPT_TEMPLATE = """以下の内容を300字以内の日本語で簡潔にまとめてください。:
+REDUCE_PROMPT_TEMPLATE = """以下の内容を200字以内の日本語で簡潔に要約してください。:
 
 
 "{text}"
