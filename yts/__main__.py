@@ -45,7 +45,7 @@ def summary (args):
     if "title" in summary.keys():
         print('[Title]\n', summary['title'], '\n')
     if "concise" in summary.keys():
-        print("\n", "[Concise Summary]\n", summary["concise"])
+        print("\n", "[Concise Summary]\n", summary["concise"], '\n')
     if "detail" in summary.keys():
         print('[Detail Summary]')
         for s in summary["detail"]:
