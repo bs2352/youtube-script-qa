@@ -112,11 +112,12 @@ def divide_transcriptions_into_chunks (
             chunk.text += transcription["text"]
             chunk.duration += transcription["duration"]
 
-        if len(overlaps) < overlap_length:
-            overlaps.append(transcription)
-        else:
-            overlaps.popleft()
-            overlaps.append(transcription)
+        if overlap_length > 0:
+            if len(overlaps) < overlap_length:
+                overlaps.append(transcription)
+            else:
+                overlaps.popleft()
+                overlaps.append(transcription)
     if chunk is not None:
         chunks.append(chunk)
 
