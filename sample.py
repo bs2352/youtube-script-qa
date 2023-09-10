@@ -136,17 +136,20 @@ def divide_topic ():
     transcriptions = YouTubeTranscriptApi.get_transcript(video_id=DEFAULT_VID, languages=["ja", "en"])
     chunks = divide_transcriptions_into_chunks(
         transcriptions=transcriptions,
-        maxlength=300,
+        maxlength=200,
         overlap_length=0
     )
     # for chunk in chunks:
     #     print(chunk)
 
+#     prompt_template = \
+# """以下に記載する文1と文2はYoutube動画の会話の一部を並べたもので、文2は文1に続く会話です。
+# 文2は文1と同じ話題について述べられていますか？
+# それとも文2は文1とは異なる新たな話題について話されていますか？
+# 文2が文1と同じ話題あればYes、異なる話題であればNoと回答してください。
     prompt_template = \
-"""以下に記載する文1と文2はYoutube動画の会話の一部を並べたもので、文2は文1に続く会話です。
-文2は文1と同じ話題について述べられていますか？
-それとも文2は文1とは異なる新たな話題について話されていますか？
-文2が文1と同じ話題あればYes、異なる話題であればNoと回答してください。
+"""以下に記載する文1と文2は会話の一部です。文1に続く文2で話題の変化がありますか？
+変化があればであればYes、なければNoと回答してください。
 
 文1:
 {text1}
@@ -178,15 +181,18 @@ def divide_topic ():
         }
         # print(prompt.format(**inputs))
         result = llm_chain.predict(**inputs).strip()
-        # if result == "Yes":
-        if result == "No":
-            print(prompt.format(**inputs))
-            input()
+        if result == "Yes":
+        # if result == "No":
+            # print(prompt.format(**inputs))
+            # input()
+            print("#", end="", flush=True)
+        else:
+            print(".", end="", flush=True)
         prev_text_1 = prev_text_2
         prev_text_2 = chunk.text
         # break
         # input()
-        print(f".{result}", end="", flush=True)
+        # print(f".{result}", end="", flush=True)
 
 
 def get_topic ():
@@ -250,7 +256,9 @@ def get_topic_from_summary ():
 
     vid = DEFAULT_VID
     # vid = "Tia4YJkNlQ0"
-    vid = "Bd9LWW4cxEU"
+    # vid = "Bd9LWW4cxEU"
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
     with open(f"./summaries/{vid}", "r") as f:
         summary = json.load(f)
 
@@ -286,8 +294,69 @@ def get_topic_from_summary ():
     print(llm_chain.predict(**inputs))
 
 
+def kmeans_embedding ():
+    from youtube_transcript_api import YouTubeTranscriptApi
+    import numpy as np
+    from sklearn.cluster import KMeans
+    from yts.utils import setup_embedding_from_environment, divide_transcriptions_into_chunks
+
+    def _split_chunks (chunks, split_num = 5):
+        total_time: float = chunks[-1].start + chunks[-1].duration
+        delta: float = total_time // split_num
+        splited_chunks = []
+        for tc in chunks:
+            idx = int(tc.start // delta)
+            idx = idx if idx < split_num else split_num
+            if idx + 1 > len(splited_chunks):
+                splited_chunks.append([])
+            splited_chunks[idx].append(tc)
+        return splited_chunks
+
+    def _make_init_cluster(splited_chunks, embeddings):
+        init_cluster = []
+        idx = 0
+        for splited_chunk in splited_chunks:
+            count = len(splited_chunk)
+            cluster = []
+            for i in range(idx, idx + count):
+                cluster.append(embeddings[i])
+            x_cluster_mean = np.mean(np.array(cluster), axis=0)
+            init_cluster.append(x_cluster_mean)
+            idx += count
+        x_init_cluster = np.array(init_cluster)
+        return x_init_cluster
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    transcriptions = YouTubeTranscriptApi.get_transcript(video_id=vid, languages=["ja", "en"])
+    chunks = divide_transcriptions_into_chunks(
+        transcriptions=transcriptions,
+        maxlength=300,
+        overlap_length=3,
+    )
+    texts = []
+    for chunk in chunks:
+        texts.append(chunk.text)
+
+    llm_embedding = setup_embedding_from_environment()
+    embeddings = llm_embedding.embed_documents(texts)
+
+    splited_chunks = _split_chunks(chunks)
+    x_init_cluster = _make_init_cluster(splited_chunks, embeddings)
+    # print(x_init_cluster, x_init_cluster.shape)
+
+    x_train = np.array(embeddings)
+
+    # kmeans = KMeans(n_clusters=5, random_state=0)
+    kmeans = KMeans(n_clusters=5, random_state=0, init=x_init_cluster)
+    predicted = kmeans.fit_predict(x_train)
+    print(predicted)
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
     # get_topic()
-    get_topic_from_summary()
+    # get_topic_from_summary()
+    kmeans_embedding()
