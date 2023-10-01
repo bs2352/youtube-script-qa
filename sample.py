@@ -37,7 +37,10 @@ def get_transcription ():
     #     print(doc.text, '-------------------')
 
     MAXLENGTH = 500
-    scripts = YouTubeTranscriptApi.get_transcript(video_id=DEFAULT_VID, languages=["ja"])
+    vid = DEFAULT_VID
+    if len(sys.argv) > 1:
+        vid = sys.argv[1]
+    scripts = YouTubeTranscriptApi.get_transcript(video_id=vid, languages=["ja", "en", "en-US"])
     # text = ""
     for script in scripts:
         print(script)
@@ -354,9 +357,57 @@ def kmeans_embedding ():
     print(predicted)
 
 
+def async_run ():
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from yts.utils import setup_llm_from_environment, divide_transcriptions_into_chunks
+    from langchain.prompts import PromptTemplate
+    from langchain.schema import HumanMessage
+    import asyncio
+    import json
+
+    PROMPT_TEMPLATE = """以下の内容を200字以内の日本語で簡潔に要約してください。:
+
+
+"{text}"
+
+
+簡潔な要約:"""
+
+    async def async_generate (llm, message):
+        results = await llm.agenerate([message])
+        return results.generations[0][0].text
+
+    async def generate_concurrently (chunks):
+        llm = setup_llm_from_environment()
+        prompt_template = PromptTemplate(template=PROMPT_TEMPLATE, input_variables=["text"])
+        tasks = []
+        for chunk in chunks:
+            message = [
+                HumanMessage(content=prompt_template.format(text=chunk.text))
+            ]
+            tasks.append(async_generate(llm, message))
+        results = await asyncio.gather(*tasks)
+
+        for chunk, result in zip(chunks, results):
+            print("========\n", chunk.text, "\n------\n", result)
+        print(len(chunks), len(results))
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    transcriptions = YouTubeTranscriptApi.get_transcript(video_id=vid, languages=["ja", "en"])
+    chunks = divide_transcriptions_into_chunks(
+        transcriptions=transcriptions,
+        maxlength=1000,
+        overlap_length=5,
+    )
+    asyncio.run(generate_concurrently(chunks))
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
     # get_topic()
     # get_topic_from_summary()
-    kmeans_embedding()
+    # kmeans_embedding()
+    async_run()

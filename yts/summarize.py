@@ -62,7 +62,7 @@ class YoutubeSummarize:
 
         MAXLENGTH = 1000
         OVERLAP_LENGTH = 5
-        transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en"])
+        transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en", "en-US"])
         self.chunks = divide_transcriptions_into_chunks(
             transcriptions,
             maxlength = MAXLENGTH,
@@ -98,7 +98,7 @@ class YoutubeSummarize:
             combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
             verbose=self.debug
         )
-        splited_chunks: List[List[TranscriptChunkModel]] = self._split_chunks(5)
+        splited_chunks: List[List[TranscriptChunkModel]] = self._divide_chunks_by_time(5)
 
         detail_summary: List[str] = [
             chain.run([Document(page_content=chunk.text) for chunk in chunks]) for chunks in splited_chunks
@@ -120,15 +120,15 @@ class YoutubeSummarize:
         return summary
 
 
-    def _split_chunks (self, split_num: int = 5) -> List[List[TranscriptChunkModel]]:
+    def _divide_chunks_by_time (self, split_num: int = 5) -> List[List[TranscriptChunkModel]]:
         total_time: float = self.chunks[-1].start + self.chunks[-1].duration
         delta: float = total_time // split_num
-        splited_chunks: List[List[TranscriptChunkModel]] = []
+        splited_chunks: List[List[TranscriptChunkModel]] = [[] for _ in range(0, split_num)]
         for tc in self.chunks:
             idx = int(tc.start // delta)
             idx = idx if idx < split_num else split_num
             if idx + 1 > len(splited_chunks):
                 splited_chunks.append([])
             splited_chunks[idx].append(tc)
-        return splited_chunks
+        return [sc  for sc in splited_chunks if len(sc) > 0]
 
