@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import os
 import sys
 import json
@@ -91,19 +91,9 @@ class YoutubeSummarize:
 
 
     def run (self) -> Dict[str, str|List[str]]:
-        chain = load_summarize_chain(
-            llm=self.llm,
-            chain_type=self.chain_type,
-            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
-            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
-            verbose=self.debug
-        )
         splited_chunks: List[List[TranscriptChunkModel]] = self._divide_chunks_by_time(5)
 
-        detail_summary: List[str] = [
-            chain.run([Document(page_content=chunk.text) for chunk in chunks]) for chunks in splited_chunks
-        ]
-        concise_summary: str = chain.run([Document(page_content=s) for s in detail_summary])
+        (detail_summary, concise_summary) = self._summarize_with_langchain(splited_chunks)
 
         summary: Dict[str, str|List[str]] = {
             "url": self.url,
@@ -132,3 +122,18 @@ class YoutubeSummarize:
             splited_chunks[idx].append(tc)
         return [sc  for sc in splited_chunks if len(sc) > 0]
 
+
+    def _summarize_with_langchain (self, splited_chunks: List[List[TranscriptChunkModel]]) -> Tuple[List[str], str]:
+        chain = load_summarize_chain(
+            llm=self.llm,
+            chain_type=self.chain_type,
+            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
+            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
+            verbose=self.debug
+        )
+        detail_summary: List[str] = [
+            chain.run([Document(page_content=chunk.text) for chunk in chunks]) for chunks in splited_chunks
+        ]
+        concise_summary: str = chain.run([Document(page_content=s) for s in detail_summary])
+
+        return (detail_summary, concise_summary)

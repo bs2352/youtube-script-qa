@@ -6,6 +6,7 @@ import os
 from langchain.llms import OpenAI, AzureOpenAI
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
+import tiktoken
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 
@@ -60,6 +61,22 @@ def setup_embedding_from_environment () -> OpenAIEmbeddings:
             "deployment":         os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
         }
     return OpenAIEmbeddings(**llm_args)
+
+
+def count_tokens (text: str) -> int:
+    # だいたいでOK. ちゃんとしたければ下記を参照.
+    # https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken
+    model = os.environ['AZURE_LLM_DEPLOYMENT_NAME']
+    if "OPENAI_API_KEY" in os.environ.keys():
+        model = os.environ['OPENAI_LLM_MODEL_NAME']
+    try:
+        encoding = tiktoken.encoding_for_model(model.replace("35", "3.5"))
+    except:
+        # model not found. using cl100k_base encoding
+        encoding = tiktoken.get_encoding("cl100k_base")
+    count = len(encoding.encode(text))
+
+    return count
 
 
 def divide_transcriptions_into_chunks (

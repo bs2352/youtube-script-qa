@@ -362,6 +362,7 @@ def async_run ():
     from yts.utils import setup_llm_from_environment, divide_transcriptions_into_chunks
     from langchain.prompts import PromptTemplate
     from langchain.schema import HumanMessage
+    from langchain.chains import LLMChain
     import asyncio
     import json
 
@@ -373,24 +374,58 @@ def async_run ():
 
 簡潔な要約:"""
 
-    async def async_generate (llm, message):
-        results = await llm.agenerate([message])
-        return results.generations[0][0].text
+    PROMPT_TEMPLATE = """以下の内容を重要な情報はできるだけ残して要約してください。:
+
+
+"{text}"
+
+
+要約:"""
+
+    # async def async_generate (llm, message):
+    #     results = await llm.agenerate([message])
+    #     return results.generations[0][0].text
+
+    # async def generate_concurrently (chunks):
+    #     llm = setup_llm_from_environment()
+    #     prompt_template = PromptTemplate(template=PROMPT_TEMPLATE, input_variables=["text"])
+    #     tasks = []
+    #     for chunk in chunks:
+    #         message = [
+    #             HumanMessage(content=prompt_template.format(text=chunk.text))
+    #         ]
+    #         tasks.append(async_generate(llm, message))
+    #     results = await asyncio.gather(*tasks)
+
+    #     for chunk, result in zip(chunks, results):
+    #         print("========\n", chunk.text, "\n------\n", result)
+    #     print(len(chunks), len(results))
+
+    async def async_generate (chain, chunk):
+        answer = await chain.arun(text=chunk)
+        return answer
 
     async def generate_concurrently (chunks):
         llm = setup_llm_from_environment()
         prompt_template = PromptTemplate(template=PROMPT_TEMPLATE, input_variables=["text"])
-        tasks = []
-        for chunk in chunks:
-            message = [
-                HumanMessage(content=prompt_template.format(text=chunk.text))
-            ]
-            tasks.append(async_generate(llm, message))
+        chain = LLMChain(llm=llm, prompt=prompt_template)
+        tasks = [async_generate(chain, chunk) for chunk in chunks]
         results = await asyncio.gather(*tasks)
 
         for chunk, result in zip(chunks, results):
             print("========\n", chunk.text, "\n------\n", result)
         print(len(chunks), len(results))
+
+    def generate_concurrently_2 (chunks):
+        llm = setup_llm_from_environment()
+        prompt_template = PromptTemplate(template=PROMPT_TEMPLATE, input_variables=["text"])
+        chain = LLMChain(llm=llm, prompt=prompt_template)
+        tasks = [async_generate(chain, chunk) for chunk in chunks]
+        gather = asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        results = loop.run_until_complete(gather)
+        return results
+
 
     vid = DEFAULT_VID
     if len(sys.argv) >= 2:
@@ -401,7 +436,42 @@ def async_run ():
         maxlength=1000,
         overlap_length=5,
     )
-    asyncio.run(generate_concurrently(chunks))
+    # asyncio.run(generate_concurrently(chunks))
+    results = generate_concurrently_2(chunks)
+    for chunk, result in zip(chunks, results):
+        print("========\n", chunk.text, "\n------\n", result)
+    print(len(chunks), len(results))
+
+
+def count_tokens ():
+    import tiktoken
+    from yts.utils import count_tokens
+
+    text = "今日はオリックスvs日本ハムです。最後だし行きたかったな。"
+    models = [
+        "text-davinci-003",
+        "gpt-3.5-turbo",
+        "gpt-3.5-turbo-0613",
+        "gpt-3.5-turbo-16k",
+        "gpt-35-turbo",
+        "gpt-35-turbo-0613",
+        "gpt-35-turbo-16k",
+        "gpt-4-0314",
+        "gpt-4-32k-0314",
+        "gpt-4-0613",
+        "gpt-4-32k-0613",
+    ]
+    for model in models:
+        try:
+            model_x = model.replace("35", "3.5")
+            encoding = tiktoken.encoding_for_model(model_x)
+        except:
+            print("Warning: model not found. Using cl100k_base encoding.")
+            encoding = tiktoken.get_encoding("cl100k_base")
+        # とりあえずだいたいでOK
+        # https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken
+        count = len(encoding.encode(text))
+        print(model, ":", count, "/", count_tokens(text))
 
 
 if __name__ == "__main__":
@@ -411,3 +481,4 @@ if __name__ == "__main__":
     # get_topic_from_summary()
     # kmeans_embedding()
     async_run()
+    # count_tokens()
