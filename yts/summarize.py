@@ -2,6 +2,8 @@ from typing import List, Dict, Tuple
 import os
 import sys
 import json
+import asyncio
+import time
 
 from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
@@ -71,29 +73,31 @@ class YoutubeSummarize:
         )
 
 
-    # def run (self) -> str:
-    #     chain = load_summarize_chain(
-    #         llm=self.llm,
-    #         chain_type=self.chain_type,
-    #         map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
-    #         combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
-    #         verbose=self.debug
-    #     )
-    #     docs: List[Document] = [Document(page_content=chunk.text) for chunk in self.chunks]
-    #     summary = chain.run(docs)
-
-    #     if not os.path.isdir(os.path.dirname(self.summary_file)):
-    #         os.makedirs(os.path.dirname(self.summary_file))
-    #     with open(self.summary_file, "w") as f:
-    #         f.write(summary)
-
-    #     return summary
-
-
     def run (self) -> Dict[str, str|List[str]]:
-        splited_chunks: List[List[TranscriptChunkModel]] = self._divide_chunks_by_time(5)
+        chain = load_summarize_chain(
+            llm=self.llm,
+            chain_type=self.chain_type,
+            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
+            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
+            verbose=self.debug
+        )
 
-        (detail_summary, concise_summary) = self._summarize_with_langchain(splited_chunks)
+        # 簡潔な要約
+        tasks = [chain.arun([Document(page_content=chunk.text) for chunk in self.chunks])]
+        gather = asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        concise_summary = loop.run_until_complete(gather)[0]
+
+        # 詳細な要約
+        splited_chunks: List[List[TranscriptChunkModel]] = self._divide_chunks_by_time(5)
+        detail_summary: List[str] = []
+        for idx, chunks in enumerate(splited_chunks):
+            if idx > 0:
+                time.sleep(3)
+            tasks = [chain.arun([Document(page_content=chunk.text) for chunk in chunks])]
+            gather = asyncio.gather(*tasks)
+            loop = asyncio.get_event_loop()
+            detail_summary.append(loop.run_until_complete(gather)[0])
 
         summary: Dict[str, str|List[str]] = {
             "url": self.url,
@@ -123,17 +127,3 @@ class YoutubeSummarize:
         return [sc  for sc in splited_chunks if len(sc) > 0]
 
 
-    def _summarize_with_langchain (self, splited_chunks: List[List[TranscriptChunkModel]]) -> Tuple[List[str], str]:
-        chain = load_summarize_chain(
-            llm=self.llm,
-            chain_type=self.chain_type,
-            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
-            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
-            verbose=self.debug
-        )
-        detail_summary: List[str] = [
-            chain.run([Document(page_content=chunk.text) for chunk in chunks]) for chunks in splited_chunks
-        ]
-        concise_summary: str = chain.run([Document(page_content=s) for s in detail_summary])
-
-        return (detail_summary, concise_summary)
