@@ -90,14 +90,10 @@ class YoutubeSummarize:
 
         # 詳細な要約
         splited_chunks: List[List[TranscriptChunkModel]] = self._divide_chunks_by_time(5)
-        detail_summary: List[str] = []
-        for idx, chunks in enumerate(splited_chunks):
-            if idx > 0:
-                time.sleep(3)
-            tasks = [chain.arun([Document(page_content=chunk.text) for chunk in chunks])]
-            gather = asyncio.gather(*tasks)
-            loop = asyncio.get_event_loop()
-            detail_summary.append(loop.run_until_complete(gather)[0])
+        tasks = [chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in splited_chunks]
+        gather = asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        detail_summary = loop.run_until_complete(gather)
 
         summary: Dict[str, str|List[str]] = {
             "url": self.url,
