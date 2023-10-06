@@ -39,7 +39,6 @@ def qa (args):
 
 def summary (args):
     ys = YoutubeSummarize(args.vid, args.debug)
-    ys.prepare()
     summary = ys.run()
 
     if "title" in summary.keys():
@@ -48,7 +47,7 @@ def summary (args):
         print("[Concise Summary]\n", summary["concise"], '\n')
     if "detail" in summary.keys():
         print('[Detail Summary]')
-        for s in summary["detail"]:
+        for s in summary["detail"]: # type: ignore
             print(f'・{s}\n')
 
 

@@ -42,14 +42,18 @@ class YoutubeSummarize:
 
         self.vid: str = vid
         self.debug: bool = debug
-        self.url: str = f'https://www.youtube.com/watch?v={vid}'
-        self.title: str = ""
 
         self.summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{self.vid}'
 
         self.chain_type: str = 'map_reduce'
         self.llm: LLMType = setup_llm_from_environment()
         self.chunks: List[TranscriptChunkModel] = []
+
+        self.url: str = f'https://www.youtube.com/watch?v={vid}'
+        video_info = YouTube(self.url).vid_info["videoDetails"]
+        self.title: str = video_info['title']
+        self.author: str = video_info['author']
+        self.lengthSeconds: int = int(video_info['lengthSeconds'])
 
 
     def _debug (self, message: str, end: str = "\n", flush: bool = False) -> None:
@@ -59,9 +63,7 @@ class YoutubeSummarize:
         return
 
 
-    def prepare (self) -> None:
-        self.title = YouTube(self.url).vid_info["videoDetails"]["title"]
-
+    def _prepare_transcriptions (self) -> None:
         MAXLENGTH = 1000
         OVERLAP_LENGTH = 5
         transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en", "en-US"])
@@ -73,7 +75,9 @@ class YoutubeSummarize:
         )
 
 
-    def run (self) -> Dict[str, str|List[str]]:
+    def run (self) -> Dict[str, int|str|List[str]]:
+        self._prepare_transcriptions()
+
         chain = load_summarize_chain(
             llm=self.llm,
             chain_type=self.chain_type,
@@ -95,11 +99,13 @@ class YoutubeSummarize:
         loop = asyncio.get_event_loop()
         detail_summary = loop.run_until_complete(gather)
 
-        summary: Dict[str, str|List[str]] = {
-            "url": self.url,
+        summary: Dict[str, int|str|List[str]] = {
             "title": self.title,
-            "detail": detail_summary,
+            "author": self.author,
+            "lengthSeconds": self.lengthSeconds,
+            "url": self.url,
             "concise": concise_summary,
+            "detail": detail_summary,
         }
 
         if not os.path.isdir(os.path.dirname(self.summary_file)):
