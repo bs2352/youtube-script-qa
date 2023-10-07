@@ -29,7 +29,7 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を200字以内の日本語で簡潔�
 "{text}"
 
 
-簡潔な要約:"""
+要約:"""
 
 
 class YoutubeSummarize:
@@ -63,21 +63,7 @@ class YoutubeSummarize:
         return
 
 
-    def _prepare_transcriptions (self) -> None:
-        MAXLENGTH = 1000
-        OVERLAP_LENGTH = 5
-        transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en", "en-US"])
-        self.chunks = divide_transcriptions_into_chunks(
-            transcriptions,
-            maxlength = MAXLENGTH,
-            overlap_length = OVERLAP_LENGTH,
-            id_prefix = self.vid
-        )
-
-
     def run (self) -> Dict[str, int|str|List[str]]:
-        self._prepare_transcriptions()
-
         chain = load_summarize_chain(
             llm=self.llm,
             chain_type=self.chain_type,
@@ -86,6 +72,9 @@ class YoutubeSummarize:
             verbose=self.debug
         )
 
+        # 字幕の準備
+        self.chunks = self._prepare_transcriptions()
+
         # 簡潔な要約
         tasks = [chain.arun([Document(page_content=chunk.text) for chunk in self.chunks])]
         gather = asyncio.gather(*tasks)
@@ -93,8 +82,10 @@ class YoutubeSummarize:
         concise_summary = loop.run_until_complete(gather)[0]
 
         # 詳細な要約
-        splited_chunks: List[List[TranscriptChunkModel]] = self._divide_chunks_by_time(5)
-        tasks = [chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in splited_chunks]
+        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups(5)
+        tasks = [
+            chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
+        ]
         gather = asyncio.gather(*tasks)
         loop = asyncio.get_event_loop()
         detail_summary = loop.run_until_complete(gather)
@@ -116,16 +107,37 @@ class YoutubeSummarize:
         return summary
 
 
-    def _divide_chunks_by_time (self, split_num: int = 5) -> List[List[TranscriptChunkModel]]:
-        total_time: float = self.chunks[-1].start + self.chunks[-1].duration
-        delta: float = total_time // split_num
-        splited_chunks: List[List[TranscriptChunkModel]] = [[] for _ in range(0, split_num)]
-        for tc in self.chunks:
-            idx = int(tc.start // delta)
-            idx = idx if idx < split_num else split_num
-            if idx + 1 > len(splited_chunks):
-                splited_chunks.append([])
-            splited_chunks[idx].append(tc)
-        return [sc  for sc in splited_chunks if len(sc) > 0]
+    def _prepare_transcriptions (self) -> List[TranscriptChunkModel]:
+        MAXLENGTH = 1000
+        OVERLAP_LENGTH = 5
+        transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en", "en-US"])
+        return divide_transcriptions_into_chunks(
+            transcriptions,
+            maxlength = MAXLENGTH,
+            overlap_length = OVERLAP_LENGTH,
+            id_prefix = self.vid
+        )
 
+
+    def _divide_chunks_into_N_groups (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
+        total_time: float = self.chunks[-1].start + self.chunks[-1].duration
+        delta: float = total_time // group_num
+        groups: List[List[TranscriptChunkModel]] = [[] for _ in range(0, group_num)]
+        for chunk in self.chunks:
+            idx = int(chunk.start // delta)
+            idx = min(idx, group_num - 1)
+            groups[idx].append(chunk)
+        return [group  for group in groups if len(group) > 0]
+
+
+    def _divide_chunks_into_groups_by_time_interval (self, interval_minutes: int = 5) -> List[List[TranscriptChunkModel]]:
+        total_time: float = self.chunks[-1].start + self.chunks[-1].duration
+        delta: int = interval_minutes * 60
+        group_num: int = (int(total_time) + 1) // delta
+        groups: List[List[TranscriptChunkModel]] = [[] for _ in range(0, group_num)]
+        for chunk in self.chunks:
+            idx = int(chunk.start // delta)
+            idx = min(idx, group_num - 1)
+            groups[idx].append(chunk)
+        return [group for group in groups if len(group) > 0]
 
