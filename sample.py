@@ -268,6 +268,8 @@ def get_topic_from_summary ():
     prompt_template = \
 """私はYoutube動画のアジェンダを作成しています。
 以下に記載する動画のタイトルと要約からアジェンダを作成してください。
+アジェンダには各セクションのタイトルのみを記載するようにしてください。
+またセクションはできるだけ少なくシンプルにまとめてください。
 
 タイトル:
 {title}
@@ -277,6 +279,7 @@ def get_topic_from_summary ():
 
 アジェンダ:
 """
+
     # print(prompt_template)
     prompt = PromptTemplate(template=prompt_template, input_variables=["title", "summaries"])
 
@@ -474,11 +477,89 @@ def count_tokens ():
         print(model, ":", count, "/", count_tokens(text))
 
 
+def test_function_calling ():
+    import openai
+    import json
+
+    functions = [
+        {
+            # "name": "answer_from_local_information",
+            "name": "answer_question_about_specific_things",
+            # "description": "指定された動画内で質問に関連する局所的な情報のみを利用して回答を生成する",
+            # "descriotion": "Generate answers using only local information relevant to the question within the specified video",
+            # "description": "指定された動画で触れられている特定の事柄に関する質問に回答する",
+            "description": "Answer questions about specific things mentioned in a given video",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "動画のタイトル"
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "質問",
+                    }
+                },
+                "required": ["title", "question"]
+            }
+        },
+        {
+            # "name": "answer_from_all_information",
+            "name": "answer_question_about_general_content",
+            # "description": "指定された動画内の全ての情報を利用して質問に対する回答を生成する",
+            # "description": "Generates an answer to a question using all the information in the specified video",
+            # "description": "指定された動画の内容全般に関する質問に回答する",
+            "description": "Answer questions about the general content of a given video",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "動画のタイトル",
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "質問",
+                    }
+                },
+                "required": ["title", "question"]
+            }
+        },
+    ]
+
+    question =  "「Azure OpenAI Developers セミナー第 2 回」というタイトルの動画から質問に回答してください。\n"
+    # question += "この動画ではどのようなトピックについて話されていますか？"
+    # question += "ベクトル検索とは何ですか？"
+    # question += "どのような話題がありますか？"
+    # question += "動画の内容を簡単に教えて"
+    # question += "ベクトル検索、ハイブリッド検索、セマンティック検索の違いを教えてください。"
+    question += "インストール手順を教えて"
+
+    openai.api_key = os.environ['OPENAI_API_KEY']
+    completion = openai.ChatCompletion.create(
+        model='gpt-3.5-turbo-0613',
+        messages=[
+            {'role': 'user', 'content': question}
+        ],
+        functions=functions,
+        function_call="auto"
+    )
+
+    message = completion['choices'][0]["message"] 
+    if message["function_call"]:
+        print("function", message["function_call"]["name"])
+        print("function", json.loads(message["function_call"]["arguments"]))
+    if message["content"]:
+        print("content", message["content"])
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
     # get_topic()
     # get_topic_from_summary()
     # kmeans_embedding()
-    async_run()
+    # async_run()
     # count_tokens()
+    test_function_calling()
