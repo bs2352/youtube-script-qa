@@ -480,6 +480,7 @@ def count_tokens ():
 def test_function_calling ():
     import openai
     import json
+    import asyncio
 
     functions = [
         {
@@ -510,7 +511,8 @@ def test_function_calling ():
             # "description": "指定された動画内の全ての情報を利用して質問に対する回答を生成する",
             # "description": "Generates an answer to a question using all the information in the specified video",
             # "description": "指定された動画の内容全般に関する質問に回答する",
-            "description": "Answer questions about the general content of a given video",
+            # "description": "Answer questions about the general content of a given video",
+            "description": "View the entire video and Answer questions about the general content of a given video",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -528,30 +530,160 @@ def test_function_calling ():
         },
     ]
 
-    question =  "「Azure OpenAI Developers セミナー第 2 回」というタイトルの動画から質問に回答してください。\n"
-    # question += "この動画ではどのようなトピックについて話されていますか？"
-    # question += "ベクトル検索とは何ですか？"
-    # question += "どのような話題がありますか？"
-    # question += "動画の内容を簡単に教えて"
-    # question += "ベクトル検索、ハイブリッド検索、セマンティック検索の違いを教えてください。"
-    question += "インストール手順を教えて"
+    question_prefix = "「Azure OpenAI Developers セミナー第 2 回」というタイトルの動画から質問に回答してください。"
+    # question_prefix = "「邪馬台国はどこにあった？」というタイトルの動画から質問に回答してください。"
+    questions = [
+        ("この動画ではどのようなトピックについて話されていますか？", 1),
+        ("ベクトル検索とは何ですか？", 0),
+        ("どのような話題がありますか？", 1),
+        ("動画の内容を簡単に教えて", 1),
+        ("ベクトル検索、ハイブリッド検索、セマンティック検索の違いを教えてください。", 0),
+        ("インストール手順を教えて", 0),
+        ("この動画で話しているのは人を全て教えてください。", 1),
+        ("この動画で話している人は誰ですか？", 0),
+        ("この動画に登場する人物を全て教えてください。", 1),
+        ("邪馬台国の候補地を全て教えてください。", 1),
+        ("邪馬台国の候補地は？", 0),
+        ("邪馬台国の候補地は？全て答えてください。", 1),
+        ("動画内で紹介されている邪馬台国の候補地を全て答えてください。", 1),
+        ("一般的に邪馬台国はどこにあったと言われていますか？", 0),
+        ("動画内で紹介されている邪馬台国の所在地を全て答えてください。", 1),
+    ]
 
     openai.api_key = os.environ['OPENAI_API_KEY']
-    completion = openai.ChatCompletion.create(
-        model='gpt-3.5-turbo-0613',
-        messages=[
-            {'role': 'user', 'content': question}
-        ],
-        functions=functions,
-        function_call="auto"
-    )
+    tasks = [
+        openai.ChatCompletion.acreate(
+            model='gpt-3.5-turbo-0613',
+            messages=[
+                {'role': 'user', 'content': f'{question_prefix}\n{question[0]}'}
+            ],
+            functions=functions,
+            function_call="auto",
+            temperature=0.3,
+        )
+        for question in questions
+    ]
+    gather = asyncio.gather(*tasks)
+    loop = asyncio.get_event_loop()
+    results = loop.run_until_complete(gather)
 
-    message = completion['choices'][0]["message"] 
-    if message["function_call"]:
-        print("function", message["function_call"]["name"])
-        print("function", json.loads(message["function_call"]["arguments"]))
-    if message["content"]:
-        print("content", message["content"])
+    for question, result in zip(questions, results):
+        message = result["choices"][0]["message"]
+        answer = message["function_call"]["name"] if "function_call" in message else "none"
+        judge = "OK" if answer == functions[question[1]]["name"] else "NG"
+        print(f'{judge}\t{question[0]}\t{answer}')
+
+    # message = completion['choices'][0]["message"]
+    # if message["function_call"]:
+    #     print("function", message["function_call"]["name"])
+    #     print("function", json.loads(message["function_call"]["arguments"]))
+    # if message["content"]:
+    #     print("content", message["content"])
+
+
+def qa_with_function_calling ():
+    from pytube import YouTube
+    openai.api_key = os.environ['OPENAI_API_KEY']
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    url = f'https://www.youtube.com/watch?v={vid}'
+    title = YouTube(url).vid_info["videoDetails"]["title"]
+
+    def is_question_about_local (question):
+        functions = [
+            {
+                "name": "answer_question_about_specific_things",
+                "description": "Answer questions about specific things mentioned in a given video",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "動画のタイトル"
+                        },
+                        "question": {
+                            "type": "string",
+                            "description": "質問",
+                        }
+                    },
+                    "required": ["title", "question"]
+                }
+            },
+            {
+                "name": "answer_question_about_general_content",
+                "description": "View the entire video and Answer questions about the general content of a given video",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "動画のタイトル",
+                        },
+                        "question": {
+                            "type": "string",
+                            "description": "質問",
+                        }
+                    },
+                    "required": ["title", "question"]
+                }
+            },
+        ]
+        question_prefix = f"「{title}」というタイトルの動画から質問に回答してください。"
+        completion = openai.ChatCompletion.create(
+            model='gpt-3.5-turbo-0613',
+            messages=[
+                {'role': 'user', 'content': f'{question_prefix}\n{question}'}
+            ],
+            functions=functions,
+            function_call="auto",
+            temperature=0.3,
+        )
+        message = completion["choices"][0]["message"] # type: ignore
+        func_name = functions[0]["name"]
+        if "function_call" in message:
+            func_name = message["function_call"]["name"]
+        return True if func_name == functions[0]["name"] else False
+
+
+    def answer_from_search (question):
+        from yts.qa import YoutubeQA
+        yqa = YoutubeQA(vid)
+        yqa.prepare_query()
+        return yqa.run_query(question)
+
+
+    def answer_from_summary (question):
+        import json
+        summary_file = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
+        if not os.path.exists(summary_file):
+            from yts.summarize import YoutubeSummarize
+            print("create summary...")
+            ys = YoutubeSummarize(vid)
+            summary = ys.run()
+        else:
+            with open(summary_file, 'r') as f:
+                summary = json.load(f)
+        summary_detail = "\n".join(summary["detail"]) # type: ignore
+        query = f'{question}\n以下の文書の内容から回答してください。\n\n{summary_detail}'
+        completion = openai.ChatCompletion.create(
+            model='gpt-3.5-turbo-0613',
+            messages=[
+                {'role': 'user', 'content': query}
+            ],
+            temperature=0.0,
+        )
+        return completion["choices"][0]["message"]["content"] # type: ignore
+
+
+    question = input("Query: ").strip()
+    is_about_local = is_question_about_local(question)
+    if is_about_local:
+        answer = answer_from_search(question)
+        print("# local\n", f'{answer}\n')
+    else:
+        answer = answer_from_summary(question)
+        print("# global\n", answer)
 
 
 if __name__ == "__main__":
@@ -562,4 +694,5 @@ if __name__ == "__main__":
     # kmeans_embedding()
     # async_run()
     # count_tokens()
-    test_function_calling()
+    # test_function_calling()
+    qa_with_function_calling()
