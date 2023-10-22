@@ -477,6 +477,15 @@ def count_tokens ():
         print(model, ":", count, "/", count_tokens(text))
 
 
+from tenacity import retry, wait_fixed, stop_after_attempt, before_log
+import logging
+# logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(3),
+    before=before_log(logger, logging.DEBUG)
+)
 def test_function_calling ():
     import openai
     import json
@@ -528,9 +537,23 @@ def test_function_calling ():
                 "required": ["title", "question"]
             }
         },
+        {
+            "name": "summarize",
+            "description": "summarize the content of a given video",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "動画のタイトル",
+                    }
+                },
+                "required": ["title"],
+            }
+        },
     ]
 
-    question_prefix = "「Azure OpenAI Developers セミナー第 2 回」というタイトルの動画から質問に回答してください。"
+    question_prefix = "「Azure OpenAI Developers セミナー第 2 回」というタイトルの動画から次の質問に回答してください。"
     # question_prefix = "「邪馬台国はどこにあった？」というタイトルの動画から質問に回答してください。"
     questions = [
         ("この動画ではどのようなトピックについて話されていますか？", 1),
@@ -548,6 +571,7 @@ def test_function_calling ():
         ("動画内で紹介されている邪馬台国の候補地を全て答えてください。", 1),
         ("一般的に邪馬台国はどこにあったと言われていますか？", 0),
         ("動画内で紹介されている邪馬台国の所在地を全て答えてください。", 1),
+        ("Please tell me all the candidate locations for Yamataikoku.", 1),
     ]
 
     openai.api_key = os.environ['OPENAI_API_KEY']
@@ -555,7 +579,7 @@ def test_function_calling ():
         openai.ChatCompletion.acreate(
             model='gpt-3.5-turbo-0613',
             messages=[
-                {'role': 'user', 'content': f'{question_prefix}\n{question[0]}'}
+                {'role': 'user', 'content': f'{question_prefix}\n\n質問：{question[0]}\n'}
             ],
             functions=functions,
             function_call="auto",
@@ -583,6 +607,10 @@ def test_function_calling ():
 
 def qa_with_function_calling ():
     from pytube import YouTube
+    from langchain import PromptTemplate, LLMChain
+    from langchain.schema import LLMResult, ChatGeneration
+    from yts.utils import setup_llm_from_environment
+
     openai.api_key = os.environ['OPENAI_API_KEY']
     vid = DEFAULT_VID
     if len(sys.argv) >= 2:
@@ -629,17 +657,42 @@ def qa_with_function_calling ():
                 }
             },
         ]
-        question_prefix = f"「{title}」というタイトルの動画から質問に回答してください。"
-        completion = openai.ChatCompletion.create(
-            model='gpt-3.5-turbo-0613',
-            messages=[
-                {'role': 'user', 'content': f'{question_prefix}\n{question}'}
-            ],
-            functions=functions,
-            function_call="auto",
-            temperature=0.3,
+        # question_prefix = f"「{title}」というタイトルの動画から質問に回答してください。"
+        # completion = openai.ChatCompletion.create(
+        #     model='gpt-3.5-turbo-0613',
+        #     messages=[
+        #         {'role': 'user', 'content': f'{question_prefix}\n{question}'}
+        #     ],
+        #     functions=functions,
+        #     function_call="auto",
+        #     temperature=0.3,
+        # )
+        # message = completion["choices"][0]["message"] # type: ignore
+
+        # See langchain/chains/openai_functions/openai.py
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template= "「{title}」というタイトルの動画から次の質問に回答してください。\n\n質問：{question}\n",
+            input_variables=["title", "question"]
         )
-        message = completion["choices"][0]["message"] # type: ignore
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            llm_kwargs={
+                "functions": functions
+            },
+            # output_parser=JsonOutputFunctionsParser(args_only=False),
+            output_key="function",
+            verbose=True
+        )
+        result: LLMResult = chain.generate([{"title":title, "question":question}])
+        generation: ChatGeneration = result.generations[0][0] # type: ignore
+        message = generation.message.additional_kwargs
+        # print(generation)
+        # print(generation.message.additional_kwargs["function_call"]["name"])
+        # print(message)
+        # sys.exit(0)
+
         func_name = functions[0]["name"]
         if "function_call" in message:
             func_name = message["function_call"]["name"]
@@ -677,7 +730,10 @@ def qa_with_function_calling ():
 
 
     question = input("Query: ").strip()
-    is_about_local = is_question_about_local(question)
+    try:
+        is_about_local = is_question_about_local(question)
+    except:
+        is_about_local = True
     if is_about_local:
         answer = answer_from_search(question)
         print("# local\n", f'{answer}\n')
@@ -694,5 +750,5 @@ if __name__ == "__main__":
     # kmeans_embedding()
     # async_run()
     # count_tokens()
-    # test_function_calling()
-    qa_with_function_calling()
+    test_function_calling()
+    # qa_with_function_calling()
