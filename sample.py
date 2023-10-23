@@ -572,6 +572,7 @@ def test_function_calling ():
         ("一般的に邪馬台国はどこにあったと言われていますか？", 0),
         ("動画内で紹介されている邪馬台国の所在地を全て答えてください。", 1),
         ("Please tell me all the candidate locations for Yamataikoku.", 1),
+        ("邪馬台国はどこにあったのですか？考えられる地域を全て答えてください", 1),
     ]
 
     openai.api_key = os.environ['OPENAI_API_KEY']
@@ -734,12 +735,51 @@ def qa_with_function_calling ():
         is_about_local = is_question_about_local(question)
     except:
         is_about_local = True
+    # is_about_local = False
     if is_about_local:
         answer = answer_from_search(question)
         print("# local\n", f'{answer}\n')
     else:
         answer = answer_from_summary(question)
         print("# global\n", answer)
+
+
+def test_loading ():
+    import asyncio
+    import time
+
+    async def async_sleep ():
+        sec = 0
+        while sec <= 10:
+            await asyncio.sleep(2)
+            print(f"# {sec} sleep.")
+            sec += 2
+        await asyncio.sleep(2)
+
+    async def loading ():
+        chars = ['/', '-', '\\', '|', '/', '-', '\\', '|', '😍', '😎']
+        # chars = ['!', '#', '$', '%', '&', '/', '-', '\\', '-', '+']
+        i = 0
+        while i >= 0:
+            i %= len(chars)
+            sys.stdout.write("\033[2K\033[G %s " % chars[i])
+            sys.stdout.flush()
+            await asyncio.sleep(1)
+            # sys.stdout.flush()
+            i += 1
+
+    x = asyncio.ensure_future(loading())
+    print(x)
+
+    tasks = [async_sleep()]
+    gather = asyncio.gather(*tasks)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(gather)
+    # loading()
+
+    x.cancel()
+    sys.stdout.write("\033[2K\033[G")
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
@@ -750,5 +790,6 @@ if __name__ == "__main__":
     # kmeans_embedding()
     # async_run()
     # count_tokens()
-    test_function_calling()
+    # test_function_calling()
     # qa_with_function_calling()
+    test_loading()

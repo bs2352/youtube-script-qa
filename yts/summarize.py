@@ -72,6 +72,10 @@ class YoutubeSummarize:
             verbose=self.debug
         )
 
+        loading = None
+        if self.debug is False:
+            loading = asyncio.ensure_future(self._loading())
+
         # 字幕の準備
         self.chunks = self._prepare_transcriptions()
 
@@ -89,6 +93,11 @@ class YoutubeSummarize:
         gather = asyncio.gather(*tasks)
         loop = asyncio.get_event_loop()
         detail_summary = loop.run_until_complete(gather)
+
+        if loading is not None:
+            loading.cancel()
+            sys.stdout.write("\033[2K\033[G")
+            sys.stdout.flush()
 
         summary: Dict[str, int|str|List[str]] = {
             "title": self.title,
@@ -140,4 +149,19 @@ class YoutubeSummarize:
             idx = min(idx, group_num - 1)
             groups[idx].append(chunk)
         return [group for group in groups if len(group) > 0]
+
+
+    async def _loading (self):
+        chars = [
+            '/', '-', '\\', '|', '/', '-', '\\', '|', '😍',
+            '/', '-', '\\', '|', '/', '-', '\\', '|', '🤪',
+            '/', '-', '\\', '|', '/', '-', '\\', '|', '😎',
+        ]
+        i = 0
+        while i >= 0:
+            i %= len(chars)
+            sys.stdout.write("\033[2K\033[G %s " % chars[i])
+            sys.stdout.flush()
+            await asyncio.sleep(0.2)
+            i += 1
 
