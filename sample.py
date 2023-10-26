@@ -711,23 +711,28 @@ def qa_with_function_calling ():
         import json
         summary_file = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
         if not os.path.exists(summary_file):
-            from yts.summarize import YoutubeSummarize
+            from yts.summarize import YoutubeSummarize, MODE_DETAIL
             print("create summary...")
             ys = YoutubeSummarize(vid)
-            summary = ys.run()
+            summary = ys.run(mode=MODE_DETAIL)
         else:
             with open(summary_file, 'r') as f:
                 summary = json.load(f)
         summary_detail = "\n".join(summary["detail"]) # type: ignore
-        query = f'{question}\n以下の文書の内容から回答してください。\n\n{summary_detail}'
-        completion = openai.ChatCompletion.create(
-            model='gpt-3.5-turbo-0613',
-            messages=[
-                {'role': 'user', 'content': query}
-            ],
-            temperature=0.0,
+
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template= "'{question}\n以下の文書の内容から回答してください。\n\n{summary_detail}\n",
+            input_variables=["question", "summary_detail"]
         )
-        return completion["choices"][0]["message"]["content"] # type: ignore
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            # verbose=True
+        )
+        result = chain.run(question=question, summary_detail=summary_detail)
+
+        return result
 
 
     question = input("Query: ").strip()
@@ -791,5 +796,5 @@ if __name__ == "__main__":
     # async_run()
     # count_tokens()
     # test_function_calling()
-    # qa_with_function_calling()
-    test_loading()
+    qa_with_function_calling()
+    # test_loading()

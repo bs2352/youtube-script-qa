@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Optional
 import os
 import sys
 import json
@@ -6,6 +6,7 @@ import asyncio
 import time
 
 from langchain.chains.summarize import load_summarize_chain
+from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
 from langchain.prompts import PromptTemplate
 from langchain.docstore.document import Document
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -13,6 +14,10 @@ from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
+
+
+MODE_CONCISE = 0x01
+MODE_DETAIL  = 0x02
 
 
 MAP_PROMPT_TEMPLATE = """以下の内容を重要な情報はできるだけ残して要約してください。:
@@ -47,6 +52,7 @@ class YoutubeSummarize:
 
         self.chain_type: str = 'map_reduce'
         self.llm: LLMType = setup_llm_from_environment()
+        self.chain: Optional[BaseCombineDocumentsChain] = None
         self.chunks: List[TranscriptChunkModel] = []
 
         self.url: str = f'https://www.youtube.com/watch?v={vid}'
@@ -63,41 +69,26 @@ class YoutubeSummarize:
         return
 
 
-    def run (self) -> Dict[str, int|str|List[str]]:
-        chain = load_summarize_chain(
-            llm=self.llm,
-            chain_type=self.chain_type,
-            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
-            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
-            verbose=self.debug
-        )
+    def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Dict[str, int|str|List[str]]:
+        loading = asyncio.ensure_future(self._loading())
 
-        loading = None
-        if self.debug is False:
-            loading = asyncio.ensure_future(self._loading())
-
-        # 字幕の準備
+        # 準備
+        self.chain = self._prepare_summarize_chain()
         self.chunks = self._prepare_transcriptions()
 
         # 簡潔な要約
-        tasks = [chain.arun([Document(page_content=chunk.text) for chunk in self.chunks])]
-        gather = asyncio.gather(*tasks)
-        loop = asyncio.get_event_loop()
-        concise_summary = loop.run_until_complete(gather)[0]
+        concise_summary = ""
+        if mode & MODE_CONCISE > 0:
+            concise_summary = self._summarize_concisely()
 
         # 詳細な要約
-        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups(5)
-        tasks = [
-            chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
-        ]
-        gather = asyncio.gather(*tasks)
-        loop = asyncio.get_event_loop()
-        detail_summary = loop.run_until_complete(gather)
+        detail_summary: List[str] = []
+        if mode & MODE_DETAIL > 0:
+            detail_summary = self._summarize_in_detail()
 
-        if loading is not None:
-            loading.cancel()
-            sys.stdout.write("\033[2K\033[G")
-            sys.stdout.flush()
+        loading.cancel()
+        sys.stdout.write("\033[2K\033[G")
+        sys.stdout.flush()
 
         summary: Dict[str, int|str|List[str]] = {
             "title": self.title,
@@ -116,6 +107,16 @@ class YoutubeSummarize:
         return summary
 
 
+    def _prepare_summarize_chain (self) -> BaseCombineDocumentsChain:
+        return load_summarize_chain(
+            llm=self.llm,
+            chain_type=self.chain_type,
+            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
+            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
+            verbose=self.debug
+        )
+
+
     def _prepare_transcriptions (self) -> List[TranscriptChunkModel]:
         MAXLENGTH = 1000
         OVERLAP_LENGTH = 5
@@ -126,6 +127,27 @@ class YoutubeSummarize:
             overlap_length = OVERLAP_LENGTH,
             id_prefix = self.vid
         )
+
+
+    def _summarize_concisely (self) -> str:
+        if self.chain is None:
+            return ""
+        tasks = [self.chain.arun([Document(page_content=chunk.text) for chunk in self.chunks])]
+        gather = asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(gather)[0]
+
+
+    def _summarize_in_detail (self) -> List[str]:
+        if self.chain is None:
+            return []
+        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups(5)
+        tasks = [
+            self.chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
+        ]
+        gather = asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(gather)
 
 
     def _divide_chunks_into_N_groups (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
@@ -153,15 +175,15 @@ class YoutubeSummarize:
 
     async def _loading (self):
         chars = [
-            '/', '-', '\\', '|', '/', '-', '\\', '|', '😍',
-            '/', '-', '\\', '|', '/', '-', '\\', '|', '🤪',
-            '/', '-', '\\', '|', '/', '-', '\\', '|', '😎',
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '😍',
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '🤪',
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '😎',
         ]
         i = 0
         while i >= 0:
             i %= len(chars)
             sys.stdout.write("\033[2K\033[G %s " % chars[i])
             sys.stdout.flush()
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(1.0)
             i += 1
 
