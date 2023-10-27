@@ -1,6 +1,9 @@
 from typing import Optional, List, Generator, Tuple
 import os
 import logging
+from concurrent.futures import ThreadPoolExecutor, Future, wait, FIRST_COMPLETED
+import sys
+import time
 
 from llama_index import download_loader, GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
 from llama_index.indices.query.base import BaseQueryEngine
@@ -35,6 +38,8 @@ class YoutubeQA:
 
         self.index: Optional[GPTVectorStoreIndex] = None
         self.query_response: Optional[RESPONSE_TYPE] = None
+
+        self.loading_canceled: bool = False
 
 
     def _setup_llm (self) -> ServiceContext:
@@ -116,6 +121,27 @@ class YoutubeQA:
 
 
     def run_query (self, query: str) -> str:
+        answer: str = ""
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures: List[Future] = []
+            futures.append(executor.submit(self._run, query=query))
+            futures.append(executor.submit(self._loading))
+
+            wait(futures, timeout=60, return_when=FIRST_COMPLETED)
+
+            if futures[0].done():
+                answer = futures[0].result()
+            else:
+                futures[0].cancel()
+
+            self.loading_canceled = True
+            while futures[1].done() is False:
+                time.sleep(1)
+
+        return answer
+
+
+    def _run (self, query: str) -> str:
         if self.index is None:
             return ""
 
@@ -127,6 +153,27 @@ class YoutubeQA:
 
         return str(self.query_response).strip()
     
+
+    def _loading (self):
+        chars = [
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '😍',
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '🤪',
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '😎',
+        ]
+        self.loading_canceled = False
+        i = 0
+        while i >= 0:
+            i %= len(chars)
+            sys.stdout.write("\033[2K\033[G %s " % chars[i])
+            sys.stdout.flush()
+            time.sleep(1.0)
+            i += 1
+            if self.loading_canceled is True:
+                break
+        sys.stdout.write("\033[2K\033[G")
+        sys.stdout.flush()
+        return
+
 
     def get_source (self) -> Generator[Tuple[float, str, str, str], None, None]:
         if self.query_response is None:

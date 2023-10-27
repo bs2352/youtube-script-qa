@@ -27,9 +27,8 @@ def qa (args):
         query = input("Query: ").strip()
         if query == "":
             break
-        print('Answer: ', end="", flush=True)
         answer = yqa.run_query(query)
-        print(f'{answer}\n')
+        print(f'Answer: {answer}\n')
 
         if args.detail:
             for score, id, time, source in yqa.get_source():

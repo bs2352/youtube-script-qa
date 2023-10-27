@@ -147,27 +147,28 @@ def divide_transcriptions_into_chunks (
     return chunks
 
 
-async def loading_async ():
-    chars = [
-        '/', '―', '\\', '|', '/', '―', '\\', '|', '😍',
-        '/', '―', '\\', '|', '/', '―', '\\', '|', '🤪',
-        '/', '―', '\\', '|', '/', '―', '\\', '|', '😎',
-    ]
-    i = 0
-    while i >= 0:
-        i %= len(chars)
-        sys.stdout.write("\033[2K\033[G %s " % chars[i])
-        sys.stdout.flush()
-        await asyncio.sleep(1.0)
-        i += 1
-
-
 def loading_for_async_func (func):
+
     def _wrapper (*args, **kwargs):
-        t = asyncio.ensure_future(loading_async())
+        async def _loading ():
+            chars = [
+                '/', '―', '\\', '|', '/', '―', '\\', '|', '😍',
+                '/', '―', '\\', '|', '/', '―', '\\', '|', '🤪',
+                '/', '―', '\\', '|', '/', '―', '\\', '|', '😎',
+            ]
+            i = 0
+            while i >= 0:
+                i %= len(chars)
+                sys.stdout.write("\033[2K\033[G %s " % chars[i])
+                sys.stdout.flush()
+                await asyncio.sleep(1.5)
+                i += 1
+
+        t = asyncio.ensure_future(_loading())
         res = func(*args, **kwargs)
         t.cancel()
         sys.stdout.write("\033[2K\033[G")
         sys.stdout.flush()
         return res
+
     return _wrapper
