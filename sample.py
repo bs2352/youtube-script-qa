@@ -612,7 +612,6 @@ def qa_with_function_calling ():
     from langchain.schema import LLMResult, ChatGeneration
     from yts.utils import setup_llm_from_environment
 
-    openai.api_key = os.environ['OPENAI_API_KEY']
     vid = DEFAULT_VID
     if len(sys.argv) >= 2:
         vid = sys.argv[1]
@@ -712,7 +711,6 @@ def qa_with_function_calling ():
         summary_file = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
         if not os.path.exists(summary_file):
             from yts.summarize import YoutubeSummarize, MODE_DETAIL
-            print("create summary...")
             ys = YoutubeSummarize(vid)
             summary = ys.run(mode=MODE_DETAIL)
         else:
@@ -787,6 +785,19 @@ def test_loading ():
     sys.stdout.flush()
 
 
+import asyncio
+from yts.utils import loading_for_async_func
+@loading_for_async_func
+def test_decorate_loading ():
+    async def func ():
+        await asyncio.sleep(10)
+    tasks = [func()]
+    gather = asyncio.gather(*tasks)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(gather)[0]
+    return "fin"
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -798,3 +809,4 @@ if __name__ == "__main__":
     # test_function_calling()
     qa_with_function_calling()
     # test_loading()
+    # print(test_decorate_loading())

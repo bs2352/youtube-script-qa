@@ -13,7 +13,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
-from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
+from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks, loading_for_async_func
 
 
 MODE_CONCISE = 0x01
@@ -69,9 +69,8 @@ class YoutubeSummarize:
         return
 
 
+    @loading_for_async_func
     def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Dict[str, int|str|List[str]]:
-        loading = asyncio.ensure_future(self._loading())
-
         # 準備
         self.chain = self._prepare_summarize_chain()
         self.chunks = self._prepare_transcriptions()
@@ -85,10 +84,6 @@ class YoutubeSummarize:
         detail_summary: List[str] = []
         if mode & MODE_DETAIL > 0:
             detail_summary = self._summarize_in_detail()
-
-        loading.cancel()
-        sys.stdout.write("\033[2K\033[G")
-        sys.stdout.flush()
 
         summary: Dict[str, int|str|List[str]] = {
             "title": self.title,
@@ -171,19 +166,4 @@ class YoutubeSummarize:
             idx = min(idx, group_num - 1)
             groups[idx].append(chunk)
         return [group for group in groups if len(group) > 0]
-
-
-    async def _loading (self):
-        chars = [
-            '/', '―', '\\', '|', '/', '―', '\\', '|', '😍',
-            '/', '―', '\\', '|', '/', '―', '\\', '|', '🤪',
-            '/', '―', '\\', '|', '/', '―', '\\', '|', '😎',
-        ]
-        i = 0
-        while i >= 0:
-            i %= len(chars)
-            sys.stdout.write("\033[2K\033[G %s " % chars[i])
-            sys.stdout.flush()
-            await asyncio.sleep(1.0)
-            i += 1
 
