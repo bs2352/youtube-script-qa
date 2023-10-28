@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Optional
 import os
 import sys
 import json
@@ -74,10 +74,14 @@ class YoutubeSummarize:
         return
 
 
-    def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> SummaryResult:
+    def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResult]:
+        summary: Optional[SummaryResult] = None
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
-            summary: SummaryResult = self._run(mode)
+            try:
+                summary = self._run(mode)
+            except:
+                pass
             self.loading_canceled = True
             while future_loading.done() is False:
                 time.sleep(1)
@@ -204,11 +208,12 @@ class YoutubeSummarize:
 
 
 def get_summary (vid: str) -> str:
+    summary: Optional[SummaryResult] = None
     summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
     if os.path.exists(summary_file):
         with open(summary_file, 'r') as f:
-            summary: SummaryResult = json.load(f)
-        return "\n".join(summary["detail"])
-    # summary: SummaryResult = YoutubeSummarize(vid, debug=True).run(mode=MODE_DETAIL)
-    summary: SummaryResult = YoutubeSummarize(vid).run(mode=MODE_DETAIL)
-    return "\n".join(summary["detail"])
+            summary = json.load(f)
+    else:
+        # summary = YoutubeSummarize(vid, debug=True).run(mode=MODE_DETAIL)
+        summary = YoutubeSummarize(vid).run(mode=MODE_DETAIL)
+    return "\n".join(summary["detail"]) if summary is not None else ""

@@ -189,7 +189,10 @@ class YoutubeQA:
         answer: str = ""
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
-            answer = self._run_query(query)
+            try:
+                answer = self._run_query(query)
+            except:
+                pass
             self.loading_canceled = True
             while future_loading.done() is False:
                 time.sleep(1)
@@ -197,13 +200,11 @@ class YoutubeQA:
         return answer
 
 
-    def _run_query (self, query: str = "aaa") -> str:
+    def _run_query (self, query: str) -> str:
         if self.index is None:
             return ""
-
-        mode = self._which_run_mode(query)
-
         answer: str = ""
+        mode: int = self._which_run_mode(query)
         if mode == RUN_MODE_SEARCH:
             answer = self._search_and_answer(query)
         if mode == RUN_MODE_SUMMARY:
