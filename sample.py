@@ -704,8 +704,7 @@ def qa_with_function_calling ():
     def answer_from_search (question):
         from yts.qa import YoutubeQA
         yqa = YoutubeQA(vid)
-        yqa.prepare_query()
-        return yqa.run_query(question)
+        return yqa.run(question)
 
 
     def answer_from_summary (question):

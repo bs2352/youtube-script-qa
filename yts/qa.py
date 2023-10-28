@@ -4,7 +4,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
-import asyncio
 
 from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
 from llama_index.indices.query.base import BaseQueryEngine
@@ -92,7 +91,8 @@ class YoutubeQA:
         self.detail: bool = detail
         self.debug: bool = debug
         self.url: str = f'https://www.youtube.com/watch?v={vid}'
-        self.title: str = ""
+        video_info = YouTube(self.url).vid_info["videoDetails"]
+        self.title: str = video_info['title']
 
         self.index_dir: str = f'{os.environ["INDEX_STORE_DIR"]}/{self.vid}'
         self.service_context: ServiceContext = self._setup_llm()
@@ -122,10 +122,12 @@ class YoutubeQA:
         return
 
 
-    def prepare_query (self) -> None:
-        self.title = YouTube(self.url).vid_info["videoDetails"]["title"]
-        self.index = self._load_index() if os.path.isdir(self.index_dir) else \
-                     self._create_index()
+    def _prepare_index (self) -> Optional[GPTVectorStoreIndex]:
+        if self.index is not None:
+            return self.index
+        if os.path.isdir(self.index_dir):
+            return self._load_index()
+        return self._create_index()
 
 
     def _load_index (self) -> GPTVectorStoreIndex:
@@ -181,7 +183,7 @@ class YoutubeQA:
         return index
 
 
-    def run_query (self, query: str) -> str:
+    def run (self, query: str) -> str:
         """（メモ）
         メインスレッドでQAを行う
         loadingは別スレッドで実行しQAが終われば停止する
@@ -201,8 +203,6 @@ class YoutubeQA:
 
 
     def _run_query (self, query: str) -> str:
-        if self.index is None:
-            return ""
         answer: str = ""
         mode: int = self._which_run_mode(query)
         if mode == RUN_MODE_SEARCH:
@@ -216,7 +216,6 @@ class YoutubeQA:
     def _which_run_mode (self, query: str) -> int:
         if query == "":
             return RUN_MODE_SUMMARY
-
         llm = setup_llm_from_environment()
         prompt = PromptTemplate(
             template=WHICH_RUN_MODE_PROMPT_TEMPLATE,
@@ -244,8 +243,9 @@ class YoutubeQA:
 
     def _search_and_answer (self, query: str) -> str:
         if self.index is None:
-            return ""
-
+            self.index = self._prepare_index()
+            if self.index is None:
+                return ""
         # より詳細にクエリエンジンを制御したい場合は以下を参照
         # https://gpt-index.readthedocs.io/en/v0.6.26/guides/primer/usage_pattern.html
         query_engine: BaseQueryEngine = self.index.as_query_engine(similarity_top_k=self.ref_source)

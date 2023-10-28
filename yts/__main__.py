@@ -16,7 +16,6 @@ dotenv.load_dotenv()
 
 def qa (args):
     yqa = YoutubeQA(args.vid, args.source, args.detail, args.debug)
-    yqa.prepare_query()
 
     # ちょっとサービス（要約はあれば表示する）
     print(f'(Title) {yqa.title}')
@@ -29,7 +28,7 @@ def qa (args):
         query = input("Query: ").strip()
         if query == "":
             break
-        answer = yqa.run_query(query)
+        answer = yqa.run(query)
         print(f'Answer: {answer}\n')
 
         if args.detail:
