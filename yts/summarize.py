@@ -14,6 +14,7 @@ from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks, loading_for_async_func
+from .types import SummaryResult
 
 
 MODE_CONCISE = 0x01
@@ -70,7 +71,7 @@ class YoutubeSummarize:
 
 
     @loading_for_async_func
-    def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Dict[str, int|str|List[str]]:
+    def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> SummaryResult:
         # 準備
         self.chain = self._prepare_summarize_chain()
         self.chunks = self._prepare_transcriptions()
@@ -85,7 +86,7 @@ class YoutubeSummarize:
         if mode & MODE_DETAIL > 0:
             detail_summary = self._summarize_in_detail()
 
-        summary: Dict[str, int|str|List[str]] = {
+        summary: SummaryResult = {
             "title": self.title,
             "author": self.author,
             "lengthSeconds": self.lengthSeconds,
@@ -167,3 +168,13 @@ class YoutubeSummarize:
             groups[idx].append(chunk)
         return [group for group in groups if len(group) > 0]
 
+
+def get_summary (vid: str) -> str:
+    summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
+    if os.path.exists(summary_file):
+        with open(summary_file, 'r') as f:
+            summary: SummaryResult = json.load(f)
+        return "\n".join(summary["detail"])
+    # summary: SummaryResult = YoutubeSummarize(vid, debug=True).run(mode=MODE_DETAIL)
+    summary: SummaryResult = YoutubeSummarize(vid).run(mode=MODE_DETAIL)
+    return "\n".join(summary["detail"])

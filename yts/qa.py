@@ -4,16 +4,77 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, Future, wait, FIRST_COMPLETED
 import sys
 import time
+import asyncio
 
-from llama_index import download_loader, GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
+from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
 from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
+from langchain import LLMChain, PromptTemplate
+from langchain.schema import LLMResult, ChatGeneration
 
 from .types import TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
+from .summarize import get_summary
+
+
+
+RUN_MODE_SEARCH  = 0x01
+RUN_MODE_SUMMARY = 0x02
+
+WHICH_RUN_MODE_PROMPT_TEMPLATE  = """「{title}」というタイトルの動画から次の質問に回答してください。
+
+質問：{question}
+"""
+WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES = ["title", "question"]
+WHICH_RUN_MODE_FUNCTIONS = [
+    {
+        "name": "answer_question_about_specific_things",
+        "description": "Answer questions about specific things mentioned in a given video",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "動画のタイトル"
+                },
+                "question": {
+                    "type": "string",
+                    "description": "質問",
+                }
+            },
+            "required": ["title", "question"]
+        }
+    },
+    {
+        "name": "answer_question_about_general_content",
+        "description": "View the entire video and Answer questions about the general content of a given video",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "動画のタイトル",
+                },
+                "question": {
+                    "type": "string",
+                    "description": "質問",
+                }
+            },
+            "required": ["title", "question"]
+        }
+    },
+]
+
+
+QA_PROMPT_TEMPLATE = """{question}
+以下の文書の内容から回答してください。
+
+{summary}
+"""
+QA_PROMPT_TEMPLATE_VARIABLES = ["question", "summary"]
 
 
 class YoutubeQA:
@@ -121,27 +182,66 @@ class YoutubeQA:
 
 
     def run_query (self, query: str) -> str:
+        """（メモ）
+        メインスレッドでQAを行う
+        loadingは別スレッドで実行しQAが終われば停止する
+        """
         answer: str = ""
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            futures: List[Future] = []
-            futures.append(executor.submit(self._run, query=query))
-            futures.append(executor.submit(self._loading))
-
-            wait(futures, timeout=60, return_when=FIRST_COMPLETED)
-
-            if futures[0].done():
-                answer = futures[0].result()
-            else:
-                futures[0].cancel()
-
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future_loading = executor.submit(self._loading)
+            answer = self._run_query(query)
             self.loading_canceled = True
-            while futures[1].done() is False:
+            while future_loading.done() is False:
                 time.sleep(1)
 
         return answer
 
 
-    def _run (self, query: str) -> str:
+    def _run_query (self, query: str = "aaa") -> str:
+        if self.index is None:
+            return ""
+
+        mode = self._which_run_mode(query)
+
+        answer: str = ""
+        if mode == RUN_MODE_SEARCH:
+            answer = self._search_and_answer(query)
+        if mode == RUN_MODE_SUMMARY:
+            answer = self._summarize_and_answer(query)
+
+        return answer
+
+
+    def _which_run_mode (self, query: str) -> int:
+        if query == "":
+            return RUN_MODE_SUMMARY
+
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=WHICH_RUN_MODE_PROMPT_TEMPLATE,
+            input_variables=WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES
+        )
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            llm_kwargs={
+                "functions": WHICH_RUN_MODE_FUNCTIONS
+            },
+            output_key="function",
+            verbose=True
+        )
+        result: LLMResult = chain.generate([{"title": self.title, "question": query}])
+        generation: ChatGeneration = result.generations[0][0] # type: ignore
+        message = generation.message.additional_kwargs
+        func_name = WHICH_RUN_MODE_FUNCTIONS[0]["name"]
+        if "function_call" in message:
+            func_name = message["function_call"]["name"]
+
+        return RUN_MODE_SEARCH if func_name == WHICH_RUN_MODE_FUNCTIONS[0]["name"] else \
+               RUN_MODE_SUMMARY
+
+
+    def _search_and_answer (self, query: str) -> str:
         if self.index is None:
             return ""
 
@@ -152,7 +252,23 @@ class YoutubeQA:
         self.query_response = response
 
         return str(self.query_response).strip()
-    
+
+
+    def _summarize_and_answer (self, query: str) -> str:
+        summary: str = get_summary(self.vid)
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=QA_PROMPT_TEMPLATE,
+            input_variables=QA_PROMPT_TEMPLATE_VARIABLES
+        )
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            # verbose=True
+        )
+        answer: str  = chain.run(question=query, summary=summary)
+        return answer
+
 
     def _loading (self):
         chars = [

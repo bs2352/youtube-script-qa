@@ -1,3 +1,5 @@
+# pyright: reportMissingModuleSource=false
+
 import os
 # from llama_index import download_loader, GPTVectorStoreIndex, Document
 # from youtube_transcript_api import YouTubeTranscriptApi
