@@ -1,3 +1,4 @@
+from typing import Optional
 import dotenv
 import argparse
 import os
@@ -5,6 +6,7 @@ import json
 
 from yts.qa import YoutubeQA
 from yts.summarize import YoutubeSummarize
+from yts.types import SummaryResult
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 DEFAULT_REF_SOURCE = 3
@@ -38,15 +40,16 @@ def qa (args):
 
 def summary (args):
     ys = YoutubeSummarize(args.vid, args.debug)
-    summary = ys.run()
-
-    if "title" in summary.keys():
-        print('[Title]\n', summary['title'], '\n')
-    if "concise" in summary.keys():
-        print("[Concise Summary]\n", summary["concise"], '\n')
-    if "detail" in summary.keys():
+    sm: Optional[SummaryResult] = ys.run()
+    if sm is None:
+        return
+    if "title" in sm.keys():
+        print('[Title]\n', sm['title'], '\n')
+    if "concise" in sm.keys():
+        print("[Concise Summary]\n", sm["concise"], '\n')
+    if "detail" in sm.keys():
         print('[Detail Summary]')
-        for s in summary["detail"]: # type: ignore
+        for s in sm["detail"]:
             print(f'・{s}\n')
 
 
