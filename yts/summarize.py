@@ -4,6 +4,8 @@ import sys
 import json
 import asyncio
 import time
+from concurrent.futures import ThreadPoolExecutor
+
 
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
@@ -62,6 +64,8 @@ class YoutubeSummarize:
         self.author: str = video_info['author']
         self.lengthSeconds: int = int(video_info['lengthSeconds'])
 
+        self.loading_canceled: bool = False
+
 
     def _debug (self, message: str, end: str = "\n", flush: bool = False) -> None:
         if self.debug is False:
@@ -70,8 +74,17 @@ class YoutubeSummarize:
         return
 
 
-    @loading_for_async_func
     def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> SummaryResult:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future_loading = executor.submit(self._loading)
+            summary: SummaryResult = self._run(mode)
+            self.loading_canceled = True
+            while future_loading.done() is False:
+                time.sleep(1)
+        return summary
+
+
+    def _run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> SummaryResult:
         # 準備
         self.chain = self._prepare_summarize_chain()
         self.chunks = self._prepare_transcriptions()
@@ -167,6 +180,27 @@ class YoutubeSummarize:
             idx = min(idx, group_num - 1)
             groups[idx].append(chunk)
         return [group for group in groups if len(group) > 0]
+
+
+    def _loading (self):
+        chars = [
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '😍',
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '🤪',
+            '/', '―', '\\', '|', '/', '―', '\\', '|', '😎',
+        ]
+        self.loading_canceled = False
+        i = 0
+        while i >= 0:
+            i %= len(chars)
+            sys.stdout.write("\033[2K\033[G %s " % chars[i])
+            sys.stdout.flush()
+            time.sleep(1.0)
+            i += 1
+            if self.loading_canceled is True:
+                break
+        sys.stdout.write("\033[2K\033[G")
+        sys.stdout.flush()
+        return
 
 
 def get_summary (vid: str) -> str:

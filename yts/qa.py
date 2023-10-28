@@ -1,7 +1,7 @@
 from typing import Optional, List, Generator, Tuple
 import os
 import logging
-from concurrent.futures import ThreadPoolExecutor, Future, wait, FIRST_COMPLETED
+from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
 import asyncio
