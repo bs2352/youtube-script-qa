@@ -68,12 +68,20 @@ WHICH_RUN_MODE_FUNCTIONS = [
 ]
 
 
-QA_PROMPT_TEMPLATE = """{question}
-以下の文書の内容から回答してください。
+QA_SUMMARIZE_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
 
-{summary}
+タイトル：
+{title}
+
+内容：
+{content}
+
+質問：
+{question}
+
+回答：
 """
-QA_PROMPT_TEMPLATE_VARIABLES = ["question", "summary"]
+QA_SUMMARIZE_PROMPT_TEMPLATE_VARIABLES = ["title", "content", "question"]
 
 
 class YoutubeQA:
@@ -90,6 +98,7 @@ class YoutubeQA:
         self.ref_source: int = ref_sources
         self.detail: bool = detail
         self.debug: bool = debug
+
         self.url: str = f'https://www.youtube.com/watch?v={vid}'
         video_info = YouTube(self.url).vid_info["videoDetails"]
         self.title: str = video_info['title']
@@ -131,12 +140,12 @@ class YoutubeQA:
 
 
     def _load_index (self) -> GPTVectorStoreIndex:
-            from llama_index import StorageContext, load_index_from_storage
-            self._debug(f'load index from {self.index_dir} ...', end="", flush=True)
-            storage_context: StorageContext = StorageContext.from_defaults(persist_dir=self.index_dir)
-            index: GPTVectorStoreIndex = load_index_from_storage(storage_context, service_context=self.service_context) # type: ignore
-            self._debug("fin", flush=True)
-            return index
+        from llama_index import StorageContext, load_index_from_storage
+        self._debug(f'load index from {self.index_dir} ...', end="", flush=True)
+        storage_context: StorageContext = StorageContext.from_defaults(persist_dir=self.index_dir)
+        index: GPTVectorStoreIndex = load_index_from_storage(storage_context, service_context=self.service_context) # type: ignore
+        self._debug("fin", flush=True)
+        return index
 
 
     def _create_index (self) -> GPTVectorStoreIndex:
@@ -259,15 +268,20 @@ class YoutubeQA:
         summary: str = get_summary(self.vid)
         llm = setup_llm_from_environment()
         prompt = PromptTemplate(
-            template=QA_PROMPT_TEMPLATE,
-            input_variables=QA_PROMPT_TEMPLATE_VARIABLES
+            template=QA_SUMMARIZE_PROMPT_TEMPLATE,
+            input_variables=QA_SUMMARIZE_PROMPT_TEMPLATE_VARIABLES
         )
         chain = LLMChain(
             llm=llm,
             prompt=prompt,
             # verbose=True
         )
-        answer: str  = chain.run(question=query, summary=summary)
+        args = {
+            "question": query,
+            "content": summary,
+            "title": self.title
+        }
+        answer: str = chain.run(**args)
         return answer
 
 
