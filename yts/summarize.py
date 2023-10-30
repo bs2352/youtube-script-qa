@@ -84,7 +84,7 @@ class YoutubeSummarize:
                 pass
             self.loading_canceled = True
             while future_loading.done() is False:
-                time.sleep(1)
+                time.sleep(0.5)
         return summary
 
 

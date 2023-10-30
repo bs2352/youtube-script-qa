@@ -195,9 +195,10 @@ class YoutubeQA:
     def run (self, query: str) -> str:
         """（メモ）
         メインスレッドでQAを行う
-        loadingは別スレッドで実行しQAが終われば停止する
+        別スレッドでloadingを行う（QAが終われば停止する）
         """
         answer: str = ""
+        self.query_response = None
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
             try:
@@ -206,7 +207,7 @@ class YoutubeQA:
                 pass
             self.loading_canceled = True
             while future_loading.done() is False:
-                time.sleep(1)
+                time.sleep(0.5)
 
         return answer
 
@@ -246,8 +247,11 @@ class YoutubeQA:
         if "function_call" in message:
             func_name = message["function_call"]["name"]
 
-        return RUN_MODE_SEARCH if func_name == WHICH_RUN_MODE_FUNCTIONS[0]["name"] else \
+        mode = RUN_MODE_SEARCH if func_name == WHICH_RUN_MODE_FUNCTIONS[0]["name"] else \
                RUN_MODE_SUMMARY
+        self._debug(f"QA mode = {mode}", flush=True)
+
+        return mode
 
 
     def _search_and_answer (self, query: str) -> str:
