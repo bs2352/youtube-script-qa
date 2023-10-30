@@ -18,7 +18,7 @@ def setup_llm_from_environment () -> LLMType:
     llm_args: Dict[str, Any] = {
         "client": None,
         "temperature": float(os.environ['LLM_TEMPERATURE']),
-        "request_timeout": 30,
+        "request_timeout": 60,
     }
     if "OPENAI_API_KEY" in os.environ.keys():
         llm_args = {
