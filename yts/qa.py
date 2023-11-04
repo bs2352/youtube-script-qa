@@ -178,10 +178,12 @@ class YoutubeQA:
         documents = [
             Document(text=chunk.text.replace("\n", " "), doc_id=chunk.id) for chunk in chunks
         ]
-        index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(documents, service_context=self.service_context)
-        # index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(documents, service_context=self.service_context, use_async=True)
-
-        self._debug("fin", flush=True)
+        index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(
+            documents,
+            service_context=self.service_context,
+            show_progress=self.debug,
+            # use_async=True, # バグ？なぜかエラーになる。
+        )
 
         # ディスクに保存しておく
         self._debug(f'save index to {self.index_dir} ...', end="", flush=True)
