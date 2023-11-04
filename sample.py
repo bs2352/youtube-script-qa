@@ -610,7 +610,8 @@ def test_function_calling ():
 
 def qa_with_function_calling ():
     from pytube import YouTube
-    from langchain import PromptTemplate, LLMChain
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import LLMChain
     from langchain.schema import LLMResult, ChatGeneration
     from yts.utils import setup_llm_from_environment
 

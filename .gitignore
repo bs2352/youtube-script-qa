@@ -1,10 +1,8 @@
 .env
 .venv
-indexes
-summaries
 __pycache__
+data/*
 vid.txt
-summarize.sh
 memo.txt
 xxx
 yyy
