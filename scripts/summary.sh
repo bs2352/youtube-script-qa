@@ -5,7 +5,6 @@ SUMMARY_DIR="../data/summaries" # 要約の保存先
 
 
 main() {
-    echo $1
     case $1 in
         "summarize" ) summarize ;;
         "summary" ) summary ;;
