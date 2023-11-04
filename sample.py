@@ -800,6 +800,67 @@ def test_decorate_loading ():
     return "fin"
 
 
+def embedding_async ():
+    from langchain.embeddings import OpenAIEmbeddings
+    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
+    from yts.utils import setup_llm_from_environment, setup_embedding_from_environment
+    import dotenv
+
+    dotenv.load_dotenv(".env")
+
+    texts = [
+        "オリックスバファローズ優勝するぞ！" for _ in range(0, 100)
+    ]
+    llm_embeddings = setup_embedding_from_environment()
+
+    # OK
+    # embedding = llm_embeddings.embed_query("オリックスバファローズ優勝するぞ！")
+    # embedding = asyncio.run(llm_embeddings.aembed_query("オリックスバファローズ優勝するぞ！"))
+
+    # OK
+    # async def aget_embedding ():
+    #     tasks = [llm_embeddings.aembed_query("オリックスバファローズ優勝するぞ！")]
+    #     return await asyncio.gather(*tasks)
+    # embedding = asyncio.run(aget_embedding())
+
+    # OK
+    # embedding = llm_embeddings.embed_documents(texts)
+    # async def aembed_documents ():
+    #     return await llm_embeddings.aembed_documents(texts)
+    # embedding = asyncio.run(aembed_documents())
+
+    # NG
+    async def aget_embedding_2 ():
+        tasks = [llm_embeddings.aembed_query(text) for text in texts]
+        return await asyncio.gather(*tasks)
+    embedding = asyncio.run(aget_embedding_2())
+
+    print(embedding)
+
+    # texts = [
+    #     "オリックスバファローズ優勝するぞ！" for _ in range(0, 50)
+    #     # "ビッグボスも頑張って欲しい。"
+    # ]
+    # documents = [
+    #     Document(text=text.replace("\n", " "), doc_id=f"id-{idx}") for idx, text in enumerate(texts)
+    # ]
+    # dotenv.load_dotenv(".env")
+    # llm = setup_llm_from_environment()
+    # embedding = setup_embedding_from_environment()
+    # llm_predictor: LLMPredictor = LLMPredictor(llm=llm)
+    # embedding_llm: LangchainEmbedding = LangchainEmbedding(embedding)
+    # service_context: ServiceContext = ServiceContext.from_defaults(
+    #     llm_predictor = llm_predictor,
+    #     embed_model = embedding_llm,
+    # )
+    # index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(
+    #     documents,
+    #     service_context=service_context,
+    #     show_progress=True,
+    #     use_async=True, # バグ？なぜかエラーになる。
+    # )
+    print("fin")
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -809,6 +870,7 @@ if __name__ == "__main__":
     # async_run()
     # count_tokens()
     # test_function_calling()
-    qa_with_function_calling()
+    # qa_with_function_calling()
     # test_loading()
     # print(test_decorate_loading())
+    embedding_async()
