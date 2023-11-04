@@ -11,7 +11,8 @@ from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
-from langchain import LLMChain, PromptTemplate
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 from langchain.schema import LLMResult, ChatGeneration
 
 from .types import TranscriptChunkModel, YoutubeTranscriptType
@@ -177,8 +178,8 @@ class YoutubeQA:
         documents = [
             Document(text=chunk.text.replace("\n", " "), doc_id=chunk.id) for chunk in chunks
         ]
-
         index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(documents, service_context=self.service_context)
+        # index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(documents, service_context=self.service_context, use_async=True)
 
         self._debug("fin", flush=True)
 
@@ -203,11 +204,12 @@ class YoutubeQA:
             future_loading = executor.submit(self._loading)
             try:
                 answer = self._run_query(query)
-            except:
-                pass
-            self.loading_canceled = True
-            while future_loading.done() is False:
-                time.sleep(0.5)
+            except Exception as e:
+                raise e
+            finally:
+                self.loading_canceled = True
+                while future_loading.done() is False:
+                    time.sleep(0.5)
 
         return answer
 
