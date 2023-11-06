@@ -1,4 +1,4 @@
-from typing import Optional, List, Generator, Tuple
+from typing import Optional, List, Generator, Tuple, Any, Dict
 import os
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -86,11 +86,13 @@ QA_SUMMARIZE_PROMPT_TEMPLATE_VARIABLES = ["title", "content", "question"]
 
 
 class YoutubeQA:
-    def __init__(self,
-                 vid: str = "",
-                 ref_sources: int = 3,
-                 detail: bool = False,
-                 debug: bool = False
+    def __init__(
+        self,
+        vid: str = "",
+        ref_sources: int = 3,
+        detail: bool = False,
+        loading: bool = False,
+        debug: bool = False
     ) -> None:
         if vid == "":
             raise ValueError("video id is invalid.")
@@ -110,6 +112,7 @@ class YoutubeQA:
         self.index: Optional[GPTVectorStoreIndex] = None
         self.query_response: Optional[RESPONSE_TYPE] = None
 
+        self.loading: bool = loading
         self.loading_canceled: bool = False
 
 
@@ -182,7 +185,7 @@ class YoutubeQA:
             documents,
             service_context=self.service_context,
             show_progress=self.debug,
-            # use_async=True, # バグ？なぜかエラーになる。
+            # use_async=True, # 制限エラー、呼び出しすぎ
         )
 
         # ディスクに保存しておく
@@ -196,27 +199,30 @@ class YoutubeQA:
 
 
     def run (self, query: str) -> str:
-        """（メモ）
-        メインスレッドでQAを行う
-        別スレッドでloadingを行う（QAが終われば停止する）
-        """
-        answer: str = ""
         self.query_response = None
+        if self.loading is True:
+            return self._run_with_loading(query)
+        return self._run(query)
+
+
+    def _run_with_loading (self, query: str) -> str:
+        # メインスレッドでQAを行う
+        # 別スレッドでloadingを行う（QAが終われば停止する）
+        answer: str = ""
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
             try:
-                answer = self._run_query(query)
+                answer = self._run(query)
             except Exception as e:
                 raise e
             finally:
                 self.loading_canceled = True
                 while future_loading.done() is False:
                     time.sleep(0.5)
-
         return answer
 
 
-    def _run_query (self, query: str) -> str:
+    def _run (self, query: str) -> str:
         answer: str = ""
         mode: int = self._which_run_mode(query)
         if mode == RUN_MODE_SEARCH:
@@ -284,7 +290,7 @@ class YoutubeQA:
             prompt=prompt,
             # verbose=True
         )
-        args = {
+        args: Dict[str, Any] = {
             "question": query,
             "content": summary,
             "title": self.title

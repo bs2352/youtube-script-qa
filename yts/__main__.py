@@ -15,7 +15,7 @@ dotenv.load_dotenv()
 
 
 def qa (args):
-    yqa = YoutubeQA(args.vid, args.source, args.detail, args.debug)
+    yqa = YoutubeQA(args.vid, args.source, args.detail, True, args.debug)
 
     # ちょっとサービス（要約はあれば表示する）
     print(f'(Title) {yqa.title}')
@@ -38,7 +38,7 @@ def qa (args):
 
 
 def summary (args):
-    ys = YoutubeSummarize(args.vid, args.debug)
+    ys = YoutubeSummarize(args.vid, True, args.debug)
     sm: Optional[SummaryResult] = ys.run()
     if sm is None:
         return

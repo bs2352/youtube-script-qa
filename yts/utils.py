@@ -18,7 +18,7 @@ def setup_llm_from_environment () -> LLMType:
     llm_args: Dict[str, Any] = {
         "client": None,
         "temperature": float(os.environ['LLM_TEMPERATURE']),
-        "request_timeout": 60,
+        "request_timeout": int(os.environ['LLM_REQUEST_TIMEOUT']),
     }
     if "OPENAI_API_KEY" in os.environ.keys():
         llm_args = {
@@ -29,7 +29,7 @@ def setup_llm_from_environment () -> LLMType:
         if os.environ['OPENAI_LLM_MODEL_NAME'].startswith("gpt-"):
             llm_class = ChatOpenAI
     else:
-        llm_args ={
+        llm_args = {
             **llm_args,
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
             "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],

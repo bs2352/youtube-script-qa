@@ -258,13 +258,15 @@ def get_topic_from_summary ():
     from langchain.chains import LLMChain
     from yts.utils import setup_llm_from_environment
     import json
+    import dotenv
 
+    dotenv.load_dotenv()
     vid = DEFAULT_VID
     # vid = "Tia4YJkNlQ0"
     # vid = "Bd9LWW4cxEU"
     if len(sys.argv) >= 2:
         vid = sys.argv[1]
-    with open(f"./summaries/{vid}", "r") as f:
+    with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
         summary = json.load(f)
 
     prompt_template = \
@@ -865,7 +867,7 @@ if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
     # get_topic()
-    # get_topic_from_summary()
+    get_topic_from_summary()
     # kmeans_embedding()
     # async_run()
     # count_tokens()
@@ -873,4 +875,4 @@ if __name__ == "__main__":
     # qa_with_function_calling()
     # test_loading()
     # print(test_decorate_loading())
-    embedding_async()
+    # embedding_async()

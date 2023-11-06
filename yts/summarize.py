@@ -15,7 +15,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
-from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks, loading_for_async_func
+from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
 from .types import SummaryResult
 
 
@@ -41,9 +41,11 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を200字以内の日本語で簡潔�
 
 
 class YoutubeSummarize:
-    def __init__(self,
-                 vid: str = "",
-                 debug: bool = False
+    def __init__(
+        self,
+        vid: str = "",
+        loading: bool = False,
+        debug: bool = False
     ) -> None:
         if vid == "":
             raise ValueError("video id is invalid.")
@@ -64,6 +66,7 @@ class YoutubeSummarize:
         self.author: str = video_info['author']
         self.lengthSeconds: int = int(video_info['lengthSeconds'])
 
+        self.loading: bool = loading
         self.loading_canceled: bool = False
 
 
@@ -75,6 +78,12 @@ class YoutubeSummarize:
 
 
     def run (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResult]:
+        if self.loading is True:
+            return self._run_with_loading(mode)
+        return self._run(mode)
+
+
+    def _run_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResult]:
         summary: Optional[SummaryResult] = None
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
