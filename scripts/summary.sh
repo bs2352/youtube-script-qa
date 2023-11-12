@@ -1,5 +1,11 @@
 #!/bin/sh
 
+CUR_DIR=`pwd`
+if [ `basename $CUR_DIR` != "scripts" ]; then
+    cd scripts
+fi
+
+
 VID_LIST="../vid.txt" # 動画IDのリスト
 SUMMARY_DIR="../data/summaries" # 要約の保存先
 

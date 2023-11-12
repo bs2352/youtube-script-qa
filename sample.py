@@ -257,6 +257,7 @@ def get_topic_from_summary ():
     from langchain.prompts import PromptTemplate
     from langchain.chains import LLMChain
     from yts.utils import setup_llm_from_environment
+    from yts.types import SummaryResult
     import json
     import dotenv
 
@@ -265,9 +266,16 @@ def get_topic_from_summary ():
     # vid = "Tia4YJkNlQ0"
     # vid = "Bd9LWW4cxEU"
     if len(sys.argv) >= 2:
-        vid = sys.argv[1]
+        vid = sys.argv[1] if len(sys.argv[1]) > 5 else vid
+
+    mode = "detail"
+    if len(sys.argv) == 2 and len(sys.argv[1]) <= 5:
+        mode = "concise"
+    if len(sys.argv) >= 3:
+        mode = "concise"
+
     with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
-        summary = json.load(f)
+        summary: SummaryResult = json.load(f)
 
     prompt_template = \
 """私はYoutube動画のアジェンダを作成しています。
@@ -295,12 +303,15 @@ def get_topic_from_summary ():
     summaries = ""
     for detail in summary["detail"]:
         summaries = f'{summaries}\n・{detail}'
+    if mode == "concise":
+        summaries = summary["concise"]
 
     inputs = {
         "title": summary["title"],
         "summaries": summaries,
     }
     # print(prompt.format(**inputs))
+    print(f"mode={mode}")
     print(llm_chain.predict(**inputs))
 
 
@@ -863,6 +874,59 @@ def embedding_async ():
     # )
     print("fin")
 
+
+def which_document_to_read ():
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import LLMChain
+    import dotenv
+    from yts.utils import setup_llm_from_environment
+
+    dotenv.load_dotenv(".env")
+
+    prompt_template = """次の質問に回答するためにはどのドキュメントを参照すれば良いですか？
+「ドキュメント：」に記載されたものから参照すべきドキュメントを全て選択してください。
+
+質問：
+{question}
+
+ドキュメント：
+{documents}
+
+選択したドキュメント：
+"""
+
+    documents = [
+        "管理サーバー導入の手引き.pdf",
+        "検査サーバー導入の手引き.pdf",
+        "管理サーバー利用の手引き.pdf",
+        "検査サーバー利用の手引き.pdf",
+    ]
+
+    llm = setup_llm_from_environment()
+    prompt = PromptTemplate(
+        template=prompt_template,
+        input_variables=["question", "documents"]
+    )
+    chain = LLMChain(
+        llm=llm,
+        prompt=prompt
+    )
+
+    documents_val = ""
+    for idx, document in enumerate(documents):
+        documents_val += f"{idx}: {document}\n"
+
+    question_val = "ライセンスはどのように登録すれば良いですか？"
+    question_val = "キーワード検査をするためにはどのように設定すれば良いですか？"
+
+    result = chain.run(
+        question=question_val,
+        documents=documents_val
+    )
+
+    print(result)
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -876,3 +940,4 @@ if __name__ == "__main__":
     # test_loading()
     # print(test_decorate_loading())
     # embedding_async()
+    # which_document_to_read()
