@@ -489,7 +489,7 @@ def count_tokens ():
         # とりあえずだいたいでOK
         # https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken
         count = len(encoding.encode(text))
-        print(model, ":", count, "/", count_tokens(text))
+        print(model, ":", count, "/", count_tokens(text), "/", f'{len(text)}chars')
 
 
 from tenacity import retry, wait_fixed, stop_after_attempt, before_log

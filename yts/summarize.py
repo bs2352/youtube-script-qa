@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 import os
 import sys
 import json
@@ -7,6 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 
+from langchain.chains import LLMChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
 from langchain.prompts import PromptTemplate
@@ -38,6 +39,21 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を200字以内の日本語で簡潔�
 
 
 要約:"""
+
+CONCISELY_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
+
+タイトル：
+{title}
+
+内容：
+{content}
+
+質問：
+この動画の内容を全体を網羅してできるだけ簡潔に要約してください。
+
+回答：
+"""
+CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
 
 class YoutubeSummarize:
@@ -102,15 +118,16 @@ class YoutubeSummarize:
         self.chain = self._prepare_summarize_chain()
         self.chunks = self._prepare_transcriptions()
 
-        # 簡潔な要約
-        concise_summary = ""
-        if mode & MODE_CONCISE > 0:
-            concise_summary = self._summarize_concisely()
-
         # 詳細な要約
         detail_summary: List[str] = []
         if mode & MODE_DETAIL > 0:
             detail_summary = self._summarize_in_detail()
+
+        # 簡潔な要約
+        concise_summary = ""
+        if mode & MODE_CONCISE > 0:
+            # concise_summary = self._summarize_concisely()
+            concise_summary = self._summarize_concisely(detail_summary)
 
         summary: SummaryResult = {
             "title": self.title,
@@ -151,13 +168,22 @@ class YoutubeSummarize:
         )
 
 
-    def _summarize_concisely (self) -> str:
-        if self.chain is None:
-            return ""
-        tasks = [self.chain.arun([Document(page_content=chunk.text) for chunk in self.chunks])]
-        gather = asyncio.gather(*tasks)
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(gather)[0]
+    def _summarize_concisely (self, detail_summary: List[str]) -> str:
+        prompt = PromptTemplate(
+            template=CONCISELY_PROMPT_TEMPLATE,
+            input_variables=CONCISELY_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=self.llm,
+            prompt=prompt
+        )
+        # TODO: contentのトークン制限への対応（16kモデルへの変更で十分かもしれない）
+        args: Dict[str, str] = {
+            "title": self.title,
+            "content": "\n".join(detail_summary),
+        }
+        result: str = chain.run(**args)
+        return result
 
 
     def _summarize_in_detail (self) -> List[str]:
