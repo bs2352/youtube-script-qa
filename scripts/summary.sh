@@ -13,7 +13,7 @@ SUMMARY_DIR="../data/summaries" # 要約の保存先
 main() {
     case $1 in
         "summarize" ) summarize ;;
-        "summary" ) summary ;;
+        "summary" ) summary $2;;
         "list" ) list ;;
         * ) list;;
     esac
@@ -47,6 +47,9 @@ list() {
 summary() {
     for vid in `ls $SUMMARY_DIR`
     do
+        if [ "x${1}" != "x" -a "x${1}" != "x${vid}" ]; then
+            continue
+        fi
         echo $vid
         summary_file="$SUMMARY_DIR/$vid"
         cat $summary_file | jq | less
@@ -54,4 +57,4 @@ summary() {
 }
 
 
-main $1
+main $1 $2

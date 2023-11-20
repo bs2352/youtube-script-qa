@@ -281,7 +281,7 @@ def get_topic_from_summary ():
 """私はYoutube動画のアジェンダを作成しています。
 以下に記載する動画のタイトルと要約からアジェンダを作成してください。
 アジェンダには各セクションのタイトルのみを記載するようにしてください。
-またセクションはできるだけ少なくシンプルにまとめてください。
+またセクションはできるだけ少なくし、それぞれのタイトルはできるだけ簡潔にまとめてください。
 
 タイトル:
 {title}
@@ -290,6 +290,45 @@ def get_topic_from_summary ():
 {summaries}
 
 アジェンダ:
+"""
+
+    prompt_template = \
+"""私はYoutube動画のアジェンダを作成しています。
+以下にアジェンダを作成するときの注意事項と動画のタイトルと要約を記載しています。
+注意事項をよく守って、タイトルと要約からアジェンダを作成してください。
+
+注意事項:
+・アジェンダには各セクションのタイトルのみを記載するようにしてください。
+・セクションはできるだけ少なくしてください。
+・それぞれのセクションに付与するタイトルはできるだけ簡潔にまとめてください。
+
+タイトル:
+{title}
+
+要約:
+{summaries}
+
+アジェンダ:
+"""
+
+    prompt_template = \
+"""I am creating an agenda for Youtube videos.
+Below are notes on creating an agenda, as well as video titles and summaries.
+Please follow the instructions carefully and create an agenda from the title and abstract.
+
+Notes:
+- Please write only the title of each section in the agenda.
+- Please keep the number of sections as small as possible.
+- Please keep the titles given to each section as concise as possible.
+- Please create the agenda in Japanese.
+
+title:
+{title}
+
+summary:
+{summaries}
+
+agenda:
 """
 
     # print(prompt_template)
