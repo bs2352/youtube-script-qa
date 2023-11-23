@@ -26,4 +26,5 @@ class SummaryResult (TypedDict):
     url: str
     concise: str
     detail: List[str]
+    topic: List[str]
 

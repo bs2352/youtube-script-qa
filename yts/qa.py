@@ -112,6 +112,8 @@ class YoutubeQA:
         self.index: Optional[GPTVectorStoreIndex] = None
         self.query_response: Optional[RESPONSE_TYPE] = None
 
+        self.summary: Optional[str] = None
+
         self.loading: bool = loading
         self.loading_canceled: bool = False
 
@@ -279,7 +281,8 @@ class YoutubeQA:
 
 
     def _summarize_and_answer (self, query: str) -> str:
-        summary: str = get_summary(self.vid)
+        if self.summary is None:
+            self.summary = get_summary(self.vid)
         llm = setup_llm_from_environment()
         prompt = PromptTemplate(
             template=QA_SUMMARIZE_PROMPT_TEMPLATE,
@@ -292,7 +295,7 @@ class YoutubeQA:
         )
         args: Dict[str, Any] = {
             "question": query,
-            "content": summary,
+            "content": self.summary,
             "title": self.title
         }
         answer: str = chain.run(**args)
