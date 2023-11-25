@@ -10,6 +10,8 @@ from llama_index.embeddings import LangchainEmbedding
 from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
+from llama_index.llms import ChatMessage, MessageRole
+from llama_index.prompts import ChatPromptTemplate
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 from langchain.chains import LLMChain
@@ -20,6 +22,8 @@ from .types import TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
 from .summarize import get_summary
 
+
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 RUN_MODE_SEARCH  = 0x01
@@ -272,9 +276,49 @@ class YoutubeQA:
             self.index = self._prepare_index()
             if self.index is None:
                 return ""
+
+        # 以下の理由からQAのプロンプトを変更する
+        # ・回答が英語になりがち
+        # ・回答が意訳されがちであるため
+        #（参照）prompts/chat_prompts.py
+        TEXT_QA_SYSTEM_PROMPT = ChatMessage(
+            content=(
+                "You are an expert Q&A system that is trusted around the world.\n"
+                "Always answer the query using the provided context information, "
+                "and not prior knowledge.\n"
+                "Some rules to follow:\n"
+                "1. Refer to the context provided within your answer as much as possible."
+                "2. Avoid statements like 'Based on the context, ...' or "
+                "'The context information ...' or anything along "
+                "those lines."
+                "3. Please answer in Japanese."
+            ),
+            role=MessageRole.SYSTEM,
+        )
+        TEXT_QA_PROMPT_TMPL_MSGS = [
+            TEXT_QA_SYSTEM_PROMPT,
+            ChatMessage(
+                content=(
+                    "Context information is below.\n"
+                    "---------------------\n"
+                    "{context_str}\n"
+                    "---------------------\n"
+                    "Given the context information and not prior knowledge, "
+                    "answer the query.\n"
+                    "Query: {query_str}\n"
+                    "Answer: "
+                ),
+                role=MessageRole.USER,
+            ),
+        ]
+        CHAT_TEXT_QA_PROMPT = ChatPromptTemplate(message_templates=TEXT_QA_PROMPT_TMPL_MSGS)
+
         # より詳細にクエリエンジンを制御したい場合は以下を参照
         # https://gpt-index.readthedocs.io/en/v0.6.26/guides/primer/usage_pattern.html
-        query_engine: BaseQueryEngine = self.index.as_query_engine(similarity_top_k=self.ref_source)
+        query_engine: BaseQueryEngine = self.index.as_query_engine(
+            similarity_top_k=self.ref_source,
+            text_qa_template=CHAT_TEXT_QA_PROMPT,
+        )
         response: RESPONSE_TYPE = query_engine.query(query)
         self.query_response = response
 
