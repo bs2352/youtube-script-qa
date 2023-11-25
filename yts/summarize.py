@@ -170,8 +170,7 @@ class YoutubeSummarize:
                 concise_summary = self._summarize_concisely(detail_summary)
                 if len(concise_summary) <= MAX_CONCISE_SUMMARY:
                     break
-                retry += 1
-                time.sleep(5.0)
+                retry += 1; time.sleep(5.0)
                 self._debug(f"retry [{retry}] - summarize concisely too long. ({len(concise_summary)})")
 
         # トピック抽出
@@ -182,8 +181,7 @@ class YoutubeSummarize:
                 topic = self._extract_topic(detail_summary)
                 if len(topic) <= MAX_TOPIC:
                     break
-                retry += 1
-                time.sleep(5.0)
+                retry += 1; time.sleep(5.0)
                 self._debug(f"retry - topic too much. ({len(topic)})")
 
         summary: SummaryResultType = {
