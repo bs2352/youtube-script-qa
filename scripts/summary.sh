@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 CUR_DIR=`pwd`
 if [ `basename $CUR_DIR` != "scripts" ]; then
