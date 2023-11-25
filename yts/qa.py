@@ -5,7 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
 
-from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
+from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
+from llama_index.embeddings import LangchainEmbedding
 from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
