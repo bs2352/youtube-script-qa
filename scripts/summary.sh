@@ -39,9 +39,9 @@ list() {
     for vid in `ls $SUMMARY_DIR`
     do
         summary_file="$SUMMARY_DIR/$vid"
-        title=`cat $summary_file | jq | grep title | cut -d ':' -f2 | sed -e 's/,$//' | sed -e 's/^[ \t]*//' | sed -e 's/^"//' | sed -e 's/"$//'`
+        title=`cat $summary_file | jq | grep title | head -n 1 | cut -d ':' -f2 | sed -e 's/,$//' | sed -e 's/^[ \t]*//' | sed -e 's/^"//' | sed -e 's/"$//'`
         author=`cat $summary_file | jq | grep author | cut -d ':' -f2 | sed -e 's/,$//' | sed -e 's/^[ \t]*//' | sed -e 's/^"//' | sed -e 's/"$//'`
-        echo "$vid\t$author\t$title"
+        echo -e "$vid\t$author\t$title"
     done
 }
 
