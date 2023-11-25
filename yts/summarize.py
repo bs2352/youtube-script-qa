@@ -25,22 +25,26 @@ MODE_DETAIL  = 0x02
 MODE_TOPIC   = 0x04
 MODE_ALL     = 0xff
 
-
-MAP_PROMPT_TEMPLATE = """以下の内容を重要な情報はできるだけ残して要約してください。:
-
-
-"{text}"
+MAX_CONCISE_SUMMARY = 300
+MAX_TOPIC = 10
+MAX_RETRY = 5
 
 
-要約:"""
-
-REDUCE_PROMPT_TEMPLATE = """以下の内容を全体を網羅して200字以内の日本語で簡潔に要約してください。:
+MAP_PROMPT_TEMPLATE = """以下の内容を重要な情報はできるだけ残して要約してください。
 
 
 "{text}"
 
 
 要約:"""
+
+REDUCE_PROMPT_TEMPLATE = """以下の内容を全体を網羅して日本語で簡潔に要約してください。
+
+
+"{text}"
+
+
+簡潔な要約:"""
 
 CONCISELY_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
 
@@ -59,30 +63,30 @@ CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
 TOPIC_PROMPT_TEMPLATE = \
 """I am creating an agenda for Youtube videos.
-Below are notes on creating an agenda, as well as video title and abstract.
-Please follow the instructions carefully and create an agenda from the title and abstract.
+Below are notes on creating an agenda, as well as video title and content.
+Please follow the instructions carefully and create an agenda from the title and content.
 
 Notes:
 - Please create an agenda that covers the entire content of the video.
-- Your agenda should include headings and a summary for each heading.
-- Please include important keywords in the heading and summary whenever possible.
+- Your agenda should include headings and some subheaddings for each heading.
+- Create headings and subheadings that follow the flow of the story.
+- Please include important keywords in the heading and subheading.
+- Please include only one topic per heading or subheading.
 - Please assign each heading a sequential number such as 1, 2, 3.
 - Please keep each heading as concise as possible.
-- Please add a "-" to the beginning of each summary and output it as bullet points.
-- Please create the summary as a subtitle, not as a sentence.
-- Please keep each summary as concise as possible.
+- Please add a "-" to the beginning of each subheading and output it as bullet points.
+- Please keep each subheading as concise as possible.
 - Please create the agenda in Japanese.
 
-title:
+Title:
 {title}
 
-abstract:
-{abstract}
+Content:
+{content}
 
-agenda:
-
+Agenda:
 """
-TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "abstract"]
+TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
 
 class YoutubeSummarize:
@@ -161,13 +165,26 @@ class YoutubeSummarize:
         # 簡潔な要約
         concise_summary = ""
         if mode & MODE_CONCISE > 0:
-            # concise_summary = self._summarize_concisely()
-            concise_summary = self._summarize_concisely(detail_summary)
+            retry = 0
+            while retry < MAX_RETRY:
+                concise_summary = self._summarize_concisely(detail_summary)
+                if len(concise_summary) <= MAX_CONCISE_SUMMARY:
+                    break
+                retry += 1
+                time.sleep(5.0)
+                self._debug(f"retry [{retry}] - summarize concisely too long. ({len(concise_summary)})")
 
         # トピック抽出
         topic: List[TopicType] = []
         if mode & MODE_TOPIC > 0:
-            topic = self._extract_topic(detail_summary)
+            retry = 0
+            while retry < MAX_RETRY:
+                topic = self._extract_topic(detail_summary)
+                if len(topic) <= MAX_TOPIC:
+                    break
+                retry += 1
+                time.sleep(5.0)
+                self._debug(f"retry - topic too much. ({len(topic)})")
 
         summary: SummaryResultType = {
             "title": self.title,
@@ -240,7 +257,7 @@ class YoutubeSummarize:
         return loop.run_until_complete(gather)
 
 
-    def _extract_topic (self, summary: List[str] = []) -> List[TopicType]:
+    def _extract_topic (self, content: List[str] = []) -> List[TopicType]:
         prompt = PromptTemplate(
             template=TOPIC_PROMPT_TEMPLATE,
             input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
@@ -251,7 +268,7 @@ class YoutubeSummarize:
         )
         args: Dict[str, str] = {
             "title": self.title,
-            "abstract": "\n".join(summary) if len(summary) > 0 else "",
+            "content": "\n".join(content) if len(content) > 0 else "",
         }
         result: str = chain.run(**args)
         topic: List[TopicType] = self._parse_topic(result)

@@ -356,6 +356,61 @@ abstract:
 agenda:
 """
 
+    prompt_template = \
+"""I am creating an agenda for Youtube videos.
+Below are notes on creating an agenda, as well as video title, abstract and content.
+Please follow the instructions carefully and create an agenda from the title, abstract and content.
+
+Notes:
+- Please create an agenda that covers the entire content of the video.
+- Your agenda should include headings and some subheaddings for each heading.
+- Create headings and subheadings that follow the flow of the story.
+- Please include important keywords in the heading and subheading.
+- Please include only one topic per heading or subheading.
+- Please assign each heading a sequential number such as 1, 2, 3.
+- Please keep each heading as concise as possible.
+- Please add a "-" to the beginning of each subheading and output it as bullet points.
+- Please keep each subheading as concise as possible.
+- Please create the agenda in Japanese.
+
+title:
+{title}
+
+abstract:
+{abstract}
+
+content:
+{content}
+
+agenda:
+"""
+
+    prompt_template = \
+"""I am creating an agenda for Youtube videos.
+Below are notes on creating an agenda, as well as video title and content.
+Please follow the instructions carefully and create an agenda from the title and content.
+
+Notes:
+- Please create an agenda that covers the entire content of the video.
+- Your agenda should include headings and some subheaddings for each heading.
+- Create headings and subheadings that follow the flow of the story.
+- Please include important keywords in the heading and subheading.
+- Please include only one topic per heading or subheading.
+- Please assign each heading a sequential number such as 1, 2, 3.
+- Please keep each heading as concise as possible.
+- Please add a "-" to the beginning of each subheading and output it as bullet points.
+- Please keep each subheading as concise as possible.
+- Please create the agenda in Japanese.
+
+Title:
+{title}
+
+Content:
+{content}
+
+Agenda:
+"""
+
     # print(prompt_template)
     prompt = PromptTemplate(template=prompt_template, input_variables=["title", "summaries"])
 
@@ -373,10 +428,11 @@ agenda:
     inputs = {
         "title": summary["title"],
         # "summaries": summaries,
-        "abstract": summaries,
+        # "abstract": summary["concise"],
+        "content": "\n".join(summary["detail"]),
     }
     # print(prompt.format(**inputs))
-    print(f"mode={mode}")
+    # print(f"mode={mode}")
     print(llm_chain.predict(**inputs))
 
 
@@ -564,7 +620,7 @@ logger = logging.getLogger(__name__)
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_fixed(3),
-    before=before_log(logger, logging.DEBUG)
+    # before=before_log(logger, logging.DEBUG)
 )
 def test_function_calling ():
     import openai
@@ -657,24 +713,29 @@ def test_function_calling ():
 
     openai.api_key = os.environ['OPENAI_API_KEY']
     tasks = [
-        openai.ChatCompletion.acreate(
-            model='gpt-3.5-turbo-0613',
+        # openai.ChatCompletion.acreate(
+            # model='gpt-3.5-turbo-0613',
+        openai.AsyncOpenAI().chat.completions.create (
+            model='gpt-3.5-turbo-1106',
             messages=[
                 {'role': 'user', 'content': f'{question_prefix}\n\n質問：{question[0]}\n'}
             ],
-            functions=functions,
+            functions=functions, # type: ignore
             function_call="auto",
             temperature=0.3,
         )
         for question in questions
     ]
     gather = asyncio.gather(*tasks)
+    # print(gather)
     loop = asyncio.get_event_loop()
     results = loop.run_until_complete(gather)
 
     for question, result in zip(questions, results):
-        message = result["choices"][0]["message"]
-        answer = message["function_call"]["name"] if "function_call" in message else "none"
+        # print(result)
+        # continue
+        message = result.choices[0].message
+        answer = message.function_call.name if hasattr(message, "function_call") else "none"
         judge = "OK" if answer == functions[question[1]]["name"] else "NG"
         print(f'{judge}\t{question[0]}\t{answer}')
 
@@ -880,7 +941,8 @@ def test_decorate_loading ():
 
 def embedding_async ():
     from langchain.embeddings import OpenAIEmbeddings
-    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor, LangchainEmbedding
+    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
+    from llama_index.embeddings import LangchainEmbedding
     from yts.utils import setup_llm_from_environment, setup_embedding_from_environment
     import dotenv
 

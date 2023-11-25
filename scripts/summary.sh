@@ -26,7 +26,9 @@ summarize() {
     do
         cur_dir=`pwd`
         cd ..
+        echo "# ${vid}"
         python -m yts --summary --vid $vid
+        echo ""
         cd $cur_dir
     done
 }

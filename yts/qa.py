@@ -373,6 +373,8 @@ class YoutubeQA:
             return None
 
         def _id2time (id: str) -> str:
+            if id == "":
+                return ""
             sec: int = int(float(id.rsplit('-', 1)[1]))
             s = sec % 60
             m = (sec // 60) % 60
@@ -381,10 +383,14 @@ class YoutubeQA:
         
         # 暫定版（もっと良い取り方があるはず）
         def _get_id (node: NodeWithScore) -> str:
-            id = ""
+            id: str = ""
             for _, val in node.node.dict()["relationships"].items():
                 if "node_id" in val.keys():
                     id = val["node_id"]
+                    if id.startswith(self.vid):
+                        break
+            if id.startswith(self.vid) is False:
+                return ""
             return id
 
         for node in self.query_response.source_nodes:
