@@ -6,7 +6,7 @@ import json
 
 from yts.qa import YoutubeQA
 from yts.summarize import YoutubeSummarize
-from yts.types import SummaryResult
+from yts.types import SummaryResultType
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 DEFAULT_REF_SOURCE = 3
@@ -23,7 +23,10 @@ def qa (args):
         with open(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}', 'r') as f:
             summary = json.load(f)
         print(f'(Summary)\n{summary["concise"]}')
-        print('(Topic)\n', "\n".join(summary["topic"]))
+        print("[Topic]")
+        for topic in summary["topic"]:
+            print(f'{topic["title"]}')
+            print("  ", "\n  ".join(topic["abstract"]), sep="")
 
     while True:
         query = input("Query: ").strip()
@@ -40,21 +43,22 @@ def qa (args):
 
 def summary (args):
     ys = YoutubeSummarize(args.vid, True, args.debug)
-    sm: Optional[SummaryResult] = ys.run()
+    sm: Optional[SummaryResultType] = ys.run()
     if sm is None:
         return
     if "title" in sm.keys():
         print('[Title]\n', sm['title'], '\n')
     if "concise" in sm.keys():
         print("[Concise Summary]\n", sm["concise"], '\n')
-    if "detail" in sm.keys():
+    if "topic" in sm.keys():
+        print("[Topic]")
+        for topic in sm["topic"]:
+            print(f'{topic["title"]}')
+            print("  ", "\n  ".join(topic["abstract"]), sep="")
+    if args.detail is True and "detail" in sm.keys():
         print('[Detail Summary]')
         for s in sm["detail"]:
             print(f'・{s}\n')
-    if "topic" in sm.keys():
-        print('[Topic]')
-        for s in sm["topic"]:
-            print(f'{s}')
 
 
 if __name__ == "__main__":

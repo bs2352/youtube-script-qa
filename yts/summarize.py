@@ -17,7 +17,7 @@ from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
-from .types import SummaryResult
+from .types import SummaryResultType, TopicType
 
 
 MODE_CONCISE = 0x01
@@ -59,24 +59,30 @@ CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
 TOPIC_PROMPT_TEMPLATE = \
 """I am creating an agenda for Youtube videos.
-Below are notes on creating an agenda, as well as video titles and summaries.
+Below are notes on creating an agenda, as well as video title and abstract.
 Please follow the instructions carefully and create an agenda from the title and abstract.
 
 Notes:
-- Please write only the title of each section in the agenda.
-- Please keep the number of sections as small as possible.
-- Please keep the titles given to each section as concise as possible.
+- Please create an agenda that covers the entire content of the video.
+- Your agenda should include headings and a summary for each heading.
+- Please include important keywords in the heading and summary whenever possible.
+- Please assign each heading a sequential number such as 1, 2, 3.
+- Please keep each heading as concise as possible.
+- Please add a "-" to the beginning of each summary and output it as bullet points.
+- Please create the summary as a subtitle, not as a sentence.
+- Please keep each summary as concise as possible.
 - Please create the agenda in Japanese.
 
 title:
 {title}
 
-summary:
-{summary}
+abstract:
+{abstract}
 
 agenda:
+
 """
-TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "summary"]
+TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "abstract"]
 
 
 class YoutubeSummarize:
@@ -116,14 +122,14 @@ class YoutubeSummarize:
         return
 
 
-    def run (self, mode:int = MODE_ALL) -> Optional[SummaryResult]:
+    def run (self, mode:int = MODE_ALL) -> Optional[SummaryResultType]:
         if self.loading is True:
             return self._run_with_loading(mode)
         return self._run(mode)
 
 
-    def _run_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResult]:
-        summary: Optional[SummaryResult] = None
+    def _run_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResultType]:
+        summary: Optional[SummaryResultType] = None
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
             try:
@@ -136,7 +142,7 @@ class YoutubeSummarize:
         return summary
 
 
-    def _run (self, mode:int = MODE_ALL) -> SummaryResult:
+    def _run (self, mode:int = MODE_ALL) -> SummaryResultType:
         # mode調整
         if mode & MODE_TOPIC > 0:
             mode |= MODE_CONCISE
@@ -159,11 +165,11 @@ class YoutubeSummarize:
             concise_summary = self._summarize_concisely(detail_summary)
 
         # トピック抽出
-        topic: List[str] = []
+        topic: List[TopicType] = []
         if mode & MODE_TOPIC > 0:
-            topic = self._extract_topic([concise_summary])
+            topic = self._extract_topic(detail_summary)
 
-        summary: SummaryResult = {
+        summary: SummaryResultType = {
             "title": self.title,
             "author": self.author,
             "lengthSeconds": self.lengthSeconds,
@@ -214,7 +220,6 @@ class YoutubeSummarize:
             llm=self.llm,
             prompt=prompt
         )
-        # TODO: contentのトークン制限への対応（16kモデルへの変更で十分かもしれない）
         args: Dict[str, str] = {
             "title": self.title,
             "content": "\n".join(detail_summary),
@@ -235,7 +240,7 @@ class YoutubeSummarize:
         return loop.run_until_complete(gather)
 
 
-    def _extract_topic (self, summary: List[str] = []) -> List[str]:
+    def _extract_topic (self, summary: List[str] = []) -> List[TopicType]:
         prompt = PromptTemplate(
             template=TOPIC_PROMPT_TEMPLATE,
             input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
@@ -246,11 +251,28 @@ class YoutubeSummarize:
         )
         args: Dict[str, str] = {
             "title": self.title,
-            "summary": "\n".join(summary) if len(summary) > 0 else "",
+            "abstract": "\n".join(summary) if len(summary) > 0 else "",
         }
         result: str = chain.run(**args)
-        topic: List[str] = [ r.strip() for r in result.split("\n")]
+        topic: List[TopicType] = self._parse_topic(result)
         return topic
+
+
+    def _parse_topic (self, topic_string: str) -> List[TopicType]:
+        topics: List[TopicType] = []
+        topic: TopicType = {"title": "", "abstract": []}
+        for line in topic_string.split("\n"):
+            line = line.strip()
+            if line == "":
+                continue
+            if line[0].isdigit():
+                if topic["title"] != "":
+                    topics.append(topic)
+                topic = {"title": line, "abstract": []}
+                continue
+            if line[0] == "-":
+                topic["abstract"].append(line)
+        return topics
 
 
     def _divide_chunks_into_N_groups (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
@@ -301,7 +323,7 @@ def get_summary (vid: str, mode: int = MODE_DETAIL) -> str:
     if mode != MODE_CONCISE and mode != MODE_DETAIL and mode != MODE_TOPIC:
         raise ValueError("mode is invalid.")
 
-    summary: Optional[SummaryResult] = None
+    summary: Optional[SummaryResultType] = None
     summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
     if os.path.exists(summary_file):
         with open(summary_file, 'r') as f:
@@ -315,5 +337,6 @@ def get_summary (vid: str, mode: int = MODE_DETAIL) -> str:
     if mode == MODE_CONCISE:
         return summary['concise'].strip()
     if mode == MODE_TOPIC:
-        return "\n".join(summary["topic"])
+        # return "\n".join(summary["topic"])
+        return ""
     return "\n".join(summary["detail"])

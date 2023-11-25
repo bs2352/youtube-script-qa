@@ -257,7 +257,7 @@ def get_topic_from_summary ():
     from langchain.prompts import PromptTemplate
     from langchain.chains import LLMChain
     from yts.utils import setup_llm_from_environment
-    from yts.types import SummaryResult
+    from yts.types import SummaryResultType
     import json
     import dotenv
 
@@ -275,7 +275,7 @@ def get_topic_from_summary ():
         mode = "concise"
 
     with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
-        summary: SummaryResult = json.load(f)
+        summary: SummaryResultType = json.load(f)
 
     prompt_template = \
 """私はYoutube動画のアジェンダを作成しています。
@@ -331,6 +331,31 @@ summary:
 agenda:
 """
 
+    prompt_template = \
+"""I am creating an agenda for Youtube videos.
+Below are notes on creating an agenda, as well as video title and abstract.
+Please follow the instructions carefully and create an agenda from the title and abstract.
+
+Notes:
+- Please create an agenda that covers the entire content of the video.
+- Your agenda should include headings and a summary for each heading.
+- Please include important keywords in the heading and summary whenever possible.
+- Please assign each heading a sequential number such as 1, 2, 3.
+- Please keep each heading as concise as possible.
+- Please add a "-" to the beginning of each summary and output it as bullet points.
+- Please create the summary as a subtitle, not as a sentence.
+- Please keep each summary as concise as possible.
+- Please create the agenda in Japanese.
+
+title:
+{title}
+
+abstract:
+{abstract}
+
+agenda:
+"""
+
     # print(prompt_template)
     prompt = PromptTemplate(template=prompt_template, input_variables=["title", "summaries"])
 
@@ -347,7 +372,8 @@ agenda:
 
     inputs = {
         "title": summary["title"],
-        "summaries": summaries,
+        # "summaries": summaries,
+        "abstract": summaries,
     }
     # print(prompt.format(**inputs))
     print(f"mode={mode}")

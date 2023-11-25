@@ -19,12 +19,16 @@ class YoutubeTranscriptType (TypedDict):
     start: float
     duration: float
 
-class SummaryResult (TypedDict):
+class TopicType (TypedDict):
+    title: str
+    abstract: List[str]
+
+class SummaryResultType (TypedDict):
     title: str
     author: str
     lengthSeconds: int
     url: str
     concise: str
     detail: List[str]
-    topic: List[str]
+    topic: List[TopicType]
 
