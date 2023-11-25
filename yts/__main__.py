@@ -55,6 +55,7 @@ def summary (args):
         for topic in sm["topic"]:
             print(f'{topic["title"]}')
             print("  ", "\n  ".join(topic["abstract"]), sep="")
+        print("")
     if args.detail is True and "detail" in sm.keys():
         print('[Detail Summary]')
         for s in sm["detail"]:
