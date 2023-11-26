@@ -29,7 +29,7 @@ MODE_ALL     = 0xff
 
 MAX_CONCISE_SUMMARY_LENGTH = 300
 MAX_TOPIC_ITEMS = 10
-MAX_RETRY_COUNT = 5
+MAX_RETRY_COUNT = 10
 RETRY_INTERVAL = 5.0
 
 
@@ -58,7 +58,7 @@ CONCISELY_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内�
 {content}
 
 質問：
-この動画の内容を全体を網羅して簡潔に要約してください。
+この動画の内容を全体を網羅してできるだけ短く簡潔に要約してください。
 
 回答：
 """

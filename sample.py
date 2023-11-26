@@ -1054,11 +1054,83 @@ def which_document_to_read ():
     print(result)
 
 
+def test_check_comprehensively ():
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import LLMChain
+    from yts.utils import setup_llm_from_environment
+    from yts.types import SummaryResultType
+    import json
+    import dotenv
+    import time
+
+    dotenv.load_dotenv()
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1] if len(sys.argv[1]) > 5 else vid
+
+    with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
+        summary: SummaryResultType = json.load(f)
+
+    title = summary["title"]
+    concise = summary["concise"]
+    detail = "\n".join(summary["detail"])
+    topic = ""
+    for t in summary["topic"]:
+        topic += f"{t['title']}\n"
+        topic += "\n".join(t["abstract"]) + "\n"
+    topic = topic.strip()
+
+    prompt_template = """次の{target}には本文の内容が網羅的に含まれていますか？
+含まれている場合はYesとだけ回答してください。
+含まれていない場合はNoと網羅されていない内容を回答してください。
+
+{target}：
+{summary}
+
+本文：
+{content}
+
+回答：
+"""
+    prompt_variables = ["target", "summary", "content"]
+
+    llm = setup_llm_from_environment()
+    prompt = PromptTemplate(
+        template=prompt_template,
+        input_variables=prompt_variables,
+    )
+    chain = LLMChain(
+        llm=llm,
+        prompt=prompt,
+        verbose=True,
+    )
+
+    args = [
+        {
+            "target": "要約",
+            "summary": concise,
+            "content": detail,
+        },
+        {
+            "target": "トピック",
+            "summary": topic,
+            "content": detail,
+        }
+    ]
+
+    for arg in args:
+        result = chain.run(**arg)
+        print(result)
+        time.sleep(3)
+
+    return ""
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
     # get_topic()
-    get_topic_from_summary()
+    # get_topic_from_summary()
     # kmeans_embedding()
     # async_run()
     # count_tokens()
@@ -1068,3 +1140,4 @@ if __name__ == "__main__":
     # print(test_decorate_loading())
     # embedding_async()
     # which_document_to_read()
+    test_check_comprehensively()

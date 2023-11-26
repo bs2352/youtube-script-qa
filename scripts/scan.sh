@@ -14,7 +14,6 @@ do
     echo "# ${vid}"
 
     # 任意の処理を書く
-    python sample.py $vid x
     python sample.py $vid
 
     cd $cur_dir
