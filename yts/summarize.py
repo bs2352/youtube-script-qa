@@ -59,7 +59,7 @@ CONCISELY_PROMPT_TEMPLATE = \
 内容：
 {content}
 
-簡潔な回答：
+簡潔な要約：
 """
 CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["length", "title", "content"]
 
