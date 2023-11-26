@@ -8,7 +8,6 @@ from concurrent.futures import ThreadPoolExecutor
 from tenacity import retry, stop_after_attempt, wait_fixed
 import traceback
 
-
 from langchain.chains import LLMChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
@@ -27,8 +26,9 @@ MODE_DETAIL  = 0x02
 MODE_TOPIC   = 0x04
 MODE_ALL     = 0xff
 
-MAX_CONCISE_SUMMARY_LENGTH = 300
-MAX_TOPIC_ITEMS = 10
+MAX_CONCISE_SUMMARY_LENGTH = 400
+MAX_LENGTH_MARGIN_MULTIPLIER = 1.0
+MAX_TOPIC_ITEMS = 15
 MAX_RETRY_COUNT = 10
 RETRY_INTERVAL = 5.0
 
@@ -49,7 +49,9 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を全体を網羅して日本語で�
 
 簡潔な要約:"""
 
-CONCISELY_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
+CONCISELY_PROMPT_TEMPLATE = \
+"""この動画の内容を全体を網羅して{length}簡潔に要約してください。
+この動画の内容は以下の通りです。
 
 タイトル：
 {title}
@@ -57,12 +59,9 @@ CONCISELY_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内�
 内容：
 {content}
 
-質問：
-この動画の内容を全体を網羅してできるだけ短く簡潔に要約してください。
-
-回答：
+簡潔な回答：
 """
-CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
+CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["length", "title", "content"]
 
 TOPIC_PROMPT_TEMPLATE = \
 """I am creating an agenda for Youtube videos.
@@ -230,14 +229,17 @@ class YoutubeSummarize:
         )
         chain = LLMChain(
             llm=self.llm,
-            prompt=prompt
+            prompt=prompt,
+            verbose=self.debug,
         )
         args: Dict[str, str] = {
+            # "length": f'{MAX_CONCISE_SUMMARY_LENGTH}文字くらいで',
+            "length": "",
             "title": self.title,
             "content": "\n".join(detail_summary),
         }
         result: str = chain.run(**args)
-        if len(result) > MAX_CONCISE_SUMMARY_LENGTH:
+        if len(result) > MAX_CONCISE_SUMMARY_LENGTH * MAX_LENGTH_MARGIN_MULTIPLIER:
             raise ValueError(f"summary too long. - ({len(result)})")
         return result
 
@@ -265,7 +267,8 @@ class YoutubeSummarize:
         )
         chain = LLMChain(
             llm=self.llm,
-            prompt=prompt
+            prompt=prompt,
+            verbose=self.debug,
         )
         args: Dict[str, str] = {
             "title": self.title,
