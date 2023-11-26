@@ -5,6 +5,8 @@ import json
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from tenacity import retry, stop_after_attempt, wait_fixed
+import traceback
 
 
 from langchain.chains import LLMChain
@@ -25,9 +27,10 @@ MODE_DETAIL  = 0x02
 MODE_TOPIC   = 0x04
 MODE_ALL     = 0xff
 
-MAX_CONCISE_SUMMARY = 300
-MAX_TOPIC = 10
-MAX_RETRY = 5
+MAX_CONCISE_SUMMARY_LENGTH = 300
+MAX_TOPIC_ITEMS = 10
+MAX_RETRY_COUNT = 5
+RETRY_INTERVAL = 5.0
 
 
 MAP_PROMPT_TEMPLATE = """以下の内容を重要な情報はできるだけ残して要約してください。
@@ -138,8 +141,10 @@ class YoutubeSummarize:
             future_loading = executor.submit(self._loading)
             try:
                 summary = self._run(mode)
-            except:
+            except KeyboardInterrupt as e:
                 pass
+            except Exception as e:
+                print(traceback.format_exc())
             self.loading_canceled = True
             while future_loading.done() is False:
                 time.sleep(0.5)
@@ -165,24 +170,12 @@ class YoutubeSummarize:
         # 簡潔な要約
         concise_summary = ""
         if mode & MODE_CONCISE > 0:
-            retry = 0
-            while retry < MAX_RETRY:
-                concise_summary = self._summarize_concisely(detail_summary)
-                if len(concise_summary) <= MAX_CONCISE_SUMMARY:
-                    break
-                retry += 1; time.sleep(5.0)
-                self._debug(f"retry [{retry}] - summarize concisely too long. ({len(concise_summary)})")
+            concise_summary = self._summarize_concisely(detail_summary)
 
         # トピック抽出
         topic: List[TopicType] = []
         if mode & MODE_TOPIC > 0:
-            retry = 0
-            while retry < MAX_RETRY:
-                topic = self._extract_topic(detail_summary)
-                if len(topic) <= MAX_TOPIC:
-                    break
-                retry += 1; time.sleep(5.0)
-                self._debug(f"retry - topic too much. ({len(topic)})")
+            topic = self._extract_topic(detail_summary)
 
         summary: SummaryResultType = {
             "title": self.title,
@@ -226,6 +219,10 @@ class YoutubeSummarize:
         )
 
 
+    @retry(
+        stop=stop_after_attempt(MAX_RETRY_COUNT),
+        wait=wait_fixed(RETRY_INTERVAL),
+    )
     def _summarize_concisely (self, detail_summary: List[str]) -> str:
         prompt = PromptTemplate(
             template=CONCISELY_PROMPT_TEMPLATE,
@@ -240,6 +237,8 @@ class YoutubeSummarize:
             "content": "\n".join(detail_summary),
         }
         result: str = chain.run(**args)
+        if len(result) > MAX_CONCISE_SUMMARY_LENGTH:
+            raise ValueError(f"summary too long. - ({len(result)})")
         return result
 
 
@@ -255,6 +254,10 @@ class YoutubeSummarize:
         return loop.run_until_complete(gather)
 
 
+    @retry(
+        stop=stop_after_attempt(MAX_RETRY_COUNT),
+        wait=wait_fixed(RETRY_INTERVAL),
+    )
     def _extract_topic (self, content: List[str] = []) -> List[TopicType]:
         prompt = PromptTemplate(
             template=TOPIC_PROMPT_TEMPLATE,
@@ -270,6 +273,8 @@ class YoutubeSummarize:
         }
         result: str = chain.run(**args)
         topic: List[TopicType] = self._parse_topic(result)
+        if len(topic) > MAX_TOPIC_ITEMS:
+            raise ValueError(f"topic too much. - ({len(topic)})")
         return topic
 
 
