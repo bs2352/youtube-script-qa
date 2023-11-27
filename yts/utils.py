@@ -6,10 +6,10 @@ import asyncio
 
 from langchain.llms import OpenAI, AzureOpenAI
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
 import tiktoken
 
-from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
+from .types import LLMType, EmbeddingType, TranscriptChunkModel, YoutubeTranscriptType
 
 
 
@@ -44,10 +44,11 @@ def setup_llm_from_environment () -> LLMType:
     return  llm_class(**llm_args)
 
 
-def setup_embedding_from_environment () -> OpenAIEmbeddings:
+def setup_embedding_from_environment () -> EmbeddingType:
     llm_args: Dict[str, Any] = {
         "client": None
     }
+    llm_class = OpenAIEmbeddings
     if "OPENAI_API_KEY" in os.environ.keys():
         llm_args = {
             **llm_args,
@@ -62,7 +63,8 @@ def setup_embedding_from_environment () -> OpenAIEmbeddings:
             "openai_api_version": os.environ['AZURE_EMBEDDING_OPENAI_API_VERSION'],
             "deployment":         os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
         }
-    return OpenAIEmbeddings(**llm_args)
+        llm_class = AzureOpenAIEmbeddings
+    return llm_class(**llm_args)
 
 
 def count_tokens (text: str) -> int:

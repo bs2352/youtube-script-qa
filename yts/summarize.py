@@ -140,13 +140,12 @@ class YoutubeSummarize:
             future_loading = executor.submit(self._loading)
             try:
                 summary = self._run(mode)
-            except KeyboardInterrupt as e:
-                pass
             except Exception as e:
-                print(traceback.format_exc())
-            self.loading_canceled = True
-            while future_loading.done() is False:
-                time.sleep(0.5)
+                raise e
+            finally:
+                self.loading_canceled = True
+                while future_loading.done() is False:
+                    time.sleep(0.5)
         return summary
 
 

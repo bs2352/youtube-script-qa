@@ -3,9 +3,12 @@ from pydantic import BaseModel
 
 from langchain.llms import OpenAI, AzureOpenAI
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
+from langchain.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
 
 
 LLMType: TypeAlias = OpenAI | ChatOpenAI | AzureOpenAI | AzureChatOpenAI
+EmbeddingType: TypeAlias = OpenAIEmbeddings | AzureOpenAIEmbeddings
+
 
 class TranscriptChunkModel (BaseModel):
     id: str
