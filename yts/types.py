@@ -1,5 +1,5 @@
 from typing import TypedDict, TypeAlias, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from langchain.llms import OpenAI, AzureOpenAI
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
@@ -22,16 +22,16 @@ class YoutubeTranscriptType (TypedDict):
     start: float
     duration: float
 
-class TopicType (TypedDict):
-    title: str
-    abstract: List[str]
+class TopicModel (BaseModel):
+    title: str = Field("")
+    abstract: List[str] = Field([])
 
-class SummaryResultType (TypedDict):
-    title: str
-    author: str
-    lengthSeconds: int
-    url: str
-    concise: str
-    detail: List[str]
-    topic: List[TopicType]
+class SummaryResultModel (BaseModel):
+    title: str = Field("")
+    author: str = Field("")
+    lengthSeconds: int = Field(0)
+    url: str = Field("")
+    concise: str = Field("")
+    detail: List[str] = Field([])
+    topic: List[TopicModel] = Field([])
 

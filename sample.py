@@ -257,7 +257,7 @@ def get_topic_from_summary ():
     from langchain.prompts import PromptTemplate
     from langchain.chains import LLMChain
     from yts.utils import setup_llm_from_environment
-    from yts.types import SummaryResultType
+    from yts.types import SummaryResultModel
     import json
     import dotenv
 
@@ -275,7 +275,7 @@ def get_topic_from_summary ():
         mode = "concise"
 
     with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
-        summary: SummaryResultType = json.load(f)
+        summary = SummaryResultModel(**(json.load(f)))
 
     prompt_template = \
 """私はYoutube動画のアジェンダを作成しています。
@@ -420,16 +420,16 @@ Agenda:
     )
 
     summaries = ""
-    for detail in summary["detail"]:
+    for detail in summary.detail:
         summaries = f'{summaries}\n・{detail}'
     if mode == "concise":
-        summaries = summary["concise"]
+        summaries = summary.concise
 
     inputs = {
-        "title": summary["title"],
+        "title": summary.title,
         # "summaries": summaries,
         # "abstract": summary["concise"],
-        "content": "\n".join(summary["detail"]),
+        "content": "\n".join(summary.detail),
     }
     # print(prompt.format(**inputs))
     # print(f"mode={mode}")
@@ -1058,7 +1058,7 @@ def test_check_comprehensively ():
     from langchain.prompts import PromptTemplate
     from langchain.chains import LLMChain
     from yts.utils import setup_llm_from_environment
-    from yts.types import SummaryResultType
+    from yts.types import SummaryResultModel
     import json
     import dotenv
     import time
@@ -1069,15 +1069,15 @@ def test_check_comprehensively ():
         vid = sys.argv[1] if len(sys.argv[1]) > 5 else vid
 
     with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
-        summary: SummaryResultType = json.load(f)
+        summary = SummaryResultModel(**(json.load(f)))
 
-    title = summary["title"]
-    concise = summary["concise"]
-    detail = "\n".join(summary["detail"])
+    title = summary.title
+    concise = summary.concise
+    detail = "\n".join(summary.detail)
     topic = ""
-    for t in summary["topic"]:
-        topic += f"{t['title']}\n"
-        topic += "\n".join(t["abstract"]) + "\n"
+    for t in summary.topic:
+        topic += f"{t.title}\n"
+        topic += "\n".join(t.abstract) + "\n"
     topic = topic.strip()
 
     prompt_template = """次の{target}には本文の内容が網羅的に含まれていますか？

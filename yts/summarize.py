@@ -18,7 +18,7 @@ from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
-from .types import SummaryResultType, TopicType
+from .types import SummaryResultModel, TopicModel
 
 
 MODE_CONCISE = 0x01
@@ -128,14 +128,14 @@ class YoutubeSummarize:
         return
 
 
-    def run (self, mode:int = MODE_ALL) -> Optional[SummaryResultType]:
+    def run (self, mode:int = MODE_ALL) -> Optional[SummaryResultModel]:
         if self.loading is True:
             return self._run_with_loading(mode)
         return self._run(mode)
 
 
-    def _run_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResultType]:
-        summary: Optional[SummaryResultType] = None
+    def _run_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResultModel]:
+        summary: Optional[SummaryResultModel] = None
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
             try:
@@ -149,7 +149,7 @@ class YoutubeSummarize:
         return summary
 
 
-    def _run (self, mode:int = MODE_ALL) -> SummaryResultType:
+    def _run (self, mode:int = MODE_ALL) -> SummaryResultModel:
         # mode調整
         if mode & MODE_TOPIC > 0:
             mode |= MODE_CONCISE
@@ -171,26 +171,26 @@ class YoutubeSummarize:
             concise_summary = self._summarize_concisely(detail_summary)
 
         # トピック抽出
-        topic: List[TopicType] = []
+        topic: List[TopicModel] = []
         if mode & MODE_TOPIC > 0:
             topic = self._extract_topic(detail_summary)
 
-        summary: SummaryResultType = {
-            "title": self.title,
-            "author": self.author,
-            "lengthSeconds": self.lengthSeconds,
-            "url": self.url,
-            "concise": concise_summary,
-            "detail": detail_summary,
-            "topic": topic,
-        }
+        summary: SummaryResultModel = SummaryResultModel(
+            title=self.title,
+            author=self.author,
+            lengthSeconds=self.lengthSeconds,
+            url=self.url,
+            concise=concise_summary,
+            detail=detail_summary,
+            topic=topic,
+        )
 
         # 全モードの場合のみ保存する
         if mode == MODE_ALL:
             if not os.path.isdir(os.path.dirname(self.summary_file)):
                 os.makedirs(os.path.dirname(self.summary_file))
             with open(self.summary_file, "w") as f:
-                f.write(json.dumps(summary, ensure_ascii=False))
+                f.write(summary.model_dump_json())
 
         return summary
 
@@ -259,7 +259,7 @@ class YoutubeSummarize:
         stop=stop_after_attempt(MAX_RETRY_COUNT),
         wait=wait_fixed(RETRY_INTERVAL),
     )
-    def _extract_topic (self, content: List[str] = []) -> List[TopicType]:
+    def _extract_topic (self, content: List[str] = []) -> List[TopicModel]:
         prompt = PromptTemplate(
             template=TOPIC_PROMPT_TEMPLATE,
             input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
@@ -274,26 +274,26 @@ class YoutubeSummarize:
             "content": "\n".join(content) if len(content) > 0 else "",
         }
         result: str = chain.run(**args)
-        topic: List[TopicType] = self._parse_topic(result)
+        topic: List[TopicModel] = self._parse_topic(result)
         if len(topic) > MAX_TOPIC_ITEMS:
             raise ValueError(f"topic too much. - ({len(topic)})")
         return topic
 
 
-    def _parse_topic (self, topic_string: str) -> List[TopicType]:
-        topics: List[TopicType] = []
-        topic: TopicType = {"title": "", "abstract": []}
+    def _parse_topic (self, topic_string: str) -> List[TopicModel]:
+        topics: List[TopicModel] = []
+        topic: TopicModel = TopicModel(title="", abstract=[])
         for line in topic_string.split("\n"):
             line = line.strip()
             if line == "":
                 continue
             if line[0].isdigit():
-                if topic["title"] != "":
+                if topic.title != "":
                     topics.append(topic)
-                topic = {"title": line, "abstract": []}
+                topic = TopicModel(title=line, abstract=[])
                 continue
             if line[0] == "-":
-                topic["abstract"].append(line)
+                topic.abstract.append(line)
         return topics
 
 
@@ -345,11 +345,11 @@ def get_summary (vid: str, mode: int = MODE_DETAIL) -> str:
     if mode != MODE_CONCISE and mode != MODE_DETAIL and mode != MODE_TOPIC:
         raise ValueError("mode is invalid.")
 
-    summary: Optional[SummaryResultType] = None
+    summary: Optional[SummaryResultModel] = None
     summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
     if os.path.exists(summary_file):
         with open(summary_file, 'r') as f:
-            summary = json.load(f)
+            summary = SummaryResultModel(**(json.load(f)))
     else:
         # summary = YoutubeSummarize(vid, debug=True).run(mode=mode)
         summary = YoutubeSummarize(vid).run(mode=mode)
@@ -357,8 +357,8 @@ def get_summary (vid: str, mode: int = MODE_DETAIL) -> str:
     if summary is None:
         return ""
     if mode == MODE_CONCISE:
-        return summary['concise'].strip()
+        return summary.concise.strip()
     if mode == MODE_TOPIC:
         # return "\n".join(summary["topic"])
         return ""
-    return "\n".join(summary["detail"])
+    return "\n".join(summary.detail)
