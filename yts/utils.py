@@ -33,9 +33,9 @@ def setup_llm_from_environment () -> LLMType:
             **llm_args,
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
             "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
-            "openai_api_base":    os.environ['AZURE_OPENAI_API_BASE'],
+            "azure_endpoint":     os.environ['AZURE_OPENAI_API_BASE'],
             "openai_api_version": os.environ['AZURE_LLM_OPENAI_API_VERSION'],
-            "deployment_name":    os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
+            "azure_deployment":   os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
         }
         llm_class = AzureOpenAI
         if os.environ['AZURE_LLM_DEPLOYMENT_NAME'].startswith("gpt-"):
@@ -59,9 +59,9 @@ def setup_embedding_from_environment () -> EmbeddingType:
             **llm_args,
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
             "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
-            "openai_api_base":    os.environ['AZURE_OPENAI_API_BASE'],
+            "azure_endpoint":     os.environ['AZURE_OPENAI_API_BASE'],
             "openai_api_version": os.environ['AZURE_EMBEDDING_OPENAI_API_VERSION'],
-            "deployment":         os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
+            "azure_deployment":   os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
         }
         llm_class = AzureOpenAIEmbeddings
     return llm_class(**llm_args)
