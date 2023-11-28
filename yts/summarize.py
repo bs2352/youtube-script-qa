@@ -6,7 +6,6 @@ import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from tenacity import retry, stop_after_attempt, wait_fixed
-import traceback
 
 from langchain.chains import LLMChain
 from langchain.chains.summarize import load_summarize_chain
@@ -26,8 +25,9 @@ MODE_DETAIL  = 0x02
 MODE_TOPIC   = 0x04
 MODE_ALL     = 0xff
 
-MAX_CONCISE_SUMMARY_LENGTH = 400
-MAX_LENGTH_MARGIN_MULTIPLIER = 1.0
+SPECIFY_SUMMARY_MAX_LENGTH = os.getenv("SPECIFY_SUMMARY_MAX_LENGTH", "false") == "true"
+MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "400"))
+MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "1.0"))
 MAX_TOPIC_ITEMS = 15
 MAX_RETRY_COUNT = 10
 RETRY_INTERVAL = 5.0
@@ -232,8 +232,8 @@ class YoutubeSummarize:
             verbose=self.debug,
         )
         args: Dict[str, str] = {
-            # "length": f'{MAX_CONCISE_SUMMARY_LENGTH}文字くらいで',
-            "length": "",
+            "length": f'{MAX_CONCISE_SUMMARY_LENGTH}文字くらいで' if SPECIFY_SUMMARY_MAX_LENGTH \
+                      else "",
             "title": self.title,
             "content": "\n".join(detail_summary),
         }

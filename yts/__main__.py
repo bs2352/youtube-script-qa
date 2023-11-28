@@ -11,8 +11,6 @@ from yts.types import SummaryResultModel
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 DEFAULT_REF_SOURCE = 3
 
-dotenv.load_dotenv()
-
 
 def qa (args):
     yqa = YoutubeQA(args.vid, args.source, args.detail, True, args.debug)
