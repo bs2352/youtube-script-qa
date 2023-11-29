@@ -14,7 +14,8 @@ do
     echo "# ${vid}"
 
     # 任意の処理を書く
-    python sample.py $vid
+    # python sample.py $vid
+    python -m yts --summary --vid $vid
 
     cd $cur_dir
     read -p "Press enter to continue" input

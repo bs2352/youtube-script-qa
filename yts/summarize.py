@@ -206,8 +206,8 @@ class YoutubeSummarize:
 
 
     def _prepare_transcriptions (self) -> List[TranscriptChunkModel]:
-        MAXLENGTH = 1000
-        OVERLAP_LENGTH = 5
+        MAXLENGTH = 3000
+        OVERLAP_LENGTH = 10
         transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en", "en-US"])
         return divide_transcriptions_into_chunks(
             transcriptions,
@@ -246,7 +246,7 @@ class YoutubeSummarize:
     def _summarize_in_detail (self) -> List[str]:
         if self.chain is None:
             return []
-        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups(5)
+        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups_evenly(5)
         tasks = [
             self.chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
         ]
@@ -295,6 +295,38 @@ class YoutubeSummarize:
             if line[0] == "-":
                 topic.abstract.append(line)
         return topics
+
+
+    def _divide_chunks_into_N_groups_evenly (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
+        chunk_num: int = len(self.chunks)
+
+        if chunk_num <= group_num:
+            return [ [c] for c in self.chunks]
+
+        if chunk_num < group_num * (group_num):
+            deltas: List[int] = [(chunk_num // group_num) for _ in range(0, group_num)]
+            much: int = chunk_num % group_num
+            for i in range(0, much):
+                deltas[i] += 1
+            groups: List[List[TranscriptChunkModel]] = []
+            idx: int = 0
+            for delta in deltas:
+                groups.append(self.chunks[idx: idx+delta])
+                idx += delta
+            return groups
+
+        import math
+        delta: int = math.ceil(chunk_num / group_num)
+        groups: List[List[TranscriptChunkModel]] = []
+        group: List[TranscriptChunkModel] = []
+        for chunk in self.chunks:
+            if len(group) >= delta:
+                groups.append(group)
+                group = []
+            group.append(chunk)
+        if (len(group) > 0):
+            groups.append(group)
+        return groups
 
 
     def _divide_chunks_into_N_groups (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
