@@ -151,9 +151,7 @@ class YoutubeSummarize:
 
     def _run (self, mode:int = MODE_ALL) -> SummaryResultModel:
         # mode調整
-        if mode & MODE_TOPIC > 0:
-            mode |= MODE_CONCISE
-        if mode & MODE_CONCISE > 0:
+        if mode & (MODE_TOPIC | MODE_CONCISE) > 0:
             mode |= MODE_DETAIL
 
         # 準備
@@ -303,29 +301,16 @@ class YoutubeSummarize:
         if chunk_num <= group_num:
             return [ [c] for c in self.chunks]
 
-        if chunk_num < group_num * (group_num):
-            deltas: List[int] = [(chunk_num // group_num) for _ in range(0, group_num)]
-            much: int = chunk_num % group_num
-            for i in range(0, much):
-                deltas[i] += 1
-            groups: List[List[TranscriptChunkModel]] = []
-            idx: int = 0
-            for delta in deltas:
-                groups.append(self.chunks[idx: idx+delta])
-                idx += delta
-            return groups
-
-        import math
-        delta: int = math.ceil(chunk_num / group_num)
+        deltas: List[int] = [(chunk_num // group_num) for _ in range(0, group_num)]
+        extra: int = chunk_num % group_num
+        for i in range(0, extra):
+            deltas[i] += 1
         groups: List[List[TranscriptChunkModel]] = []
-        group: List[TranscriptChunkModel] = []
-        for chunk in self.chunks:
-            if len(group) >= delta:
-                groups.append(group)
-                group = []
-            group.append(chunk)
-        if (len(group) > 0):
-            groups.append(group)
+        idx: int = 0
+        for delta in deltas:
+            groups.append(self.chunks[idx: idx+delta])
+            idx += delta
+
         return groups
 
 
