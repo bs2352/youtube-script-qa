@@ -51,6 +51,7 @@ def summary (args):
         print(f'{topic.title}')
         print("  ", "\n  ".join(topic.abstract), sep="")
     print("")
+    print("[Keyword]\n", ", ".join(sm.keyword), "\n")
     if args.detail is True:
         print('[Detail Summary]')
         for s in sm.detail:

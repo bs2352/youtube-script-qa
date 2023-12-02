@@ -34,4 +34,5 @@ class SummaryResultModel (BaseModel):
     concise: str = Field("")
     detail: List[str] = Field([])
     topic: List[TopicModel] = Field([])
+    keyword: List[str] = Field([])
 

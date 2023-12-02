@@ -1154,6 +1154,74 @@ def test_check_comprehensively ():
     return ""
 
 
+def test_extract_keyword ():
+    from yts.summarize import get_summary
+    from yts.utils import setup_llm_from_environment
+    from yts.types import SummaryResultModel
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import LLMChain
+    import json
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+
+    with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
+        summary = SummaryResultModel(**(json.load(f)))
+
+
+    prompt_template = \
+"""以下に記載する動画のタイトルと本文から、この動画の内容を説明するキーワードを抽出してください。
+
+タイトル：
+{title}
+
+本文：
+{content}
+
+キーワード：
+"""
+
+    prompt_template = \
+"""Please extract the keywords that describe the content of this video from the title and body of the video listed below.
+Please observe the following precautions when extracting keywords.
+
+Notes:
+Please output one keyword in one line.
+Please output only important keywords.
+Do not output the same keywords.
+Do not translate keywords into English.
+
+Title:
+{title}
+
+Body:
+{content}
+
+キーワード：
+"""
+    prompt_variables = ["title", "content"]
+
+    llm = setup_llm_from_environment()
+    prompt = PromptTemplate(
+        template=prompt_template,
+        input_variables=prompt_variables,
+    )
+    chain = LLMChain(
+        llm=llm,
+        prompt=prompt,
+        verbose=True,
+    )
+
+    args = {
+        "title": summary.title,
+        "content": "\n".join(summary.detail),
+    }
+
+    result = chain.run(**args)
+    print(result)
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -1168,4 +1236,5 @@ if __name__ == "__main__":
     # print(test_decorate_loading())
     # embedding_async()
     # which_document_to_read()
-    test_check_comprehensively()
+    # test_check_comprehensively()
+    test_extract_keyword()

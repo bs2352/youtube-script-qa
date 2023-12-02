@@ -23,12 +23,15 @@ from .types import SummaryResultModel, TopicModel
 MODE_CONCISE = 0x01
 MODE_DETAIL  = 0x02
 MODE_TOPIC   = 0x04
-MODE_ALL     = MODE_CONCISE | MODE_DETAIL | MODE_TOPIC
+MODE_KEYWORD = 0x08
+MODE_ALL     = MODE_CONCISE | MODE_DETAIL | MODE_TOPIC | MODE_KEYWORD
 
 SPECIFY_SUMMARY_MAX_LENGTH = os.getenv("SPECIFY_SUMMARY_MAX_LENGTH", "false") == "true"
 MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "400"))
 MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "1.0"))
 MAX_TOPIC_ITEMS = 15
+MAX_KEYWORDS = 30
+MAX_KEYWORDS_MARGIN_MULTIPLIER = 1.3
 MAX_RETRY_COUNT = 5
 RETRY_INTERVAL = 5.0
 
@@ -90,6 +93,27 @@ Agenda:
 """
 TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
+KEYWORD_PROMPT_TEMPLATE = \
+"""Please extract the keywords that describe the content of this video from the title and body of the video listed below.
+Please observe the following precautions when extracting keywords.
+
+Notes:
+Please output one keyword in one line.
+Please output only important keywords.
+Maximum number of keywords is {max_keywords}
+Do not output the same keywords.
+Do not translate keywords into English.
+
+Title:
+{title}
+
+Body:
+{content}
+
+キーワード：
+"""
+KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["max_keywords", "title", "content"]
+
 
 class YoutubeSummarize:
     def __init__(
@@ -122,6 +146,7 @@ class YoutubeSummarize:
 
         self.tmp_concise_summary: str = ""
         self.tmp_topic: List[TopicModel] = []
+        self.tmp_keyword: List[str] = []
 
 
     def _debug (self, message: str, end: str = "\n", flush: bool = False) -> None:
@@ -164,8 +189,8 @@ class YoutubeSummarize:
         # 詳細な要約
         detail_summary: List[str] = self._summarize_in_detail()
 
-        # 簡潔な要約、トピック抽出（非同期で並行処理）
-        (concise_summary, topic) = self._async_run_with_detail_summary(mode, detail_summary)
+        # 簡潔な要約、トピック抽出、キーワード抽出（非同期で並行処理）
+        (concise_summary, topic, keyword) = self._async_run_with_detail_summary(mode, detail_summary)
 
         summary: SummaryResultModel = SummaryResultModel(
             title=self.title,
@@ -175,6 +200,7 @@ class YoutubeSummarize:
             concise=concise_summary,
             detail=detail_summary,
             topic=topic,
+            keyword=keyword
         )
 
         # 全モードの場合のみ保存する
@@ -221,34 +247,27 @@ class YoutubeSummarize:
         return loop.run_until_complete(gather)
 
 
-    def _async_run_with_detail_summary (self, mode, detail_summary) -> Tuple[str, List[TopicModel]]:
-        if mode & (MODE_CONCISE | MODE_TOPIC) == 0:
-            return ("", [])
+    def _async_run_with_detail_summary (self, mode, detail_summary) -> Tuple[str, List[TopicModel], List[str]]:
+        if mode & (MODE_CONCISE | MODE_TOPIC | MODE_KEYWORD) == 0:
+            return ("", [], [])
 
         tasks = []
-        if mode & MODE_CONCISE > 0:
-            tasks.append(self._summarize_concisely(detail_summary))
-        if mode & MODE_TOPIC > 0:
-            tasks.append(self._extract_topic(detail_summary))
+        tasks.append(self._summarize_concisely(detail_summary, mode & MODE_CONCISE > 0))
+        tasks.append(self._extract_topic(detail_summary, mode & MODE_TOPIC > 0))
+        tasks.append(self._extract_keyword(detail_summary, mode & MODE_KEYWORD > 0))
 
         gather = asyncio.gather(*tasks)
         loop = asyncio.get_event_loop()
         results = loop.run_until_complete(gather)
 
-        concise_summary: str = ""
-        topic: List[TopicModel] = []
-        if mode & (MODE_CONCISE | MODE_TOPIC) == (MODE_CONCISE | MODE_TOPIC):
-            concise_summary = results[0]
-            topic = results[1]
-        elif mode & MODE_CONCISE == MODE_CONCISE:
-            concise_summary = results[0]
-        elif mode & MODE_TOPIC == MODE_TOPIC:
-            topic = results[0]
+        concise_summary: str    = results[0]
+        topic: List[TopicModel] = results[1]
+        keyword: List[str]      = results[2]
 
-        return (concise_summary, topic)
+        return (concise_summary, topic, keyword)
 
 
-    async def _summarize_concisely (self, detail_summary: List[str]) -> str:
+    async def _summarize_concisely (self, detail_summary: List[str], enable: bool = True) -> str:
         @retry(
             stop=stop_after_attempt(MAX_RETRY_COUNT),
             wait=wait_fixed(RETRY_INTERVAL),
@@ -262,6 +281,9 @@ class YoutubeSummarize:
                     self.tmp_concise_summary = summary
                 raise ValueError(f"summary too long. - ({len(summary)})")
             return summary
+
+        if enable is False:
+            return ""
 
         # 準備
         prompt = PromptTemplate(
@@ -295,7 +317,7 @@ class YoutubeSummarize:
         return concise_summary
 
 
-    async def _extract_topic (self, detail_summary: List[str] = []) -> List[TopicModel]:
+    async def _extract_topic (self, detail_summary: List[str], enable: bool = True) -> List[TopicModel]:
         @retry(
             stop=stop_after_attempt(MAX_RETRY_COUNT),
             wait=wait_fixed(RETRY_INTERVAL),
@@ -309,7 +331,12 @@ class YoutubeSummarize:
                 elif len(topic) < len(self.tmp_topic):
                     self.tmp_topic = topic
                 raise ValueError(f"topic too much. - ({len(topic)})")
+            if len(topic) == 0:
+                raise ValueError(f"topic is empty.\n{result}")
             return topic
+
+        if enable is False:
+            return []
 
         # 準備
         prompt = PromptTemplate(
@@ -354,6 +381,56 @@ class YoutubeSummarize:
             if line[0] == "-":
                 topic.abstract.append(line)
         return topics
+
+
+    async def _extract_keyword (self, detail_summary: List[str], enable: bool = True) -> List[str]:
+        @retry(
+            stop=stop_after_attempt(MAX_RETRY_COUNT),
+            wait=wait_fixed(RETRY_INTERVAL),
+        )
+        async def _extract () -> List[str]:
+            result: str = await chain.arun(**args)
+            keyword: List[str] = [ k.strip() for k in result.split("\n")]
+            if len(keyword) > MAX_KEYWORDS * MAX_KEYWORDS_MARGIN_MULTIPLIER:
+                if len(self.tmp_keyword) == 0:
+                    self.tmp_keyword = keyword
+                elif len(keyword) < len(self.tmp_keyword):
+                    self.tmp_keyword = keyword
+                raise ValueError(f"keyword too much. - ({len(keyword)})")
+            if len(keyword) == 1:
+                raise ValueError(f"Perhaps invalid format. \n{result}")
+            return keyword
+
+        if enable is False:
+            return []
+
+        # 準備
+        prompt = PromptTemplate(
+            template=KEYWORD_PROMPT_TEMPLATE,
+            input_variables=KEYWORD_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=self.llm,
+            prompt=prompt,
+            verbose=self.debug,
+        )
+        args: Dict[str, str] = {
+            "max_keywords": str(MAX_KEYWORDS),
+            "title": self.title,
+            "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
+        }
+        self.tmp_keyword = []
+        keyword: List[str] = []
+
+        # リトライしても改善されない場合は一番マシなもので我慢する
+        try:
+            keyword = await _extract()
+        except RetryError:
+            keyword = self.tmp_keyword
+        except Exception as e:
+            raise e
+
+        return keyword
 
 
     def _divide_chunks_into_N_groups_evenly (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
