@@ -154,7 +154,7 @@ class YoutubeSummarize:
 
     def _run (self, mode:int = MODE_ALL) -> SummaryResultModel:
         # mode調整
-        if mode & (MODE_TOPIC | MODE_CONCISE) > 0:
+        if mode & MODE_DETAIL == 0:
             mode |= MODE_DETAIL
 
         # 準備
@@ -162,11 +162,9 @@ class YoutubeSummarize:
         self.chunks = self._prepare_transcriptions()
 
         # 詳細な要約
-        detail_summary: List[str] = []
-        if mode & MODE_DETAIL > 0:
-            detail_summary = self._summarize_in_detail()
+        detail_summary: List[str] = self._summarize_in_detail()
 
-        # 以降は詳細な要約をベースに処理するので非同期で並行処理で行う
+        # 簡潔な要約、トピック抽出（非同期で並行処理）
         (concise_summary, topic) = self._async_run_with_detail_summary(mode, detail_summary)
 
         summary: SummaryResultModel = SummaryResultModel(
