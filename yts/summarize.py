@@ -5,7 +5,7 @@ import json
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed, RetryError
 
 from langchain.chains import LLMChain
 from langchain.chains.summarize import load_summarize_chain
@@ -119,6 +119,9 @@ class YoutubeSummarize:
 
         self.loading: bool = loading
         self.loading_canceled: bool = False
+
+        self.tmp_concise_summary: str = ""
+        self.tmp_topic: List[TopicModel] = []
 
 
     def _debug (self, message: str, end: str = "\n", flush: bool = False) -> None:
@@ -247,11 +250,22 @@ class YoutubeSummarize:
         return (concise_summary, topic)
 
 
-    @retry(
-        stop=stop_after_attempt(MAX_RETRY_COUNT),
-        wait=wait_fixed(RETRY_INTERVAL),
-    )
     async def _summarize_concisely (self, detail_summary: List[str]) -> str:
+        @retry(
+            stop=stop_after_attempt(MAX_RETRY_COUNT),
+            wait=wait_fixed(RETRY_INTERVAL),
+        )
+        async def _summarize () -> str:
+            summary: str  = await chain.arun(**args)
+            if len(summary) > MAX_CONCISE_SUMMARY_LENGTH * MAX_LENGTH_MARGIN_MULTIPLIER:
+                if len(self.tmp_concise_summary) == 0:
+                    self.tmp_concise_summary = summary
+                elif len(summary) < len(self.tmp_concise_summary):
+                    self.tmp_concise_summary = summary
+                raise ValueError(f"summary too long. - ({len(summary)})")
+            return summary
+
+        # 準備
         prompt = PromptTemplate(
             template=CONCISELY_PROMPT_TEMPLATE,
             input_variables=CONCISELY_PROMPT_TEMPLATE_VARIABLES,
@@ -261,23 +275,45 @@ class YoutubeSummarize:
             prompt=prompt,
             verbose=self.debug,
         )
+        length_str = ''
+        if SPECIFY_SUMMARY_MAX_LENGTH is True:
+            length_str = f'{MAX_CONCISE_SUMMARY_LENGTH}文字くらいで'
         args: Dict[str, str] = {
-            "length": f'{MAX_CONCISE_SUMMARY_LENGTH}文字くらいで' if SPECIFY_SUMMARY_MAX_LENGTH \
-                      else "",
+            "length": length_str,
             "title": self.title,
             "content": "\n".join(detail_summary),
         }
-        result: str  = await chain.arun(**args)
-        if len(result) > MAX_CONCISE_SUMMARY_LENGTH * MAX_LENGTH_MARGIN_MULTIPLIER:
-            raise ValueError(f"summary too long. - ({len(result)})")
-        return result
+        self.tmp_concise_summary = ""
+        concise_summary: str = ""
+
+        # リトライしても改善されない場合は一番マシなもので我慢する
+        try:
+            concise_summary = await _summarize()
+        except RetryError:
+            concise_summary = self.tmp_concise_summary
+        except Exception as e:
+            raise e
+
+        return concise_summary
 
 
-    @retry(
-        stop=stop_after_attempt(MAX_RETRY_COUNT),
-        wait=wait_fixed(RETRY_INTERVAL),
-    )
-    async def _extract_topic (self, content: List[str] = []) -> List[TopicModel]:
+    async def _extract_topic (self, detail_summary: List[str] = []) -> List[TopicModel]:
+        @retry(
+            stop=stop_after_attempt(MAX_RETRY_COUNT),
+            wait=wait_fixed(RETRY_INTERVAL),
+        )
+        async def _extract () -> List[TopicModel]:
+            result: str = await chain.arun(**args)
+            topic: List[TopicModel] = self._parse_topic(result)
+            if len(topic) > MAX_TOPIC_ITEMS:
+                if len(self.tmp_topic) == 0:
+                    self.tmp_topic = topic
+                elif len(topic) < len(self.tmp_topic):
+                    self.tmp_topic = topic
+                raise ValueError(f"topic too much. - ({len(topic)})")
+            return topic
+
+        # 準備
         prompt = PromptTemplate(
             template=TOPIC_PROMPT_TEMPLATE,
             input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
@@ -289,12 +325,19 @@ class YoutubeSummarize:
         )
         args: Dict[str, str] = {
             "title": self.title,
-            "content": "\n".join(content) if len(content) > 0 else "",
+            "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
         }
-        result: str = await chain.arun(**args)
-        topic: List[TopicModel] = self._parse_topic(result)
-        if len(topic) > MAX_TOPIC_ITEMS:
-            raise ValueError(f"topic too much. - ({len(topic)})")
+        self.tmp_topic = []
+        topic: List[TopicModel] = []
+
+        # リトライしても改善されない場合は一番マシなもので我慢する
+        try:
+            topic = await _extract()
+        except RetryError:
+            topic = self.tmp_topic
+        except Exception as e:
+            raise e
+
         return topic
 
 
