@@ -23,7 +23,7 @@ from .types import SummaryResultModel, TopicModel
 MODE_CONCISE = 0x01
 MODE_DETAIL  = 0x02
 MODE_TOPIC   = 0x04
-MODE_ALL     = 0xff
+MODE_ALL     = MODE_CONCISE | MODE_DETAIL | MODE_TOPIC
 
 SPECIFY_SUMMARY_MAX_LENGTH = os.getenv("SPECIFY_SUMMARY_MAX_LENGTH", "false") == "true"
 MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "400"))
