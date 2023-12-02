@@ -21,10 +21,12 @@ def qa (args):
         with open(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}', 'r') as f:
             summary = json.load(f)
         print(f'(Summary)\n{summary["concise"]}')
-        print("[Topic]")
+        print("(Topic)")
         for topic in summary["topic"]:
             print(f'{topic["title"]}')
             print("  ", "\n  ".join(topic["abstract"]), sep="")
+        print("(Keyword)", ", ".join(summary["keyword"]), sep="\n")
+    print("")
 
     while True:
         query = input("Query: ").strip()

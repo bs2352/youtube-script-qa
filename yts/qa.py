@@ -287,11 +287,12 @@ class YoutubeQA:
                 "Always answer the query using the provided context information, "
                 "and not prior knowledge.\n"
                 "Some rules to follow:\n"
-                "1. Refer to the context provided within your answer as much as possible."
-                "2. Avoid statements like 'Based on the context, ...' or "
+                "- Refer to the context provided within your answer as much as possible.\n"
+                "- Avoid statements like 'Based on the context, ...' or "
                 "'The context information ...' or anything along "
-                "those lines."
-                "3. Please answer in Japanese."
+                "those lines.\n"
+                "- If you don't know, please answer \"I don't know.\"\n"
+                "- Please answer in Japanese.\n"
             ),
             role=MessageRole.SYSTEM,
         )
