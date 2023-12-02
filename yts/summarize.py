@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 import os
 import sys
 import json
@@ -29,7 +29,7 @@ SPECIFY_SUMMARY_MAX_LENGTH = os.getenv("SPECIFY_SUMMARY_MAX_LENGTH", "false") ==
 MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "400"))
 MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "1.0"))
 MAX_TOPIC_ITEMS = 15
-MAX_RETRY_COUNT = 10
+MAX_RETRY_COUNT = 5
 RETRY_INTERVAL = 5.0
 
 
@@ -163,15 +163,8 @@ class YoutubeSummarize:
         if mode & MODE_DETAIL > 0:
             detail_summary = self._summarize_in_detail()
 
-        # 簡潔な要約
-        concise_summary = ""
-        if mode & MODE_CONCISE > 0:
-            concise_summary = self._summarize_concisely(detail_summary)
-
-        # トピック抽出
-        topic: List[TopicModel] = []
-        if mode & MODE_TOPIC > 0:
-            topic = self._extract_topic(detail_summary)
+        # 以降は詳細な要約をベースに処理するので非同期で並行処理で行う
+        (concise_summary, topic) = self._async_run_with_detail_summary(mode, detail_summary)
 
         summary: SummaryResultModel = SummaryResultModel(
             title=self.title,
@@ -215,11 +208,50 @@ class YoutubeSummarize:
         )
 
 
+    def _summarize_in_detail (self) -> List[str]:
+        if self.chain is None:
+            return []
+        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups_evenly(5)
+        tasks = [
+            self.chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
+        ]
+        gather = asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(gather)
+
+
+    def _async_run_with_detail_summary (self, mode, detail_summary) -> Tuple[str, List[TopicModel]]:
+        if mode & (MODE_CONCISE | MODE_TOPIC) == 0:
+            return ("", [])
+
+        tasks = []
+        if mode & MODE_CONCISE > 0:
+            tasks.append(self._summarize_concisely(detail_summary))
+        if mode & MODE_TOPIC > 0:
+            tasks.append(self._extract_topic(detail_summary))
+
+        gather = asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        results = loop.run_until_complete(gather)
+
+        concise_summary: str = ""
+        topic: List[TopicModel] = []
+        if mode & (MODE_CONCISE | MODE_TOPIC) == (MODE_CONCISE | MODE_TOPIC):
+            concise_summary = results[0]
+            topic = results[1]
+        elif mode & MODE_CONCISE == MODE_CONCISE:
+            concise_summary = results[0]
+        elif mode & MODE_TOPIC == MODE_TOPIC:
+            topic = results[0]
+
+        return (concise_summary, topic)
+
+
     @retry(
         stop=stop_after_attempt(MAX_RETRY_COUNT),
         wait=wait_fixed(RETRY_INTERVAL),
     )
-    def _summarize_concisely (self, detail_summary: List[str]) -> str:
+    async def _summarize_concisely (self, detail_summary: List[str]) -> str:
         prompt = PromptTemplate(
             template=CONCISELY_PROMPT_TEMPLATE,
             input_variables=CONCISELY_PROMPT_TEMPLATE_VARIABLES,
@@ -235,29 +267,17 @@ class YoutubeSummarize:
             "title": self.title,
             "content": "\n".join(detail_summary),
         }
-        result: str = chain.run(**args)
+        result: str  = await chain.arun(**args)
         if len(result) > MAX_CONCISE_SUMMARY_LENGTH * MAX_LENGTH_MARGIN_MULTIPLIER:
             raise ValueError(f"summary too long. - ({len(result)})")
         return result
-
-
-    def _summarize_in_detail (self) -> List[str]:
-        if self.chain is None:
-            return []
-        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups_evenly(5)
-        tasks = [
-            self.chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
-        ]
-        gather = asyncio.gather(*tasks)
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(gather)
 
 
     @retry(
         stop=stop_after_attempt(MAX_RETRY_COUNT),
         wait=wait_fixed(RETRY_INTERVAL),
     )
-    def _extract_topic (self, content: List[str] = []) -> List[TopicModel]:
+    async def _extract_topic (self, content: List[str] = []) -> List[TopicModel]:
         prompt = PromptTemplate(
             template=TOPIC_PROMPT_TEMPLATE,
             input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
@@ -271,7 +291,7 @@ class YoutubeSummarize:
             "title": self.title,
             "content": "\n".join(content) if len(content) > 0 else "",
         }
-        result: str = chain.run(**args)
+        result: str = await chain.arun(**args)
         topic: List[TopicModel] = self._parse_topic(result)
         if len(topic) > MAX_TOPIC_ITEMS:
             raise ValueError(f"topic too much. - ({len(topic)})")
