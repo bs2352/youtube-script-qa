@@ -1301,36 +1301,40 @@ Agenda:
         template=prompt_template,
         input_variables=prompt_template_variables
     )
+    inputs = {
+        "title": summary.title,
+        "content": "\n".join(summary.detail),
+    }
+
     prompt_kw = PromptTemplate(
         template=prompt_template_kw,
         input_variables=prompt_template_variables_kw
     )
-
-    idx = 0
-    prompts = [prompt, prompt_kw]
-    inputs = [
-        {
-            "title": summary.title,
-            "content": "\n".join(summary.detail),
-        },
-        {
-            "title": summary.title,
-            "content": "\n".join(summary.detail),
-            "keyword": ", ".join(summary.keyword),
-        }
-    ]
+    inputs_kw = {
+        "title": summary.title,
+        "content": "\n".join(summary.detail),
+        "keyword": ", ".join(summary.keyword),
+    }
 
     llm_chain = LLMChain(
         llm = setup_llm_from_environment(),
-        prompt=prompts[idx],
-        # verbose=True,
+        prompt=prompt,
+        verbose=True,
+    )
+    llm_chain_kw = LLMChain(
+        llm = setup_llm_from_environment(),
+        prompt=prompt_kw,
+        verbose=True,
     )
 
-    tasks = [llm_chain.arun(**(inputs[idx]))]
+    tasks = [llm_chain.arun(**inputs), llm_chain_kw.arun(**inputs_kw)]
     gather = asyncio.gather(*tasks)
     loop = asyncio.get_event_loop()
     results = loop.run_until_complete(gather)
     print(results[0])
+    print("--------------------")
+    print(results[1])
+    print("--------------------")
     print("\n", ", ".join(summary.keyword))
 
 
