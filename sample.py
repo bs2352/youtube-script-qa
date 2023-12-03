@@ -1222,6 +1222,118 @@ Body:
     print(result)
 
 
+def get_topic_from_summary_kwd ():
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import LLMChain
+    from yts.utils import setup_llm_from_environment
+    from yts.types import SummaryResultModel
+    import json
+    import dotenv
+
+    dotenv.load_dotenv()
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1] if len(sys.argv[1]) > 5 else vid
+
+    with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
+        summary = SummaryResultModel(**(json.load(f)))
+
+    prompt_template  = \
+"""I am creating an agenda for Youtube videos.
+Below are notes on creating an agenda, as well as video title and content.
+Please follow the instructions carefully and create an agenda from the title and content.
+
+Notes:
+- Please create an agenda that covers the entire content of the video.
+- Your agenda should include headings and some subheaddings for each heading.
+- Create headings and subheadings that follow the flow of the story.
+- Please include important keywords in the heading and subheading.
+- Please include only one topic per heading or subheading.
+- Please assign each heading a sequential number such as 1, 2, 3.
+- Please keep each heading as concise as possible.
+- Please add a "-" to the beginning of each subheading and output it as bullet points.
+- Please keep each subheading as concise as possible.
+- Please create the agenda in Japanese.
+
+Title:
+{title}
+
+Content:
+{content}
+
+Agenda:
+"""
+    prompt_template_variables = ["title", "content"]
+
+
+    prompt_template_kw  = \
+"""I am creating an agenda for Youtube videos.
+Below are notes on creating an agenda, as well as video title and content.
+Please follow the instructions carefully and create an agenda from the title and content.
+
+Notes:
+- Please create an agenda that covers the entire content of the video.
+- Your agenda should include headings and some subheaddings for each heading.
+- Create headings and subheadings that follow the flow of the story.
+- Please include important keywords in the heading and subheading.
+- Please include the keywords listed below for headings and subheadings as much as possible.
+- Please include only one topic per heading or subheading.
+- Please assign each heading a sequential number such as 1, 2, 3.
+- Please keep each heading as concise as possible.
+- Please add a "-" to the beginning of each subheading and output it as bullet points.
+- Please keep each subheading as concise as possible.
+- Please create the agenda in Japanese.
+
+Title:
+{title}
+
+Content:
+{content}
+
+Keywords:
+{keyword}
+
+Agenda:
+"""
+    prompt_template_variables_kw = ["title", "keyword", "content"]
+
+    prompt = PromptTemplate(
+        template=prompt_template,
+        input_variables=prompt_template_variables
+    )
+    prompt_kw = PromptTemplate(
+        template=prompt_template_kw,
+        input_variables=prompt_template_variables_kw
+    )
+
+    idx = 0
+    prompts = [prompt, prompt_kw]
+    inputs = [
+        {
+            "title": summary.title,
+            "content": "\n".join(summary.detail),
+        },
+        {
+            "title": summary.title,
+            "content": "\n".join(summary.detail),
+            "keyword": ", ".join(summary.keyword),
+        }
+    ]
+
+    llm_chain = LLMChain(
+        llm = setup_llm_from_environment(),
+        prompt=prompts[idx],
+        # verbose=True,
+    )
+
+    tasks = [llm_chain.arun(**(inputs[idx]))]
+    gather = asyncio.gather(*tasks)
+    loop = asyncio.get_event_loop()
+    results = loop.run_until_complete(gather)
+    print(results[0])
+    print("\n", ", ".join(summary.keyword))
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -1237,4 +1349,5 @@ if __name__ == "__main__":
     # embedding_async()
     # which_document_to_read()
     # test_check_comprehensively()
-    test_extract_keyword()
+    # test_extract_keyword()
+    get_topic_from_summary_kwd()
