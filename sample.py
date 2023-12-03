@@ -1319,12 +1319,12 @@ Agenda:
     llm_chain = LLMChain(
         llm = setup_llm_from_environment(),
         prompt=prompt,
-        verbose=True,
+        # verbose=True,
     )
     llm_chain_kw = LLMChain(
         llm = setup_llm_from_environment(),
         prompt=prompt_kw,
-        verbose=True,
+        # verbose=True,
     )
 
     tasks = [llm_chain.arun(**inputs), llm_chain_kw.arun(**inputs_kw)]
