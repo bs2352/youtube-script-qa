@@ -1183,24 +1183,81 @@ def test_extract_keyword ():
 """
 
     prompt_template = \
-"""Please extract the keywords that describe the content of this video from the title and body of the video listed below.
-Please observe the following precautions when extracting keywords.
+"""Please extract the keywords that describe the content of this video from the title, abstract and content listed below.
+Keywords refer to words or phrases within the main theme or content of this video.
+Please observe the following notes when extracting keywords.
 
 Notes:
 Please output one keyword in one line.
-Please output only important keywords.
+Please extract only truly important and distinctive keywords.
+Group similar keywords together.
 Do not output the same keywords.
 Do not translate keywords into English.
 
 Title:
 {title}
 
-Body:
+Abstract:
+{abstract}
+
+Content:
+{content}
+
+Keyword:
+"""
+    prompt_variables = ["title", "content", "abstract"]
+    args = {
+        "title": summary.title,
+        "content": summary.concise,
+        # "content": "\n".join(summary.detail),
+        # "abstract": summary.concise,
+    }
+
+    prompt_template = \
+"""Please extract the keywords that describe the content of this video from the title and content listed below.
+Keywords refer to words or phrases within the main theme or content of this video.
+Please observe the following notes when extracting keywords.
+
+Notes:
+Please output one keyword in one line.
+Please extract only truly important and distinctive keywords.
+Group similar keywords together.
+Do not output the same keywords.
+Do not translate keywords into English.
+
+Title:
+{title}
+
+Content:
+{content}
+
+Keywords:
+"""
+    prompt_template = \
+"""下記のタイトルと内容からこの動画の内容を表すキーワードを抽出してください。
+キーワードは、この動画のメインテーマまたはコンテンツ内の単語またはフレーズを指します。
+キーワードを抽出する際には、以下の注意事項をお守りください。
+
+注意事項：
+キーワードは1行に1つずつ入力してください。
+本当に重要かつ特徴的なキーワードのみを抽出してください。
+類似したキーワードをグループ化してください。
+同じキーワードを出力しないでください。
+
+タイトル：
+{title}
+
+内容：
 {content}
 
 キーワード：
 """
     prompt_variables = ["title", "content"]
+    args = {
+        "title": summary.title,
+        # "content": summary.concise,
+        "content": "\n".join(summary.detail),
+    }
 
     llm = setup_llm_from_environment()
     prompt = PromptTemplate(
@@ -1213,13 +1270,10 @@ Body:
         verbose=True,
     )
 
-    args = {
-        "title": summary.title,
-        "content": "\n".join(summary.detail),
-    }
-
     result = chain.run(**args)
     print(result)
+    print("--------------")
+    print(", ".join(summary.keyword))
 
 
 def get_topic_from_summary_kwd ():
@@ -1353,5 +1407,5 @@ if __name__ == "__main__":
     # embedding_async()
     # which_document_to_read()
     # test_check_comprehensively()
-    # test_extract_keyword()
-    get_topic_from_summary_kwd()
+    test_extract_keyword()
+    # get_topic_from_summary_kwd()

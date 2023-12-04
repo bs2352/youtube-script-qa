@@ -26,12 +26,11 @@ MODE_TOPIC   = 0x04
 MODE_KEYWORD = 0x08
 MODE_ALL     = MODE_CONCISE | MODE_DETAIL | MODE_TOPIC | MODE_KEYWORD
 
-SPECIFY_SUMMARY_MAX_LENGTH = os.getenv("SPECIFY_SUMMARY_MAX_LENGTH", "false") == "true"
 MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "400"))
 MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "1.0"))
 MAX_TOPIC_ITEMS = 15
-MAX_KEYWORDS = 30
-MAX_KEYWORDS_MARGIN_MULTIPLIER = 1.3
+MAX_KEYWORDS = int(os.getenv("MAX_KEYWORD", "30"))
+MAX_KEYWORDS_MARGIN_MULTIPLIER = float(os.getenv("MAX_KEYWORD_MARGIN", "1.3"))
 MAX_RETRY_COUNT = 5
 RETRY_INTERVAL = 5.0
 
@@ -53,7 +52,7 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を全体を網羅して日本語で�
 簡潔な要約:"""
 
 CONCISELY_PROMPT_TEMPLATE = \
-"""この動画の内容を全体を網羅して{length}簡潔に要約してください。
+"""この動画の内容を全体を網羅して簡潔に要約してください。
 この動画の内容は以下の通りです。
 
 タイトル：
@@ -64,7 +63,7 @@ CONCISELY_PROMPT_TEMPLATE = \
 
 簡潔な要約：
 """
-CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["length", "title", "content"]
+CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
 TOPIC_PROMPT_TEMPLATE = \
 """I am creating an agenda for Youtube videos.
@@ -74,7 +73,7 @@ Please follow the instructions carefully and create an agenda from the title and
 Notes:
 - Please create an agenda that covers the entire content of the video.
 - Your agenda should include headings and some subheaddings for each heading.
-- Create headings and subheadings that follow the flow of the story.
+- Please create headings and subheadings that follow the flow of the story.
 - Please include important keywords in the heading and subheading.
 - Please include only one topic per heading or subheading.
 - Please assign each heading a sequential number such as 1, 2, 3.
@@ -94,25 +93,25 @@ Agenda:
 TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
 KEYWORD_PROMPT_TEMPLATE = \
-"""Please extract the keywords that describe the content of this video from the title and body of the video listed below.
-Please observe the following precautions when extracting keywords.
+"""Please extract the keywords that describe the content of this video from the title and content listed below.
+Keywords refer to words or phrases within the main theme or content of this video.
+Please observe the following notes when extracting keywords.
 
 Notes:
 Please output one keyword in one line.
-Please output only important keywords.
-Maximum number of keywords is {max_keywords}
+Please extract only truly important and distinctive keywords.
 Do not output the same keywords.
 Do not translate keywords into English.
 
 Title:
 {title}
 
-Body:
+Content:
 {content}
 
-キーワード：
+Keywords:
 """
-KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["max_keywords", "title", "content"]
+KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
 
 class YoutubeSummarize:
@@ -295,11 +294,7 @@ class YoutubeSummarize:
             prompt=prompt,
             verbose=self.debug,
         )
-        length_str = ''
-        if SPECIFY_SUMMARY_MAX_LENGTH is True:
-            length_str = f'{MAX_CONCISE_SUMMARY_LENGTH}文字くらいで'
         args: Dict[str, str] = {
-            "length": length_str,
             "title": self.title,
             "content": "\n".join(detail_summary),
         }
@@ -415,7 +410,6 @@ class YoutubeSummarize:
             verbose=self.debug,
         )
         args: Dict[str, str] = {
-            "max_keywords": str(MAX_KEYWORDS),
             "title": self.title,
             "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
         }
