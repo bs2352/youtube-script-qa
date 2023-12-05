@@ -73,13 +73,9 @@ Please follow the instructions carefully and create an agenda from the title and
 Notes:
 - Please create an agenda that covers the entire content of the video.
 - Your agenda should include headings and some subheaddings for each heading.
-- Please create headings and subheadings that follow the flow of the story.
-- Please include important keywords in the heading and subheading.
-- Please include only one topic per heading or subheading.
 - Please assign each heading a sequential number such as 1, 2, 3.
-- Please keep each heading as concise as possible.
 - Please add a "-" to the beginning of each subheading and output it as bullet points.
-- Please keep each subheading as concise as possible.
+- Please keep each heading and subheading short and concise.
 - Please create the agenda in Japanese.
 
 Title:

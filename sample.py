@@ -1292,6 +1292,31 @@ def get_topic_from_summary_kwd ():
     with open(f"./{os.environ['SUMMARY_STORE_DIR']}/{vid}", "r") as f:
         summary = SummaryResultModel(**(json.load(f)))
 
+    # prompt_template  = \
+# """I am creating an agenda for Youtube videos.
+# Below are notes on creating an agenda, as well as video title and content.
+# Please follow the instructions carefully and create an agenda from the title and content.
+
+# Notes:
+# - Please create an agenda that covers the entire content of the video.
+# - Your agenda should include headings and some subheaddings for each heading.
+# - Please create headings and subheadings that follow the flow of the story.
+# - Please include important keywords in the heading and subheading.
+# - Please include only one topic per heading or subheading.
+# - Please assign each heading a sequential number such as 1, 2, 3.
+# - Please keep each heading as concise as possible.
+# - Please add a "-" to the beginning of each subheading and output it as bullet points.
+# - Please keep each subheading as concise as possible.
+# - Please create the agenda in Japanese.
+
+# Title:
+# {title}
+
+# Content:
+# {content}
+
+# Agenda:
+# """
     prompt_template  = \
 """I am creating an agenda for Youtube videos.
 Below are notes on creating an agenda, as well as video title and content.
@@ -1300,13 +1325,9 @@ Please follow the instructions carefully and create an agenda from the title and
 Notes:
 - Please create an agenda that covers the entire content of the video.
 - Your agenda should include headings and some subheaddings for each heading.
-- Please create headings and subheadings that follow the flow of the story.
-- Please include important keywords in the heading and subheading.
-- Please include only one topic per heading or subheading.
 - Please assign each heading a sequential number such as 1, 2, 3.
-- Please keep each heading as concise as possible.
 - Please add a "-" to the beginning of each subheading and output it as bullet points.
-- Please keep each subheading as concise as possible.
+- Please keep each heading and subheading short and concise.
 - Please create the agenda in Japanese.
 
 Title:
