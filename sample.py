@@ -1407,5 +1407,5 @@ if __name__ == "__main__":
     # embedding_async()
     # which_document_to_read()
     # test_check_comprehensively()
-    test_extract_keyword()
-    # get_topic_from_summary_kwd()
+    # test_extract_keyword()
+    get_topic_from_summary_kwd()

@@ -5,7 +5,7 @@ import json
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
-from tenacity import retry, stop_after_attempt, wait_fixed, RetryError
+from tenacity import retry, stop_after_attempt, wait_fixed, RetryError, retry_if_not_result
 
 from langchain.chains import LLMChain
 from langchain.chains.summarize import load_summarize_chain
@@ -129,11 +129,6 @@ class YoutubeSummarize:
 
         self.summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{self.vid}'
 
-        self.chain_type: str = 'map_reduce'
-        self.llm: LLMType = setup_llm_from_environment()
-        self.chain: Optional[BaseCombineDocumentsChain] = None
-        self.chunks: List[TranscriptChunkModel] = []
-
         self.url: str = f'https://www.youtube.com/watch?v={vid}'
         video_info = YouTube(self.url).vid_info["videoDetails"]
         self.title: str = video_info['title']
@@ -181,10 +176,6 @@ class YoutubeSummarize:
         if mode & MODE_DETAIL == 0:
             mode |= MODE_DETAIL
 
-        # 準備
-        self.chain = self._prepare_summarize_chain()
-        self.chunks = self._prepare_transcriptions()
-
         # 詳細な要約
         detail_summary: List[str] = self._summarize_in_detail()
 
@@ -212,38 +203,42 @@ class YoutubeSummarize:
         return summary
 
 
-    def _prepare_summarize_chain (self) -> BaseCombineDocumentsChain:
-        return load_summarize_chain(
-            llm=self.llm,
-            chain_type=self.chain_type,
-            map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
-            combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
-            verbose=self.debug
-        )
-
-
-    def _prepare_transcriptions (self) -> List[TranscriptChunkModel]:
-        MAXLENGTH = 3000
-        OVERLAP_LENGTH = 10
-        transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en", "en-US"])
-        return divide_transcriptions_into_chunks(
-            transcriptions,
-            maxlength = MAXLENGTH,
-            overlap_length = OVERLAP_LENGTH,
-            id_prefix = self.vid
-        )
-
-
     def _summarize_in_detail (self) -> List[str]:
-        if self.chain is None:
-            return []
-        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups_evenly(5)
+
+        def _prepare_summarize_chain () -> BaseCombineDocumentsChain:
+            return load_summarize_chain(
+                llm=setup_llm_from_environment(),
+                chain_type='map_reduce',
+                map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
+                combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
+                verbose=self.debug
+            )
+
+        def _prepare_transcriptions () -> List[TranscriptChunkModel]:
+            MAXLENGTH = 3000
+            OVERLAP_LENGTH = 10
+            transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(
+                video_id=self.vid, languages=["ja", "en", "en-US"]
+            )
+            return divide_transcriptions_into_chunks(
+                transcriptions,
+                maxlength = MAXLENGTH,
+                overlap_length = OVERLAP_LENGTH,
+                id_prefix = self.vid
+            )
+
+        chain: BaseCombineDocumentsChain = _prepare_summarize_chain()
+        chunks: List[TranscriptChunkModel] = _prepare_transcriptions()
+
+        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups_evenly(chunks, 5)
         tasks = [
-            self.chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
+            chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
         ]
         gather = asyncio.gather(*tasks)
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(gather)
+        results: List[str] = loop.run_until_complete(gather)
+
+        return results
 
 
     def _async_run_with_detail_summary (self, mode, detail_summary) -> Tuple[str, List[TopicModel], List[str]]:
@@ -252,34 +247,41 @@ class YoutubeSummarize:
 
         tasks = []
         tasks.append(self._summarize_concisely(detail_summary, mode & MODE_CONCISE > 0))
-        tasks.append(self._extract_topic(detail_summary, mode & MODE_TOPIC > 0))
         tasks.append(self._extract_keyword(detail_summary, mode & MODE_KEYWORD > 0))
+        tasks.append(self._extract_topic(detail_summary, mode & MODE_TOPIC > 0))
 
         gather = asyncio.gather(*tasks)
         loop = asyncio.get_event_loop()
         results = loop.run_until_complete(gather)
 
         concise_summary: str    = results[0]
-        topic: List[TopicModel] = results[1]
-        keyword: List[str]      = results[2]
+        keyword: List[str]      = results[1]
+        topic: List[TopicModel] = results[2]
 
         return (concise_summary, topic, keyword)
 
 
     async def _summarize_concisely (self, detail_summary: List[str], enable: bool = True) -> str:
-        @retry(
-            stop=stop_after_attempt(MAX_RETRY_COUNT),
-            wait=wait_fixed(RETRY_INTERVAL),
-        )
-        async def _summarize () -> str:
-            summary: str  = await chain.arun(**args)
+
+        def _check (summary:str) -> bool:
             if len(summary) > MAX_CONCISE_SUMMARY_LENGTH * MAX_LENGTH_MARGIN_MULTIPLIER:
                 if len(self.tmp_concise_summary) == 0:
                     self.tmp_concise_summary = summary
                 elif len(summary) < len(self.tmp_concise_summary):
                     self.tmp_concise_summary = summary
-                raise ValueError(f"summary too long. - ({len(summary)})")
+                self._debug(f"summary too long. - ({len(summary)})")
+                return False
+            return True
+
+        @retry(
+            stop=stop_after_attempt(MAX_RETRY_COUNT),
+            wait=wait_fixed(RETRY_INTERVAL),
+            retry=retry_if_not_result(_check)
+        )
+        async def _summarize () -> str:
+            summary: str  = await chain.arun(**args)
             return summary
+
 
         if enable is False:
             return ""
@@ -290,7 +292,7 @@ class YoutubeSummarize:
             input_variables=CONCISELY_PROMPT_TEMPLATE_VARIABLES,
         )
         chain = LLMChain(
-            llm=self.llm,
+            llm=setup_llm_from_environment(),
             prompt=prompt,
             verbose=self.debug,
         )
@@ -312,89 +314,31 @@ class YoutubeSummarize:
         return concise_summary
 
 
-    async def _extract_topic (self, detail_summary: List[str], enable: bool = True) -> List[TopicModel]:
-        @retry(
-            stop=stop_after_attempt(MAX_RETRY_COUNT),
-            wait=wait_fixed(RETRY_INTERVAL),
-        )
-        async def _extract () -> List[TopicModel]:
-            result: str = await chain.arun(**args)
-            topic: List[TopicModel] = self._parse_topic(result)
-            if len(topic) > MAX_TOPIC_ITEMS:
-                if len(self.tmp_topic) == 0:
-                    self.tmp_topic = topic
-                elif len(topic) < len(self.tmp_topic):
-                    self.tmp_topic = topic
-                raise ValueError(f"topic too much. - ({len(topic)})")
-            if len(topic) == 0:
-                raise ValueError(f"topic is empty.\n{result}")
-            return topic
-
-        if enable is False:
-            return []
-
-        # 準備
-        prompt = PromptTemplate(
-            template=TOPIC_PROMPT_TEMPLATE,
-            input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
-        )
-        chain = LLMChain(
-            llm=self.llm,
-            prompt=prompt,
-            verbose=self.debug,
-        )
-        args: Dict[str, str] = {
-            "title": self.title,
-            "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
-        }
-        self.tmp_topic = []
-        topic: List[TopicModel] = []
-
-        # リトライしても改善されない場合は一番マシなもので我慢する
-        try:
-            topic = await _extract()
-        except RetryError:
-            topic = self.tmp_topic
-        except Exception as e:
-            raise e
-
-        return topic
-
-
-    def _parse_topic (self, topic_string: str) -> List[TopicModel]:
-        topics: List[TopicModel] = []
-        topic: TopicModel = TopicModel(title="", abstract=[])
-        for line in topic_string.split("\n"):
-            line = line.strip()
-            if line == "":
-                continue
-            if line[0].isdigit():
-                if topic.title != "":
-                    topics.append(topic)
-                topic = TopicModel(title=line, abstract=[])
-                continue
-            if line[0] == "-":
-                topic.abstract.append(line)
-        return topics
-
-
     async def _extract_keyword (self, detail_summary: List[str], enable: bool = True) -> List[str]:
-        @retry(
-            stop=stop_after_attempt(MAX_RETRY_COUNT),
-            wait=wait_fixed(RETRY_INTERVAL),
-        )
-        async def _extract () -> List[str]:
-            result: str = await chain.arun(**args)
-            keyword: List[str] = [ k.strip() for k in result.split("\n")]
+
+        def _check (keyword: List[str]) -> bool:
             if len(keyword) > MAX_KEYWORDS * MAX_KEYWORDS_MARGIN_MULTIPLIER:
                 if len(self.tmp_keyword) == 0:
                     self.tmp_keyword = keyword
                 elif len(keyword) < len(self.tmp_keyword):
                     self.tmp_keyword = keyword
-                raise ValueError(f"keyword too much. - ({len(keyword)})")
+                self._debug(f"keyword too much. - ({len(keyword)})")
+                return False
             if len(keyword) == 1:
-                raise ValueError(f"Perhaps invalid format. \n{result}")
+                self._debug(f"Perhaps invalid format. \n{keyword[0]}")
+                return False
+            return True
+
+        @retry(
+            stop=stop_after_attempt(MAX_RETRY_COUNT),
+            wait=wait_fixed(RETRY_INTERVAL),
+            retry=retry_if_not_result(_check)
+        )
+        async def _extract () -> List[str]:
+            result: str = await chain.arun(**args)
+            keyword: List[str] = [ k.strip() for k in result.split("\n")]
             return keyword
+
 
         if enable is False:
             return []
@@ -405,7 +349,7 @@ class YoutubeSummarize:
             input_variables=KEYWORD_PROMPT_TEMPLATE_VARIABLES,
         )
         chain = LLMChain(
-            llm=self.llm,
+            llm=setup_llm_from_environment(),
             prompt=prompt,
             verbose=self.debug,
         )
@@ -427,45 +371,136 @@ class YoutubeSummarize:
         return keyword
 
 
-    def _divide_chunks_into_N_groups_evenly (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
-        chunk_num: int = len(self.chunks)
+    async def _extract_topic (self, detail_summary: List[str], enable: bool = True) -> List[TopicModel]:
+
+        def _parse_topic (topic_string: str) -> List[TopicModel]:
+            topics: List[TopicModel] = []
+            topic: TopicModel = TopicModel(title="", abstract=[])
+            for line in topic_string.split("\n"):
+                line = line.strip()
+                if line == "":
+                    continue
+                if line[0].isdigit():
+                    if topic.title != "":
+                        topics.append(topic)
+                    topic = TopicModel(title=line, abstract=[])
+                    continue
+                if line[0] == "-":
+                    topic.abstract.append(line)
+            return topics
+
+        def _check (topic: List[TopicModel]) -> bool:
+            if len(topic) > MAX_TOPIC_ITEMS:
+                if len(self.tmp_topic) == 0:
+                    self.tmp_topic = topic
+                elif len(topic) < len(self.tmp_topic):
+                    self.tmp_topic = topic
+                self._debug(f"topic too much. - ({len(topic)})")
+                return False
+            if len(topic) == 0:
+                self._debug(f"topic is empty.\n{topic}")
+                return False
+            return True
+
+        @retry(
+            stop=stop_after_attempt(MAX_RETRY_COUNT),
+            wait=wait_fixed(RETRY_INTERVAL),
+            retry=retry_if_not_result(_check)
+        )
+        async def _extract () -> List[TopicModel]:
+            result: str = await chain.arun(**args)
+            topic: List[TopicModel] = _parse_topic(result)
+            return topic
+
+
+        if enable is False:
+            return []
+
+        # 準備
+        prompt = PromptTemplate(
+            template=TOPIC_PROMPT_TEMPLATE,
+            input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=setup_llm_from_environment(),
+            prompt=prompt,
+            verbose=self.debug,
+        )
+        args: Dict[str, str] = {
+            "title": self.title,
+            "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
+        }
+        self.tmp_topic = []
+        topic: List[TopicModel] = []
+
+        # リトライしても改善されない場合は一番マシなもので我慢する
+        try:
+            topic = await _extract()
+        except RetryError:
+            topic = self.tmp_topic
+        except Exception as e:
+            raise e
+
+        return topic
+
+
+    def _divide_chunks_into_N_groups_evenly (
+        self,
+        chunks: List[TranscriptChunkModel] = [],
+        group_num: int = 5
+    ) -> List[List[TranscriptChunkModel]]:
+
+        chunk_num: int = len(chunks)
 
         if chunk_num <= group_num:
-            return [ [c] for c in self.chunks]
+            return [ [c] for c in chunks]
 
         deltas: List[int] = [(chunk_num // group_num) for _ in range(0, group_num)]
         extra: int = chunk_num % group_num
         for i in range(0, extra):
             deltas[i] += 1
+
         groups: List[List[TranscriptChunkModel]] = []
         idx: int = 0
         for delta in deltas:
-            groups.append(self.chunks[idx: idx+delta])
+            groups.append(chunks[idx: idx+delta])
             idx += delta
 
         return groups
 
 
-    def _divide_chunks_into_N_groups (self, group_num: int = 5) -> List[List[TranscriptChunkModel]]:
-        total_time: float = self.chunks[-1].start + self.chunks[-1].duration
+    def _divide_chunks_into_N_groups (
+        self,
+        chunks: List[TranscriptChunkModel] = [],
+        group_num: int = 5
+    ) -> List[List[TranscriptChunkModel]]:
+
+        total_time: float = chunks[-1].start + chunks[-1].duration
         delta: float = total_time // group_num
         groups: List[List[TranscriptChunkModel]] = [[] for _ in range(0, group_num)]
-        for chunk in self.chunks:
+        for chunk in chunks:
             idx = int(chunk.start // delta)
             idx = min(idx, group_num - 1)
             groups[idx].append(chunk)
+
         return [group  for group in groups if len(group) > 0]
 
 
-    def _divide_chunks_into_groups_by_time_interval (self, interval_minutes: int = 5) -> List[List[TranscriptChunkModel]]:
-        total_time: float = self.chunks[-1].start + self.chunks[-1].duration
+    def _divide_chunks_into_groups_by_time_interval (
+        self,
+        chunks: List[TranscriptChunkModel] = [],
+        interval_minutes: int = 5
+    ) -> List[List[TranscriptChunkModel]]:
+
+        total_time: float = chunks[-1].start + chunks[-1].duration
         delta: int = interval_minutes * 60
         group_num: int = (int(total_time) + 1) // delta
         groups: List[List[TranscriptChunkModel]] = [[] for _ in range(0, group_num)]
-        for chunk in self.chunks:
+        for chunk in chunks:
             idx = int(chunk.start // delta)
             idx = min(idx, group_num - 1)
             groups[idx].append(chunk)
+
         return [group for group in groups if len(group) > 0]
 
 
