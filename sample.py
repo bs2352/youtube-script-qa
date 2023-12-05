@@ -1350,6 +1350,8 @@ Agenda:
 """
     prompt_template_variables_kw = ["title", "keyword", "content"]
 
+    llm = setup_llm_from_environment()
+
     prompt = PromptTemplate(
         template=prompt_template,
         input_variables=prompt_template_variables
@@ -1370,12 +1372,12 @@ Agenda:
     }
 
     llm_chain = LLMChain(
-        llm = setup_llm_from_environment(),
+        llm = llm,
         prompt=prompt,
         # verbose=True,
     )
     llm_chain_kw = LLMChain(
-        llm = setup_llm_from_environment(),
+        llm = llm,
         prompt=prompt_kw,
         # verbose=True,
     )

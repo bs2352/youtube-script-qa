@@ -135,6 +135,8 @@ class YoutubeSummarize:
         self.author: str = video_info['author']
         self.lengthSeconds: int = int(video_info['lengthSeconds'])
 
+        self.llm: LLMType = setup_llm_from_environment()
+
         self.loading: bool = loading
         self.loading_canceled: bool = False
 
@@ -207,7 +209,7 @@ class YoutubeSummarize:
 
         def _prepare_summarize_chain () -> BaseCombineDocumentsChain:
             return load_summarize_chain(
-                llm=setup_llm_from_environment(),
+                llm=self.llm,
                 chain_type='map_reduce',
                 map_prompt=PromptTemplate(template=MAP_PROMPT_TEMPLATE, input_variables=["text"]),
                 combine_prompt=PromptTemplate(template=REDUCE_PROMPT_TEMPLATE, input_variables=["text"]),
@@ -292,7 +294,7 @@ class YoutubeSummarize:
             input_variables=CONCISELY_PROMPT_TEMPLATE_VARIABLES,
         )
         chain = LLMChain(
-            llm=setup_llm_from_environment(),
+            llm=self.llm,
             prompt=prompt,
             verbose=self.debug,
         )
@@ -349,7 +351,7 @@ class YoutubeSummarize:
             input_variables=KEYWORD_PROMPT_TEMPLATE_VARIABLES,
         )
         chain = LLMChain(
-            llm=setup_llm_from_environment(),
+            llm=self.llm,
             prompt=prompt,
             verbose=self.debug,
         )
@@ -422,7 +424,7 @@ class YoutubeSummarize:
             input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
         )
         chain = LLMChain(
-            llm=setup_llm_from_environment(),
+            llm=self.llm,
             prompt=prompt,
             verbose=self.debug,
         )
