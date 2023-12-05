@@ -1300,7 +1300,7 @@ Please follow the instructions carefully and create an agenda from the title and
 Notes:
 - Please create an agenda that covers the entire content of the video.
 - Your agenda should include headings and some subheaddings for each heading.
-- Create headings and subheadings that follow the flow of the story.
+- Please create headings and subheadings that follow the flow of the story.
 - Please include important keywords in the heading and subheading.
 - Please include only one topic per heading or subheading.
 - Please assign each heading a sequential number such as 1, 2, 3.
@@ -1318,7 +1318,6 @@ Content:
 Agenda:
 """
     prompt_template_variables = ["title", "content"]
-
 
     prompt_template_kw  = \
 """I am creating an agenda for Youtube videos.
