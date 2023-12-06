@@ -42,7 +42,7 @@ def qa (args):
 
 
 def summary (args):
-    ys = YoutubeSummarize(args.vid, True, args.debug)
+    ys = YoutubeSummarize(args.vid, not args.debug, args.debug)
     sm: Optional[SummaryResultModel] = ys.run()
     if sm is None:
         return
