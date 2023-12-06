@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Any
 import os
 import sys
 import json
@@ -149,17 +149,25 @@ class YoutubeSummarize:
 
 
     def run (self, mode:int = MODE_ALL) -> Optional[SummaryResultModel]:
+        loop = asyncio.get_event_loop()
+        tasks = [self.arun(mode)]
+        gather = asyncio.gather(*tasks)
+        result = loop.run_until_complete(gather)[0]
+        return result
+
+
+    async def arun (self, mode:int = MODE_ALL) -> Optional[SummaryResultModel]:
         if self.loading is True:
-            return self._run_with_loading(mode)
-        return self._run(mode)
+            return await self._arun_with_loading(mode)
+        return await self._arun(mode)
 
 
-    def _run_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResultModel]:
+    async def _arun_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResultModel]:
         summary: Optional[SummaryResultModel] = None
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
             try:
-                summary = self._run(mode)
+                summary = await self._arun(mode)
             except Exception as e:
                 raise e
             finally:
@@ -169,16 +177,16 @@ class YoutubeSummarize:
         return summary
 
 
-    def _run (self, mode:int = MODE_ALL) -> SummaryResultModel:
+    async def _arun (self, mode:int = MODE_ALL) -> SummaryResultModel:
         # mode調整
         if mode & MODE_DETAIL == 0:
             mode |= MODE_DETAIL
 
         # 詳細な要約
-        detail_summary: List[str] = self._summarize_in_detail()
+        detail_summary: List[str] = await self._summarize_in_detail()
 
         # 簡潔な要約、トピック抽出、キーワード抽出（非同期で並行処理）
-        (concise_summary, topic, keyword) = self._async_run_with_detail_summary(mode, detail_summary)
+        (concise_summary, topic, keyword) = await self._arun_with_detail_summary(mode, detail_summary)
 
         summary: SummaryResultModel = SummaryResultModel(
             title=self.title,
@@ -201,8 +209,7 @@ class YoutubeSummarize:
         return summary
 
 
-    def _summarize_in_detail (self) -> List[str]:
-
+    async def _summarize_in_detail (self) -> List[str]:
         def _prepare_summarize_chain () -> BaseCombineDocumentsChain:
             return load_summarize_chain(
                 llm=self.llm,
@@ -232,14 +239,16 @@ class YoutubeSummarize:
         tasks = [
             chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
         ]
-        gather = asyncio.gather(*tasks)
-        loop = asyncio.get_event_loop()
-        results: List[str] = loop.run_until_complete(gather)
+        results: List[str] = await asyncio.gather(*tasks)
 
         return results
 
 
-    def _async_run_with_detail_summary (self, mode, detail_summary) -> Tuple[str, List[TopicModel], List[str]]:
+    async def _arun_with_detail_summary (
+        self,
+        mode,
+        detail_summary
+    ) -> Tuple[str, List[TopicModel], List[str]]:
         if mode & (MODE_CONCISE | MODE_TOPIC | MODE_KEYWORD) == 0:
             return ("", [], [])
 
@@ -248,9 +257,7 @@ class YoutubeSummarize:
         tasks.append(self._extract_keyword(detail_summary, mode & MODE_KEYWORD > 0))
         tasks.append(self._extract_topic(detail_summary, mode & MODE_TOPIC > 0))
 
-        gather = asyncio.gather(*tasks)
-        loop = asyncio.get_event_loop()
-        results = loop.run_until_complete(gather)
+        results: List[Any] = await asyncio.gather(*tasks)
 
         concise_summary: str    = results[0]
         keyword: List[str]      = results[1]
@@ -259,8 +266,11 @@ class YoutubeSummarize:
         return (concise_summary, topic, keyword)
 
 
-    async def _summarize_concisely (self, detail_summary: List[str], enable: bool = True) -> str:
-
+    async def _summarize_concisely (
+        self,
+        detail_summary: List[str],
+        enable: bool = True
+    ) -> str:
         def _check (summary:str) -> bool:
             if len(summary) > MAX_CONCISE_SUMMARY_LENGTH * MAX_LENGTH_MARGIN_MULTIPLIER:
                 if len(self.tmp_concise_summary) == 0:
@@ -312,8 +322,11 @@ class YoutubeSummarize:
         return concise_summary
 
 
-    async def _extract_keyword (self, detail_summary: List[str], enable: bool = True) -> List[str]:
-
+    async def _extract_keyword (
+        self,
+        detail_summary: List[str],
+        enable: bool = True
+    ) -> List[str]:
         def _check (keyword: List[str]) -> bool:
             if len(keyword) > MAX_KEYWORDS * MAX_KEYWORDS_MARGIN_MULTIPLIER:
                 if len(self.tmp_keyword) == 0:
@@ -369,7 +382,23 @@ class YoutubeSummarize:
         return keyword
 
 
-    async def _extract_topic (self, detail_summary: List[str], enable: bool = True) -> List[TopicModel]:
+    async def _extract_topic (
+        self,
+        detail_summary: List[str],
+        enable: bool = True
+    ) -> List[TopicModel]:
+        def _check (topic: List[TopicModel]) -> bool:
+            if len(topic) > MAX_TOPIC_ITEMS:
+                if len(self.tmp_topic) == 0:
+                    self.tmp_topic = topic
+                elif len(topic) < len(self.tmp_topic):
+                    self.tmp_topic = topic
+                self._debug(f"topic too much. - ({len(topic)})")
+                return False
+            if len(topic) == 0:
+                self._debug(f"topic is empty.\n{topic}")
+                return False
+            return True
 
         def _parse_topic (topic_string: str) -> List[TopicModel]:
             topics: List[TopicModel] = []
@@ -386,19 +415,6 @@ class YoutubeSummarize:
                 if line[0] == "-":
                     topic.abstract.append(line)
             return topics
-
-        def _check (topic: List[TopicModel]) -> bool:
-            if len(topic) > MAX_TOPIC_ITEMS:
-                if len(self.tmp_topic) == 0:
-                    self.tmp_topic = topic
-                elif len(topic) < len(self.tmp_topic):
-                    self.tmp_topic = topic
-                self._debug(f"topic too much. - ({len(topic)})")
-                return False
-            if len(topic) == 0:
-                self._debug(f"topic is empty.\n{topic}")
-                return False
-            return True
 
         @retry(
             stop=stop_after_attempt(MAX_RETRY_COUNT),
