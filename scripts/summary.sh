@@ -30,6 +30,7 @@ summarize() {
         time python -m yts --summary --vid $vid
         echo ""
         cd $cur_dir
+        sleep 7
     done
 }
 
