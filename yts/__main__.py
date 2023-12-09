@@ -62,11 +62,11 @@ def summary (args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Youtube動画の視聴を支援するスクリプト')
-    parser.add_argument('--vid', default=DEFAULT_VIDEO_ID, help=f'Youtube動画のID（default:{DEFAULT_VIDEO_ID}）')
+    parser.add_argument('-v', '--vid', default=DEFAULT_VIDEO_ID, help=f'Youtube動画のID（default:{DEFAULT_VIDEO_ID}）')
     parser.add_argument('--source', default=DEFAULT_REF_SOURCE, type=int, help=f'回答を生成する際に参照する検索結果の数を指定する（default:{DEFAULT_REF_SOURCE}）')
     parser.add_argument('--detail', action='store_true', help='回答生成する際に参照した検索結果を表示する')
     parser.add_argument('--debug', action='store_true', help='デバッグ情報を出力する')
-    parser.add_argument('--summary', action='store_true', help='要約する')
+    parser.add_argument('-s', '--summary', action='store_true', help='要約する')
     args = parser.parse_args()
 
     if args.summary is False:

@@ -12,10 +12,11 @@ SUMMARY_DIR="../data/summaries" # 要約の保存先
 
 main() {
     case $1 in
+        "-s" )        summarize ;;
         "summarize" ) summarize ;;
-        "summary" ) summary $2;;
-        "list" ) list ;;
-        * ) list;;
+        "summary" )   summary $2;;
+        "list" )      list ;;
+        * )           list;;
     esac
 }
 

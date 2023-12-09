@@ -4,6 +4,7 @@ import sys
 import json
 import asyncio
 import time
+import re
 from concurrent.futures import ThreadPoolExecutor
 from tenacity import retry, stop_after_attempt, wait_fixed, RetryError, retry_if_not_result
 
@@ -29,8 +30,11 @@ MODE_ALL     = MODE_CONCISE | MODE_DETAIL | MODE_TOPIC | MODE_KEYWORD
 MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "400"))
 MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "1.0"))
 MAX_TOPIC_ITEMS = 15
-MAX_KEYWORDS = int(os.getenv("MAX_KEYWORD", "30"))
+MAX_KEYWORDS = int(os.getenv("MAX_KEYWORD", "20"))
 MAX_KEYWORDS_MARGIN_MULTIPLIER = float(os.getenv("MAX_KEYWORD_MARGIN", "1.3"))
+EXCLUDE_KEYWORDS = [
+    "セミナー", "企画", "チャンネル登録", "情報", "コラボ", "勉強会", "予定", "登録", "イベント",
+]
 MAX_RETRY_COUNT = 5
 RETRY_INTERVAL = 5.0
 
@@ -52,62 +56,54 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を全体を網羅して日本語で�
 簡潔な要約:"""
 
 CONCISELY_PROMPT_TEMPLATE = \
-"""この動画の内容を全体を網羅して簡潔に要約してください。
-この動画の内容は以下の通りです。
-
-タイトル：
-{title}
+"""以下の内容をターゲットを絞って日本語で簡潔に要約してください。
 
 内容：
 {content}
 
 簡潔な要約：
 """
-CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
+CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["content"]
 
 TOPIC_PROMPT_TEMPLATE = \
 """I am creating an agenda for Youtube videos.
-Below are notes on creating an agenda, as well as video title and content.
-Please follow the instructions carefully and create an agenda from the title and content.
+Below are notes on creating an agenda, as well as video content.
+Please follow the notes carefully and create an agenda from the content.
 
 Notes:
-- Please create an agenda that covers the entire content of the video.
-- Your agenda should include headings and some subheaddings for each heading.
+- Your agenda must cover the entire content.
+- Your agenda must include headings and some subheaddings for each heading.
 - Please assign each heading a sequential number such as 1, 2, 3.
-- Please add a "-" to the beginning of each subheading and output it as bullet points.
-- Please keep each heading and subheading short and concise.
+- Do not assign subheadings numbers such as 1.1, 3.1 to, but instead output them as bulleted lists with a "-" instead.
+- Please keep each heading and subheading short and concise term, not sentence.
 - Please create the agenda in Japanese.
-
-Title:
-{title}
 
 Content:
 {content}
 
 Agenda:
 """
-TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
+TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content"]
 
 KEYWORD_PROMPT_TEMPLATE = \
-"""Please extract the keywords that describe the content of this video from the title and content listed below.
-Keywords refer to words or phrases within the main theme or content of this video.
-Please observe the following notes when extracting keywords.
+"""Please extract impressive keywords from the video content listed below.
+Please follow the notes carefully when extracting keywords.
 
 Notes:
-Please output one keyword in one line.
-Please extract only truly important and distinctive keywords.
-Do not output the same keywords.
-Do not translate keywords into English.
-
-Title:
-{title}
+- Please scan the entire content first, then extract only targeted keywords.
+- Please assign each keyword a sequential number such as 1, 2, 3.
+- Please extract no more than {max} keywords.
+- Do not output same keywords.
+- Do not output similar keywords.
+- Do not translate keywords into English.
+- Please output one keyword in one line.
 
 Content:
 {content}
 
 Keywords:
 """
-KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
+KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
 
 class YoutubeSummarize:
@@ -305,7 +301,6 @@ class YoutubeSummarize:
             verbose=self.debug,
         )
         args: Dict[str, str] = {
-            "title": self.title,
             "content": "\n".join(detail_summary),
         }
         self.tmp_concise_summary = ""
@@ -340,6 +335,10 @@ class YoutubeSummarize:
                 return False
             return True
 
+        def _trim_kwd (kwd: str) -> str:
+            keyword: str = re.sub(r"^\d+\.?", "", kwd.strip()).strip()
+            return keyword
+
         @retry(
             stop=stop_after_attempt(MAX_RETRY_COUNT),
             wait=wait_fixed(RETRY_INTERVAL),
@@ -347,7 +346,8 @@ class YoutubeSummarize:
         )
         async def _extract () -> List[str]:
             result: str = await chain.arun(**args)
-            keyword: List[str] = [ k.strip() for k in result.split("\n")]
+            keyword: List[str] = [ _trim_kwd(kwd) for kwd in result.split("\n")]
+            keyword = [kwd for kwd in keyword if kwd not in EXCLUDE_KEYWORDS ]
             return keyword
 
 
@@ -364,9 +364,9 @@ class YoutubeSummarize:
             prompt=prompt,
             verbose=self.debug,
         )
-        args: Dict[str, str] = {
-            "title": self.title,
+        args: Dict[str, str|int] = {
             "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
+            "max": MAX_KEYWORDS,
         }
         self.tmp_keyword = []
         keyword: List[str] = []
@@ -441,7 +441,6 @@ class YoutubeSummarize:
             verbose=self.debug,
         )
         args: Dict[str, str] = {
-            "title": self.title,
             "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
         }
         self.tmp_topic = []

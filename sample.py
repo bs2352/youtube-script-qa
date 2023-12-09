@@ -1188,11 +1188,11 @@ Keywords refer to words or phrases within the main theme or content of this vide
 Please observe the following notes when extracting keywords.
 
 Notes:
-Please output one keyword in one line.
-Please extract only truly important and distinctive keywords.
-Group similar keywords together.
-Do not output the same keywords.
-Do not translate keywords into English.
+- Please extract only the keywords that will impress the content of this video.
+- Do not output similar keywords.
+- Do not output the same keywords.
+- Do not translate keywords into English.
+- Please output one keyword in one line.
 
 Title:
 {title}
@@ -1213,51 +1213,41 @@ Keyword:
         # "abstract": summary.concise,
     }
 
+    # prompt_template = \
+# """Please extract impressive keywords from the video content listed below.
+# Please observe the following notes when extracting keywords.
+
+# Notes:
+# - Please extract only targeted and impressive keywords.
+# - Do not output similar keywords.
+# - Do not output the same keywords.
+# - Do not translate keywords into English.
+# - Please output one keyword in one line.
+
+# Content:
+# {content}
+
+# Keywords:
+# """
     prompt_template = \
-"""Please extract the keywords that describe the content of this video from the title and content listed below.
-Keywords refer to words or phrases within the main theme or content of this video.
+"""Please extract impressive keywords from the video content listed below.
 Please observe the following notes when extracting keywords.
 
 Notes:
-Please output one keyword in one line.
-Please extract only truly important and distinctive keywords.
-Group similar keywords together.
-Do not output the same keywords.
-Do not translate keywords into English.
-
-Title:
-{title}
+- Please select only targeted keywords.
+- Please assign each keyword a sequential number such as 1, 2, 3.
+- Please extract no more than 20 keywords.
+- Do not output same keywords.
+- Do not output Similar keywords.
+- Do not translate keywords into English.
+- Please output one keyword in one line.
 
 Content:
 {content}
 
 Keywords:
 """
-    prompt_template = \
-"""下記のタイトルと内容からこの動画の内容を表すキーワードを抽出してください。
-キーワードは、この動画のメインテーマまたはコンテンツ内の単語またはフレーズを指します。
-キーワードを抽出する際には、以下の注意事項をお守りください。
-
-注意事項：
-キーワードは1行に1つずつ入力してください。
-本当に重要かつ特徴的なキーワードのみを抽出してください。
-類似したキーワードをグループ化してください。
-同じキーワードを出力しないでください。
-
-タイトル：
-{title}
-
-内容：
-{content}
-
-キーワード：
-"""
-    prompt_variables = ["title", "content"]
-    args = {
-        "title": summary.title,
-        # "content": summary.concise,
-        "content": "\n".join(summary.detail),
-    }
+    prompt_variables = ["content"]
 
     llm = setup_llm_from_environment()
     prompt = PromptTemplate(
@@ -1270,8 +1260,20 @@ Keywords:
         verbose=True,
     )
 
+    args = {
+        "content": "\n".join(summary.detail),
+    }
     result = chain.run(**args)
     print(result)
+
+    print("--------------")
+
+    args = {
+        "content": "\n".join(reversed(summary.detail)),
+    }
+    result_r = chain.run(**args)
+    print(result_r)
+
     print("--------------")
     print(", ".join(summary.keyword))
 
@@ -1323,7 +1325,7 @@ Below are notes on creating an agenda, as well as video title and content.
 Please follow the instructions carefully and create an agenda from the title and content.
 
 Notes:
-- Please create an agenda that covers the entire content of the video.
+- Please create a targeted and concise agenda.
 - Your agenda should include headings and some subheaddings for each heading.
 - Please assign each heading a sequential number such as 1, 2, 3.
 - Please add a "-" to the beginning of each subheading and output it as bullet points.
@@ -1339,6 +1341,7 @@ Content:
 Agenda:
 """
     prompt_template_variables = ["title", "content"]
+
 
     prompt_template_kw  = \
 """I am creating an agenda for Youtube videos.
@@ -1380,7 +1383,9 @@ Agenda:
     inputs = {
         "title": summary.title,
         "content": "\n".join(summary.detail),
+        # "content": summary.concise,
     }
+    # print(inputs)
 
     prompt_kw = PromptTemplate(
         template=prompt_template_kw,
@@ -1409,7 +1414,7 @@ Agenda:
     results = loop.run_until_complete(gather)
     print(results[0])
     print("--------------------")
-    print(results[1])
+    # print(results[1])
     print("--------------------")
     print("\n", ", ".join(summary.keyword))
 
@@ -1429,5 +1434,5 @@ if __name__ == "__main__":
     # embedding_async()
     # which_document_to_read()
     # test_check_comprehensively()
-    # test_extract_keyword()
-    get_topic_from_summary_kwd()
+    test_extract_keyword()
+    # get_topic_from_summary_kwd()
