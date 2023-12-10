@@ -55,8 +55,12 @@ summary() {
             continue
         fi
         echo $vid
-        summary_file="$SUMMARY_DIR/$vid"
-        cat $summary_file | jq | less
+        # summary_file="$SUMMARY_DIR/$vid"
+        # cat $summary_file | jq | less
+        cur_dir=`pwd`
+        cd ..
+        python -c "from yts.summarize import get_summary, YoutubeSummarize; YoutubeSummarize.print(get_summary('${vid}'))" | less
+        cd $cur_dir
     done
 }
 

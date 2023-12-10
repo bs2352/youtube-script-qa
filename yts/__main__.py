@@ -13,7 +13,7 @@ DEFAULT_REF_SOURCE = 3
 
 
 def qa (args):
-    yqa = YoutubeQA(args.vid, args.source, args.detail, True, args.debug)
+    yqa = YoutubeQA(args.vid, args.source, args.detail, not args.debug, args.debug)
 
     # ちょっとサービス（要約はあれば表示する）
     if os.path.exists(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}'):
