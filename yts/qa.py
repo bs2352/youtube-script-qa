@@ -18,7 +18,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import LLMResult, ChatGeneration
 
-from .types import TranscriptChunkModel, YoutubeTranscriptType
+from .types import TranscriptChunkModel, YoutubeTranscriptType, SummaryResultModel
 from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
 from .summarize import get_summary
 
@@ -328,7 +328,8 @@ class YoutubeQA:
 
     def _summarize_and_answer (self, query: str) -> str:
         if self.summary is None:
-            self.summary = get_summary(self.vid)
+            summary: Optional[SummaryResultModel] = get_summary(self.vid)
+            self.summary = "\n".join(summary.detail) if summary is not None else None
         llm = setup_llm_from_environment()
         prompt = PromptTemplate(
             template=QA_SUMMARIZE_PROMPT_TEMPLATE,

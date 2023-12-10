@@ -144,6 +144,30 @@ class YoutubeSummarize:
         return
 
 
+    @classmethod
+    def print (
+        cls,
+        summary: Optional[SummaryResultModel] = None,
+        mode: int = MODE_ALL
+    ) -> None:
+        if summary is None:
+            return
+        print("[Title]"); print(summary.title); print("")
+        if mode & MODE_CONCISE > 0:
+            print("[Summary]"); print(summary.concise); print("")
+        if mode & MODE_KEYWORD > 0:
+            print("[Keyword]"); print(", ".join(summary.keyword)); print("")
+        if mode & MODE_TOPIC > 0:
+            print("[Topic]")
+            for topic in summary.topic:
+                print(f'{topic.title}')
+                print("  ", "\n  ".join(topic.abstract), sep="")
+            print("")
+        if mode & MODE_DETAIL > 0:
+            print("[Detail Summary]"); print("・", "\n・".join(summary.detail)); print("")
+        return
+
+
     def run (self, mode:int = MODE_ALL) -> Optional[SummaryResultModel]:
         loop = asyncio.get_event_loop()
         tasks = [self.arun(mode)]
@@ -538,8 +562,8 @@ class YoutubeSummarize:
         return
 
 
-def get_summary (vid: str, mode: int = MODE_DETAIL) -> str:
-    if mode != MODE_CONCISE and mode != MODE_DETAIL and mode != MODE_TOPIC:
+def get_summary (vid: str, mode: int = MODE_ALL) -> Optional[SummaryResultModel]:
+    if mode & MODE_ALL == 0:
         raise ValueError("mode is invalid.")
 
     summary: Optional[SummaryResultModel] = None
@@ -550,12 +574,4 @@ def get_summary (vid: str, mode: int = MODE_DETAIL) -> str:
     else:
         # summary = YoutubeSummarize(vid, debug=True).run(mode=mode)
         summary = YoutubeSummarize(vid).run(mode=mode)
-
-    if summary is None:
-        return ""
-    if mode == MODE_CONCISE:
-        return summary.concise.strip()
-    if mode == MODE_TOPIC:
-        # return "\n".join(summary["topic"])
-        return ""
-    return "\n".join(summary.detail)
+    return summary

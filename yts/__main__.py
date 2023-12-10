@@ -5,7 +5,7 @@ import os
 import json
 
 from yts.qa import YoutubeQA
-from yts.summarize import YoutubeSummarize
+from yts.summarize import YoutubeSummarize, MODE_ALL, MODE_DETAIL
 from yts.types import SummaryResultModel
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
@@ -16,17 +16,12 @@ def qa (args):
     yqa = YoutubeQA(args.vid, args.source, args.detail, True, args.debug)
 
     # ちょっとサービス（要約はあれば表示する）
-    print(f'(Title)\n{yqa.title}')
     if os.path.exists(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}'):
         with open(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}', 'r') as f:
-            summary = json.load(f)
-        print(f'(Summary)\n{summary["concise"]}')
-        print("(Topic)")
-        for topic in summary["topic"]:
-            print(f'{topic["title"]}')
-            print("  ", "\n  ".join(topic["abstract"]), sep="")
-        print("(Keyword)", ", ".join(summary["keyword"]), sep="\n")
-    print("")
+            summary: SummaryResultModel = SummaryResultModel(**json.load(f))
+        YoutubeSummarize.print(summary, MODE_ALL & ~MODE_DETAIL)
+    else:
+        print(f'[Title]\n{yqa.title}\n')
 
     while True:
         query = input("Query: ").strip()
@@ -44,27 +39,14 @@ def qa (args):
 def summary (args):
     ys = YoutubeSummarize(args.vid, not args.debug, args.debug)
     sm: Optional[SummaryResultModel] = ys.run()
-    if sm is None:
-        return
-    print('[Title]\n', sm.title, '\n')
-    print("[Concise Summary]\n", sm.concise, '\n')
-    print("[Topic]")
-    for topic in sm.topic:
-        print(f'{topic.title}')
-        print("  ", "\n  ".join(topic.abstract), sep="")
-    print("")
-    print("[Keyword]\n", ", ".join(sm.keyword), "\n")
-    if args.detail is True:
-        print('[Detail Summary]')
-        for s in sm.detail:
-            print(f'・{s}\n')
+    YoutubeSummarize.print(sm, MODE_ALL if args.detail else MODE_ALL & ~MODE_DETAIL)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Youtube動画の視聴を支援するスクリプト')
     parser.add_argument('-v', '--vid', default=DEFAULT_VIDEO_ID, help=f'Youtube動画のID（default:{DEFAULT_VIDEO_ID}）')
     parser.add_argument('--source', default=DEFAULT_REF_SOURCE, type=int, help=f'回答を生成する際に参照する検索結果の数を指定する（default:{DEFAULT_REF_SOURCE}）')
-    parser.add_argument('--detail', action='store_true', help='回答生成する際に参照した検索結果を表示する')
+    parser.add_argument('-d', '--detail', action='store_true', help='回答生成する際に参照した検索結果を表示する')
     parser.add_argument('--debug', action='store_true', help='デバッグ情報を出力する')
     parser.add_argument('-s', '--summary', action='store_true', help='要約する')
     args = parser.parse_args()
