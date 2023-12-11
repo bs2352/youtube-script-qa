@@ -27,15 +27,16 @@ MODE_TOPIC   = 0x04
 MODE_KEYWORD = 0x08
 MODE_ALL     = MODE_CONCISE | MODE_DETAIL | MODE_TOPIC | MODE_KEYWORD
 
-MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "400"))
-MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "1.0"))
-MAX_TOPIC_ITEMS = 15
+MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "300"))
+MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "2.0"))
+MAX_TOPIC_ITEMS = int(os.getenv("MAX_TOPIC_ITEM", "10"))
+MAX_TOPIC_ITEMS_MARGIN_MULTIPLIER = float(os.getenv("MAX_TOPIC_ITEM_MARGIN", "1.3"))
 MAX_KEYWORDS = int(os.getenv("MAX_KEYWORD", "20"))
 MAX_KEYWORDS_MARGIN_MULTIPLIER = float(os.getenv("MAX_KEYWORD_MARGIN", "1.3"))
 EXCLUDE_KEYWORDS = [
     "セミナー", "企画", "チャンネル登録", "情報", "コラボ", "勉強会", "予定", "登録", "イベント",
 ]
-MAX_RETRY_COUNT = 5
+MAX_RETRY_COUNT = int(os.getenv("MAX_RETRY_COUNT", "3"))
 RETRY_INTERVAL = 5.0
 
 
@@ -57,13 +58,14 @@ REDUCE_PROMPT_TEMPLATE = """以下の内容を全体を網羅して日本語で�
 
 CONCISELY_PROMPT_TEMPLATE = \
 """以下の内容をターゲットを絞って日本語で簡潔に要約してください。
+要約は{max}文字以内にしてください。
 
 内容：
 {content}
 
 簡潔な要約：
 """
-CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["content"]
+CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
 TOPIC_PROMPT_TEMPLATE = \
 """I am creating an agenda for Youtube videos.
@@ -75,6 +77,7 @@ Notes:
 - Your agenda must include headings and some subheaddings for each heading.
 - Please assign each heading a sequential number such as 1, 2, 3.
 - Do not assign subheadings numbers such as 1.1, 3.1 to, but instead output them as bulleted lists with a "-" instead.
+- Please include no more than {max} headings.
 - Please keep each heading and subheading short and concise term, not sentence.
 - Please create the agenda in Japanese.
 
@@ -83,7 +86,7 @@ Content:
 
 Agenda:
 """
-TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content"]
+TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
 KEYWORD_PROMPT_TEMPLATE = \
 """Please extract impressive keywords from the video content listed below.
@@ -161,7 +164,8 @@ class YoutubeSummarize:
             print("[Topic]")
             for topic in summary.topic:
                 print(f'{topic.title}')
-                print("  ", "\n  ".join(topic.abstract), sep="")
+                if len(topic.abstract) > 0:
+                    print("  ", "\n  ".join(topic.abstract), sep="")
             print("")
         if mode & MODE_DETAIL > 0:
             print("[Detail Summary]"); print("・", "\n・".join(summary.detail)); print("")
@@ -324,8 +328,9 @@ class YoutubeSummarize:
             prompt=prompt,
             verbose=self.debug,
         )
-        args: Dict[str, str] = {
+        args: Dict[str, str|int] = {
             "content": "\n".join(detail_summary),
+            "max": MAX_CONCISE_SUMMARY_LENGTH,
         }
         self.tmp_concise_summary = ""
         concise_summary: str = ""
@@ -412,7 +417,7 @@ class YoutubeSummarize:
         enable: bool = True
     ) -> List[TopicModel]:
         def _check (topic: List[TopicModel]) -> bool:
-            if len(topic) > MAX_TOPIC_ITEMS:
+            if len(topic) > MAX_TOPIC_ITEMS * MAX_TOPIC_ITEMS_MARGIN_MULTIPLIER:
                 if len(self.tmp_topic) == 0:
                     self.tmp_topic = topic
                 elif len(topic) < len(self.tmp_topic):
@@ -464,8 +469,9 @@ class YoutubeSummarize:
             prompt=prompt,
             verbose=self.debug,
         )
-        args: Dict[str, str] = {
+        args: Dict[str, str|int] = {
             "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
+            "max": MAX_TOPIC_ITEMS,
         }
         self.tmp_topic = []
         topic: List[TopicModel] = []
