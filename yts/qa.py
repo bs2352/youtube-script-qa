@@ -381,7 +381,7 @@ class YoutubeQA:
             s = sec % 60
             m = (sec // 60) % 60
             h = (sec // 60) // 60
-            return f'{h}:{m}:{s}'
+            return f'{h:02}:{m:02}:{s:02}'
         
         # 暫定版（もっと良い取り方があるはず）
         def _get_id (node: NodeWithScore) -> str:

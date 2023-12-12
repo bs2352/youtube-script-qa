@@ -1423,7 +1423,6 @@ Agenda:
 def test_function ():
     from yts.summarize import YoutubeSummarize, MODE_ALL, MODE_DETAIL
     from yts.types import SummaryResultModel
-    import json
 
     vid = DEFAULT_VID
     if len(sys.argv) >= 2:
@@ -1431,6 +1430,35 @@ def test_function ():
 
     summary: Optional[SummaryResultModel] = YoutubeSummarize.summary(vid)
     YoutubeSummarize.print(summary=summary, mode=MODE_ALL&~MODE_DETAIL)
+
+
+def test_topic_similarity ():
+    from yts.summarize import YoutubeSummarize
+    from yts.types import SummaryResultModel
+    from yts.qa import YoutubeQA
+    import re
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+
+    summary: Optional[SummaryResultModel] = YoutubeSummarize.summary(vid)
+    if summary is None:
+        return
+    for topic in summary.topic:
+        content = re.sub(r"^\d+\.?", "", topic.title).strip()
+        content += " " + " ".join(topic.abstract)
+        print("## ", content)
+        yqa = YoutubeQA(vid=vid, detail=True, ref_sources=10)
+        _ = yqa.run(content)
+        starts = [
+            time for _, _, time, _ in yqa.get_source()
+        ]
+        starts.sort(); print(starts); print("")
+        # for score, id, time, source in yqa.get_source():
+        #     print(f"--- {time} ({id} [{score}]) ---\n {source}")
+        #     print("")
+        # x = input()
 
 
 if __name__ == "__main__":
@@ -1450,4 +1478,5 @@ if __name__ == "__main__":
     # test_check_comprehensively()
     # test_extract_keyword()
     # get_topic_from_summary_kwd()
-    test_function()
+    # test_function()
+    test_topic_similarity()

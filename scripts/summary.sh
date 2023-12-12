@@ -59,7 +59,7 @@ summary() {
         # cat $summary_file | jq | less
         cur_dir=`pwd`
         cd ..
-        python -c "from yts.summarize import get_summary, YoutubeSummarize; YoutubeSummarize.print(get_summary('${vid}'))" | less
+        python -c "from yts.summarize import YoutubeSummarize; YoutubeSummarize.print(YoutubeSummarize.summary('${vid}'))" | less
         cd $cur_dir
     done
 }

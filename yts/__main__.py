@@ -1,5 +1,4 @@
 from typing import Optional
-import dotenv
 import argparse
 import os
 import json
