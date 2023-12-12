@@ -6,6 +6,7 @@ import os
 import openai
 import dotenv
 import sys
+from typing import Optional
 
 
 DEFAULT_VID = "cEynsEWpXdA"
@@ -1155,7 +1156,7 @@ def test_check_comprehensively ():
 
 
 def test_extract_keyword ():
-    from yts.summarize import get_summary
+    # from yts.summarize import get_summary
     from yts.utils import setup_llm_from_environment
     from yts.types import SummaryResultModel
     from langchain.prompts import PromptTemplate
@@ -1419,6 +1420,19 @@ Agenda:
     print("\n", ", ".join(summary.keyword))
 
 
+def test_function ():
+    from yts.summarize import YoutubeSummarize, MODE_ALL, MODE_DETAIL
+    from yts.types import SummaryResultModel
+    import json
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+
+    summary: Optional[SummaryResultModel] = YoutubeSummarize.summary(vid)
+    YoutubeSummarize.print(summary=summary, mode=MODE_ALL&~MODE_DETAIL)
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -1434,5 +1448,6 @@ if __name__ == "__main__":
     # embedding_async()
     # which_document_to_read()
     # test_check_comprehensively()
-    test_extract_keyword()
+    # test_extract_keyword()
     # get_topic_from_summary_kwd()
+    test_function()

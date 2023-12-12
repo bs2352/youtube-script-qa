@@ -172,6 +172,21 @@ class YoutubeSummarize:
         return
 
 
+    @classmethod
+    def summary (cls, vid: Optional[str]) -> Optional[SummaryResultModel]:
+        if vid is None:
+            return None
+        summary: Optional[SummaryResultModel] = None
+        summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
+        if os.path.exists(summary_file):
+            with open(summary_file, 'r') as f:
+                summary = SummaryResultModel(**(json.load(f)))
+        else:
+            # summary = cls(vid, debug=True).run()
+            summary = cls(vid).run()
+        return summary
+
+
     def run (self, mode:int = MODE_ALL) -> Optional[SummaryResultModel]:
         loop = asyncio.get_event_loop()
         tasks = [self.arun(mode)]
@@ -567,17 +582,3 @@ class YoutubeSummarize:
         sys.stdout.flush()
         return
 
-
-def get_summary (vid: str, mode: int = MODE_ALL) -> Optional[SummaryResultModel]:
-    if mode & MODE_ALL == 0:
-        raise ValueError("mode is invalid.")
-
-    summary: Optional[SummaryResultModel] = None
-    summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
-    if os.path.exists(summary_file):
-        with open(summary_file, 'r') as f:
-            summary = SummaryResultModel(**(json.load(f)))
-    else:
-        # summary = YoutubeSummarize(vid, debug=True).run(mode=mode)
-        summary = YoutubeSummarize(vid).run(mode=mode)
-    return summary
