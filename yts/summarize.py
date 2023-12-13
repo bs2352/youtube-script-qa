@@ -35,6 +35,7 @@ MAX_KEYWORDS = int(os.getenv("MAX_KEYWORD", "20"))
 MAX_KEYWORDS_MARGIN_MULTIPLIER = float(os.getenv("MAX_KEYWORD_MARGIN", "1.3"))
 EXCLUDE_KEYWORDS = [
     "セミナー", "企画", "チャンネル登録", "情報", "コラボ", "勉強会", "予定", "登録", "イベント",
+    "メールマガジン",
 ]
 MAX_RETRY_COUNT = int(os.getenv("MAX_RETRY_COUNT", "3"))
 RETRY_INTERVAL = 5.0
@@ -75,10 +76,11 @@ Please follow the notes carefully and create an agenda from the content.
 Notes:
 - Your agenda must cover the entire content.
 - Your agenda must include headings and some subheaddings for each heading.
+- Subheadings on similar subjects should be included under one heading.
+- Please keep each heading and subheading short and concise term, not sentence.
 - Please assign each heading a sequential number such as 1, 2, 3.
 - Do not assign subheadings numbers such as 1.1, 3.1 to, but instead output them as bulleted lists with a "-" instead.
 - Please include no more than {max} headings.
-- Please keep each heading and subheading short and concise term, not sentence.
 - Please create the agenda in Japanese.
 
 Content:
@@ -458,6 +460,8 @@ class YoutubeSummarize:
                     continue
                 if line[0] == "-":
                     topic.abstract.append(line)
+                else:
+                    topic.abstract.append(f"- {line}")
             return topics
 
         @retry(
