@@ -14,14 +14,20 @@ class SummaryRequestModel (BaseModel):
     vid: str
 
 
-@app.get("/")
+@app.get (
+    "/",
+    summary="Hello World",
+    description="Sample Top Page.",
+    tags=["Top Page"]
+)
 async def index ():
     return {"Hello": "World"}
 
 
 @app.post (
     "/summary",
-    description="Summarize Youtube video content. Please specify video ID (such as cEynsEWpXdA, nYx5UaKI8mE) for vid parameter.",
+    summary="Summarize Youtube video content",
+    description="Please specify video ID (such as cEynsEWpXdA, nYx5UaKI8mE) for vid parameter.",
     tags=["Summary"]
 )
 async def summary (request_body: SummaryRequestModel):
