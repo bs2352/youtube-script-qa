@@ -10,6 +10,9 @@ youtube-transcript-api = "*"
 langchain = "*"
 pytube = "*"
 nltk = "*"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+gunicorn = "*"
 
 [dev-packages]
 scikit-learn = "*"
