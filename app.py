@@ -1,13 +1,36 @@
 from typing import Optional
 import logging
+import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from yts.summarize import YoutubeSummarize
 from yts.types import SummaryResultModel
+import os
 
-app = FastAPI()
+
+STATIC_FILES_DIR = "frontend/dist"
+
+
+# 起動時と停止時の処理はここに書く
+# ref. https://fastapi.tiangolo.com/advanced/events/#alternative-events-deprecated
+@asynccontextmanager
+async def lifespan (app: FastAPI):
+    # 起動時の処理
+    # ...
+    yield
+    # 停止時の処理
+    # ...
+
+
+app = FastAPI(lifespan=lifespan)
+
+if os.path.exists(STATIC_FILES_DIR):
+    app.mount("/", StaticFiles(directory=STATIC_FILES_DIR, html=True), name="static")
 
 
 class SummaryRequestModel (BaseModel):
@@ -16,12 +39,12 @@ class SummaryRequestModel (BaseModel):
 
 @app.get (
     "/",
-    summary="Hello World",
-    description="Sample Top Page.",
-    tags=["Top Page"]
+    summary="Top Page",
+    description="Top Page.",
+    tags=["Top"]
 )
 async def index ():
-    return {"Hello": "World"}
+    return HTMLResponse(content="<h2>Not Found</h2>", status_code=404)
 
 
 @app.post (
@@ -40,5 +63,4 @@ async def summary (request_body: SummaryRequestModel):
         logging.error(f"[{vid}] {str(e)}", exc_info=True)
         return {"vid": request_body.vid, "error": str(e)}, 500
     return summary
-
 
