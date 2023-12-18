@@ -88,7 +88,7 @@ options:
 
 ### APIサーバー
 ```
-$ gunicorn -c gunicorn_config.py app:app
+$ gunicorn -c gunicorn_config.py api:app
 ```
 
 http://127.0.0.1:8080/docs

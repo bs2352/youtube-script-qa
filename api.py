@@ -4,7 +4,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -29,14 +29,13 @@ async def lifespan (app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-if os.path.exists(STATIC_FILES_DIR):
-    app.mount("/", StaticFiles(directory=STATIC_FILES_DIR, html=True), name="static")
-
 
 class SummaryRequestModel (BaseModel):
     vid: str
 
 
+# if os.path.exists(STATIC_FILES_DIR):
+#     app.mount("/static", StaticFiles(directory=STATIC_FILES_DIR, html=True), name="static")
 @app.get (
     "/",
     summary="Top Page",
@@ -44,7 +43,9 @@ class SummaryRequestModel (BaseModel):
     tags=["Top"]
 )
 async def index ():
-    return HTMLResponse(content="<h2>Not Found</h2>", status_code=404)
+    if not os.path.exists(STATIC_FILES_DIR):
+        return HTMLResponse(content="<h2>Not Found</h2>", status_code=404)
+    return FileResponse(path=f"{STATIC_FILES_DIR}/index.html")
 
 
 @app.post (
