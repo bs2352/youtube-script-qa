@@ -44,7 +44,11 @@ function App() {
             setSummary(res);
             setLoading(false);
         }))
-        .catch((err) => console.log(err))
+        .catch((err) => {
+            console.log(err);
+            alert('要約作成中にエラーが発生しました。');
+            setLoading(false);
+        })
     }
 
     return (
@@ -65,7 +69,7 @@ function App() {
                 onReady={onReadyHanler}
             />
             {
-                summary && <Result summary={summary} />
+                summary && !loading && <Result summary={summary} />
             }
             {
                 !summary && loading && <div className='div-loading' />

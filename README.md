@@ -86,9 +86,29 @@ options:
 ```
 
 
-### APIサーバー
+## APIサーバー
 ```
 $ gunicorn -c gunicorn_config.py api:app
 ```
 
-http://127.0.0.1:8080/docs
+* http://127.0.0.1:8080/　※フロントエンドのビルドが必要
+* http://127.0.0.1:8080/docs
+
+
+
+## フロントエンド
+
+### 開発
+```
+$ cd frontend
+$ npm install
+$ npm run dev
+```
+
+* http://localhost:5173
+
+### ビルド
+```
+$ npm run build
+```
+
