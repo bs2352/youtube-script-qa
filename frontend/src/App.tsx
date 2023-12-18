@@ -8,6 +8,7 @@ import './App.css'
 
 function App() {
     const [vid, setVid] = useState<string>('cEynsEWpXdA')
+    // @ts-ignore
     const [ytplayer, setYtPlayer] = useState<YouTubePlayer>()
     const [summary, setSummary] = useState<SummaryResponseBody|null>(null)
     const [loading, setLoading] = useState<boolean>(false)
