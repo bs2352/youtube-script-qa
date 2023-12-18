@@ -1,0 +1,31 @@
+.div-result {
+    padding: 2em;
+    width: 800px;
+}
+
+.div-table-resulttable {
+    border: 1px solid;
+    border-color: black;
+    border-collapse: collapse;
+}
+
+.div-table-resulttable tr {
+    text-align: left;
+}
+
+.div-table-resulttable td {
+    border: 1px solid;
+    border-color: black;
+    padding: 0.5em;
+    padding-right: 1em;
+}
+
+.div-table-td-title-resulttable {
+    white-space: nowrap;
+    font-weight: bold;
+    background-color: bisque;
+}
+
+.div-table-li-topic-title-resulttable {
+    font-weight: bold;
+}
