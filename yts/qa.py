@@ -191,8 +191,8 @@ class YoutubeQA:
         index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(
             documents,
             service_context=self.service_context,
-            show_progress=self.debug,
-            # use_async=True, # 制限エラー、呼び出しすぎ
+            # show_progress=self.debug, # なぜか結果が変わるからやめる
+            use_async=True,
         )
 
         # ディスクに保存しておく

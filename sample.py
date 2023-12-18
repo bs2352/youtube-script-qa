@@ -999,35 +999,35 @@ def embedding_async ():
     # embedding = asyncio.run(aembed_documents())
 
     # NG
-    async def aget_embedding_2 ():
-        tasks = [llm_embeddings.aembed_query(text) for text in texts]
-        return await asyncio.gather(*tasks)
-    embedding = asyncio.run(aget_embedding_2())
+    # async def aget_embedding_2 ():
+    #     tasks = [llm_embeddings.aembed_query(text) for text in texts]
+    #     return await asyncio.gather(*tasks)
+    # embedding = asyncio.run(aget_embedding_2())
 
-    print(embedding)
+    # print(embedding)
 
-    # texts = [
-    #     "オリックスバファローズ優勝するぞ！" for _ in range(0, 50)
-    #     # "ビッグボスも頑張って欲しい。"
-    # ]
-    # documents = [
-    #     Document(text=text.replace("\n", " "), doc_id=f"id-{idx}") for idx, text in enumerate(texts)
-    # ]
-    # dotenv.load_dotenv(".env")
-    # llm = setup_llm_from_environment()
-    # embedding = setup_embedding_from_environment()
-    # llm_predictor: LLMPredictor = LLMPredictor(llm=llm)
-    # embedding_llm: LangchainEmbedding = LangchainEmbedding(embedding)
-    # service_context: ServiceContext = ServiceContext.from_defaults(
-    #     llm_predictor = llm_predictor,
-    #     embed_model = embedding_llm,
-    # )
-    # index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(
-    #     documents,
-    #     service_context=service_context,
-    #     show_progress=True,
-    #     use_async=True, # バグ？なぜかエラーになる。
-    # )
+    texts = [
+        "オリックスバファローズ優勝するぞ！" for _ in range(0, 50)
+        # "ビッグボスも頑張って欲しい。"
+    ]
+    documents = [
+        Document(text=text.replace("\n", " "), doc_id=f"id-{idx}") for idx, text in enumerate(texts)
+    ]
+    dotenv.load_dotenv(".env")
+    llm = setup_llm_from_environment()
+    embedding = setup_embedding_from_environment()
+    llm_predictor: LLMPredictor = LLMPredictor(llm=llm)
+    embedding_llm: LangchainEmbedding = LangchainEmbedding(embedding)
+    service_context: ServiceContext = ServiceContext.from_defaults(
+        llm_predictor = llm_predictor,
+        embed_model = embedding_llm,
+    )
+    index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(
+        documents,
+        service_context=service_context,
+        show_progress=True,
+        use_async=True, # バグ？なぜかエラーになる。
+    )
     print("fin")
 
 
@@ -1473,10 +1473,10 @@ if __name__ == "__main__":
     # qa_with_function_calling()
     # test_loading()
     # print(test_decorate_loading())
-    # embedding_async()
+    embedding_async()
     # which_document_to_read()
     # test_check_comprehensively()
     # test_extract_keyword()
     # get_topic_from_summary_kwd()
     # test_function()
-    test_topic_similarity()
+    # test_topic_similarity()
