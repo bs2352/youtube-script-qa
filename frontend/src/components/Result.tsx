@@ -1,17 +1,29 @@
-import { SummaryResponseBody } from "./types"
+import { SummaryResponseBody, SummaryType } from "./types"
 import './Result.css'
 
-interface Props {
+function s2hms (seconds: number) {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0')
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0')
+    return `${h}:${m}:${s}`
+}
+
+
+interface ResultProps {
     summary: SummaryResponseBody
+}
+
+interface ResultTableProps {
+    summary: SummaryType
 }
 
 export function Result ({
     summary,
-}: Props) {
+}: ResultProps) {
 
     const ResultTable = ({
         summary
-    } : Props) : JSX.Element => {
+    } : ResultTableProps) : JSX.Element => {
         return (
             <table className="div-table-resulttable">
                 <tbody>
@@ -24,6 +36,10 @@ export function Result ({
                         <td>{summary.author}</td>
                     </tr>
                     <tr>
+                        <td className="div-table-td-title-resulttable">時間</td>
+                        <td>{s2hms(summary.lengthSeconds)}</td>
+                    </tr>
+                    <tr>
                         <td className="div-table-td-title-resulttable">要約</td>
                         <td>{summary.concise}</td>
                     </tr>
@@ -34,11 +50,11 @@ export function Result ({
                     <tr>
                         <td className="div-table-td-title-resulttable">トピック</td>
                         <td>
-                            <ul style={{listStyle: "none"}} >
+                            <ul className="div-table-ul-topic-resulttable">
                                 {summary.topic.map((topic, idx) =>
                                     <li key={`title-${idx}`}>
                                         <div  className="div-table-li-topic-title-resulttable">{topic.title}</div>
-                                        <ul style={{listStyle: "none"}}>
+                                        <ul className="div-table-ul-topic-resulttable">
                                             {topic.abstract.map((abstract, idx) =>
                                                 <li key={`abstract-${idx}`}>{abstract}</li>
                                             )}
@@ -51,7 +67,7 @@ export function Result ({
                     <tr>
                         <td className="div-table-td-title-resulttable">詳細</td>
                         <td>
-                            <ul>
+                            <ul className="div-table-ul-detail-resulttable">
                                 {summary.detail.map((detail, idx) =>
                                     <li key={`detail-${idx}`}>{detail}</li>
                                 )}
@@ -65,7 +81,7 @@ export function Result ({
 
     return (
         <div className="div-result">
-            <ResultTable summary={summary} />
+            <ResultTable summary={summary.summary} />
         </div>
     ) 
 }

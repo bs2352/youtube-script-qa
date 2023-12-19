@@ -2,7 +2,7 @@ export type SummaryRequestBody = {
     vid: string;
 }
 
-export type SummaryResponseBody = {
+export type SummaryType = {
     title: string;
     author: string;
     lengthSeconds: number;
@@ -11,6 +11,11 @@ export type SummaryResponseBody = {
     detail: string[];
     topic: TopicType[];
     keyword: string[];
+}
+
+export type SummaryResponseBody = {
+    vid: string;
+    summary: SummaryType;
 }
 
 export type TopicType = {
