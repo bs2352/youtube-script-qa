@@ -4,6 +4,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
+import asyncio
 
 from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
 from llama_index.embeddings import LangchainEmbedding
@@ -22,6 +23,8 @@ from .types import TranscriptChunkModel, YoutubeTranscriptType, SummaryResultMod
 from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
 from .summarize import YoutubeSummarize
 
+import nest_asyncio
+nest_asyncio.apply()
 
 # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -206,20 +209,28 @@ class YoutubeQA:
 
 
     def run (self, query: str) -> str:
+        loop = asyncio.get_event_loop()
+        tasks = [self.arun(query)]
+        gather = asyncio.gather(*tasks)
+        result = loop.run_until_complete(gather)[0]
+        return result
+
+
+    async def arun (self, query: str) -> str:
         self.query_response = None
         if self.loading is True:
-            return self._run_with_loading(query)
-        return self._run(query)
+            return await self._arun_with_loading(query)
+        return await self._arun(query)
 
 
-    def _run_with_loading (self, query: str) -> str:
+    async def _arun_with_loading (self, query: str) -> str:
         # メインスレッドでQAを行う
         # 別スレッドでloadingを行う（QAが終われば停止する）
         answer: str = ""
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
             try:
-                answer = self._run(query)
+                answer = await self._arun(query)
             except Exception as e:
                 raise e
             finally:
@@ -229,18 +240,17 @@ class YoutubeQA:
         return answer
 
 
-    def _run (self, query: str) -> str:
+    async def _arun (self, query: str) -> str:
         answer: str = ""
-        mode: int = self._which_run_mode(query)
+        mode: int = await self._awhich_run_mode(query)
         if mode == RUN_MODE_SEARCH:
-            answer = self._search_and_answer(query)
+            answer = await self._asearch_and_answer(query)
         if mode == RUN_MODE_SUMMARY:
-            answer = self._summarize_and_answer(query)
-
+            answer = await self._asummarize_and_answer(query)
         return answer
 
 
-    def _which_run_mode (self, query: str) -> int:
+    async def _awhich_run_mode (self, query: str) -> int:
         if query == "":
             return RUN_MODE_SUMMARY
         llm = setup_llm_from_environment()
@@ -257,7 +267,7 @@ class YoutubeQA:
             output_key="function",
             verbose=True
         )
-        result: LLMResult = chain.generate([{"title": self.title, "question": query}])
+        result: LLMResult = await chain.agenerate([{"title": self.title, "question": query}])
         generation: ChatGeneration = result.generations[0][0] # type: ignore
         message = generation.message.additional_kwargs
         func_name = WHICH_RUN_MODE_FUNCTIONS[0]["name"]
@@ -271,7 +281,7 @@ class YoutubeQA:
         return mode
 
 
-    def _search_and_answer (self, query: str) -> str:
+    async def _asearch_and_answer (self, query: str) -> str:
         if self.index is None:
             self.index = self._prepare_index()
             if self.index is None:
@@ -320,15 +330,15 @@ class YoutubeQA:
             similarity_top_k=self.ref_source,
             text_qa_template=CHAT_TEXT_QA_PROMPT,
         )
-        response: RESPONSE_TYPE = query_engine.query(query)
+        response: RESPONSE_TYPE = await query_engine.aquery(query)
         self.query_response = response
 
         return str(self.query_response).strip()
 
 
-    def _summarize_and_answer (self, query: str) -> str:
+    async def _asummarize_and_answer (self, query: str) -> str:
         if self.summary is None:
-            summary: Optional[SummaryResultModel] = YoutubeSummarize.summary(self.vid)
+            summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(self.vid)
             self.summary = "\n".join(summary.detail) if summary is not None else None
         llm = setup_llm_from_environment()
         prompt = PromptTemplate(
@@ -345,7 +355,7 @@ class YoutubeQA:
             "content": self.summary,
             "title": self.title
         }
-        answer: str = chain.run(**args)
+        answer: str = await chain.arun(**args)
         return answer
 
 
