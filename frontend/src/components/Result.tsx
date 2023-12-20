@@ -1,87 +1,78 @@
-import { SummaryResponseBody, SummaryType } from "./types"
-import './Result.css'
+import Box from '@mui/material/Box'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
+import { useState } from 'react'
 
-function s2hms (seconds: number) {
-    const h = Math.floor(seconds / 3600).toString().padStart(2, '0')
-    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
-    const s = Math.floor(seconds % 60).toString().padStart(2, '0')
-    return `${h}:${m}:${s}`
+import { SummaryResponseBody } from "./types"
+import { VideoInfo } from './VideoInfo'
+import { DetailSummary } from './DetailSummary'
+import { Topic } from './Topic'
+import { QA } from './QA'
+
+
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
 }
-
 
 interface ResultProps {
     summary: SummaryResponseBody
 }
 
-interface ResultTableProps {
-    summary: SummaryType
+function TabPanel (props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            {...other}
+        >
+            {value === index && (
+                <Box sx={{ p: 3 }}>
+                    {children}
+                </Box>
+            )}
+        </div>
+    );
 }
 
-export function Result ({
-    summary,
-}: ResultProps) {
 
-    const ResultTable = ({
-        summary
-    } : ResultTableProps) : JSX.Element => {
-        return (
-            <table className="div-table-resulttable">
-                <tbody>
-                    <tr>
-                        <td className="div-table-td-title-resulttable">タイトル</td>
-                        <td>{summary.title}</td>
-                    </tr>
-                    <tr>
-                        <td className="div-table-td-title-resulttable">チャンネル名</td>
-                        <td>{summary.author}</td>
-                    </tr>
-                    <tr>
-                        <td className="div-table-td-title-resulttable">時間</td>
-                        <td>{s2hms(summary.lengthSeconds)}</td>
-                    </tr>
-                    <tr>
-                        <td className="div-table-td-title-resulttable">要約</td>
-                        <td>{summary.concise}</td>
-                    </tr>
-                    <tr>
-                        <td className="div-table-td-title-resulttable">キーワード</td>
-                        <td>{summary.keyword.join(', ')}</td>
-                    </tr>
-                    <tr>
-                        <td className="div-table-td-title-resulttable">トピック</td>
-                        <td>
-                            <ul className="div-table-ul-topic-resulttable">
-                                {summary.topic.map((topic, idx) =>
-                                    <li key={`title-${idx}`}>
-                                        <div  className="div-table-li-topic-title-resulttable">{topic.title}</div>
-                                        <ul className="div-table-ul-topic-resulttable">
-                                            {topic.abstract.map((abstract, idx) =>
-                                                <li key={`abstract-${idx}`}>{abstract}</li>
-                                            )}
-                                        </ul>
-                                    </li>
-                                )}
-                            </ul>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td className="div-table-td-title-resulttable">詳細</td>
-                        <td>
-                            <ul className="div-table-ul-detail-resulttable">
-                                {summary.detail.map((detail, idx) =>
-                                    <li key={`detail-${idx}`}>{detail}</li>
-                                )}
-                            </ul>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        )
+export function Result (props: ResultProps) {
+    const { summary } = props;
+    const [ value, setValue ] = useState<number>(0)
+
+    const tabItemList: string[] = ['概要', 'トピック', '詳細', 'QA']
+
+    const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
+        setValue(value);
     }
 
     return (
-        <div className="div-result">
-            <ResultTable summary={summary.summary} />
-        </div>
+        <>
+            <Box sx={{ width: '100%', bgcolor: 'background.paper', marginTop: 3 }}>
+                <Tabs
+                    value={value}
+                    onChange={onTabChangeHandler}
+                    centered
+                >
+                    {tabItemList.map((item, idx) =>
+                        <Tab key={idx} label={item} />
+                    )}
+                </Tabs>
+            </Box>
+            <TabPanel value={value} index={0}>
+                <VideoInfo summary={summary.summary} />
+            </TabPanel>
+            <TabPanel value={value} index={1}>
+                <Topic summary={summary.summary} />
+            </TabPanel>
+            <TabPanel value={value} index={2}>
+                <DetailSummary summary={summary.summary} />
+            </TabPanel>
+            <TabPanel value={value} index={3}>
+                <QA />
+            </TabPanel>
+        </>
     ) 
 }
