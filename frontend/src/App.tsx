@@ -4,7 +4,7 @@ import { Box } from '@mui/material'
 
 import { SummaryRequestBody, SummaryResponseBody } from './components/types'
 import { Header } from './components/Header'
-import { Input } from './components/Input'
+import { InputVid } from './components/InputVid'
 import { Result } from './components/Result'
 import './App.css'
 
@@ -15,14 +15,6 @@ function App() {
     const [ytplayer, setYtPlayer] = useState<YouTubePlayer>()
     const [summary, setSummary] = useState<SummaryResponseBody|null>(null)
     const [loading, setLoading] = useState<boolean>(false)
-
-    const refInputTextVid = useRef<HTMLInputElement>(null)
-
-    const onKeyDownHandlerVid = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
-            setVid(refInputTextVid.current!.value)
-        }
-    }
 
     const onReadyHanler: YouTubeProps['onReady'] = (event: YouTubeEvent) => {
         setYtPlayer(event.target)
@@ -54,24 +46,10 @@ function App() {
         })
     }
 
-    const vidInputBoxSx = {
-        padding: "2em",
-    }
-
     return (
         <Box>
             <Header />
-            <Input />
-            <Box sx={vidInputBoxSx}>
-                Youtube Video ID
-                <input
-                    type="text"
-                    defaultValue={vid}
-                    ref={refInputTextVid}
-                    onKeyDown={onKeyDownHandlerVid}
-                    className='input-vid'
-                />
-            </Box>
+            <InputVid vid={vid} setVid={setVid} />
             <YouTube
                 videoId={vid}
                 onReady={onReadyHanler}
