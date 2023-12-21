@@ -4,7 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -69,6 +69,9 @@ class TranscriptModel (BaseModel):
 class TranscriptResponseModel (BaseModel):
     vid: str
     transcripts: List[TranscriptModel]
+
+class SampleVidModel (BaseModel):
+    vid: List[str]
 
 
 @app.post (
@@ -136,6 +139,22 @@ async def transcript (request_body: TranscriptRequestModel):
             ) for transcript in transcripts
         ]
     )
+
+
+@app.get (
+    "/sample",
+    summary="get sample video IDs",
+    description="get sample video IDs",
+    tags=["Sample"]
+)
+async def sample ():
+    if not os.path.exists("vid.txt"):
+        raise HTTPException(status_code=404, detail="file not found")
+    with open("vid.txt", "r") as f:
+        vids: List[str] = f.read().splitlines()
+    return SampleVidModel(vid=vids)
+
+
 
 # if __name__ == "__main__":
 #     import uvicorn

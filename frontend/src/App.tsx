@@ -1,7 +1,10 @@
 import { useState, useRef } from 'react'
 import YouTube, { YouTubeEvent, YouTubePlayer, YouTubeProps } from 'react-youtube'
+import { Box } from '@mui/material'
 
 import { SummaryRequestBody, SummaryResponseBody } from './components/types'
+import { Header } from './components/Header'
+import { Input } from './components/Input'
 import { Result } from './components/Result'
 import './App.css'
 
@@ -51,10 +54,15 @@ function App() {
         })
     }
 
+    const vidInputBoxSx = {
+        padding: "2em",
+    }
+
     return (
-        <>
-            <h1>Youtube Supporter</h1>
-            <div className='div-vid'>
+        <Box>
+            <Header />
+            <Input />
+            <Box sx={vidInputBoxSx}>
                 Youtube Video ID
                 <input
                     type="text"
@@ -63,7 +71,7 @@ function App() {
                     onKeyDown={onKeyDownHandlerVid}
                     className='input-vid'
                 />
-            </div>
+            </Box>
             <YouTube
                 videoId={vid}
                 onReady={onReadyHanler}
@@ -74,7 +82,7 @@ function App() {
             {
                 !summary && loading && <div className='div-loading' />
             }
-        </>
+        </Box>
     )
 }
 

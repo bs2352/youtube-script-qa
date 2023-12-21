@@ -8,6 +8,7 @@ import { VideoInfo } from './VideoInfo'
 import { DetailSummary } from './DetailSummary'
 import { Topic } from './Topic'
 import { QA } from './QA'
+import { Transcript } from './Transcript'
 
 
 interface TabPanelProps {
@@ -42,14 +43,14 @@ export function Result (props: ResultProps) {
     const { summary } = props;
     const [ value, setValue ] = useState<number>(0)
 
-    const tabItemList: string[] = ['概要', 'トピック', '詳細', 'QA']
+    const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA', '字幕']
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
     }
 
     return (
-        <>
+        <Box>
             <Box sx={{ width: '100%', bgcolor: 'background.paper', marginTop: 3 }}>
                 <Tabs
                     value={value}
@@ -65,14 +66,17 @@ export function Result (props: ResultProps) {
                 <VideoInfo summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={1}>
-                <Topic summary={summary.summary} />
+                <DetailSummary summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={2}>
-                <DetailSummary summary={summary.summary} />
+                <Topic summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={3}>
                 <QA />
             </TabPanel>
-        </>
+            <TabPanel value={value} index={4}>
+                <Transcript />
+            </TabPanel>
+        </Box>
     ) 
 }

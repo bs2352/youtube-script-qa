@@ -13,7 +13,7 @@ interface TopicProps {
 }
 
 const boxSx = {
-    width: "75%",
+    width: "auto",
     margin: "0 auto",
     padding: "2em",
     paddingTop: "1em",
@@ -36,7 +36,8 @@ const tableCellSx = {
     paddingLeft: "3em",
     paddingRight: "3em",
     paddingTop: "0em",
-    whiteSpace: "nowrap",
+    // whiteSpace: "nowrap",
+    width: "auto",
 }
 
 const listItemTitleSx = {
