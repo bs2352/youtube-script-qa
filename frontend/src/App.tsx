@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import YouTube, { YouTubeEvent, YouTubePlayer, YouTubeProps } from 'react-youtube'
 import { Box } from '@mui/material'
 
