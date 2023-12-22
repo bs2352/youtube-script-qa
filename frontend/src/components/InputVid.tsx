@@ -1,6 +1,5 @@
-import { useRef } from 'react';
-
-import { Box } from '@mui/material'
+import { useState, useEffect } from 'react';
+import { Box, TextField, MenuItem } from '@mui/material'
 
 interface InputVidProps {
     vid: string;
@@ -11,33 +10,58 @@ const vidInputBoxSx = {
     padding: "2em",
 }
 
-const inputVidSx = {
-    padding: 5,
-    paddingLeft: 7,
-    margin: '1em'
+const textFieldSx = {
+    marginLeft: "10px",
+    marginRight: "10px",
 }
 
 export function InputVid (props: InputVidProps) {
     const { vid, setVid } = props;
+    const [ sampleVidList, setSampleVidList ] = useState<string[]|null>(null);
 
-    const refInputTextVid = useRef<HTMLInputElement>(null)
+    useEffect(() => {
+        fetch ("/sample")
+        .then((res => res.json()))
+        .then((res => setSampleVidList(res.vid)))
+        .catch((err) => console.log(err))
+    }, []);
 
     const onKeyDownHandlerVid = (event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter') {
-            setVid(refInputTextVid.current!.value)
+            const inputElement = event.target as HTMLInputElement;
+            setVid(inputElement.value);
         }
+    }
+
+    const onChangeHandlerSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const inputElement = event.target as HTMLInputElement;
+        setVid(inputElement.value);
     }
 
     return (
         <Box sx={vidInputBoxSx}>
-            Youtube Video ID
-            <input
-                type="text"
+            <TextField
+                label="Video ID"
                 defaultValue={vid}
-                ref={refInputTextVid}
+                value={vid}
                 onKeyDown={onKeyDownHandlerVid}
-                style={inputVidSx}
+                size="small"
+                sx={textFieldSx}
             />
+            { sampleVidList &&
+                <TextField
+                    select
+                    label="Sample Video ID"
+                    defaultValue={sampleVidList[0]}
+                    onChange={onChangeHandlerSelect}
+                    size="small"
+                    sx={textFieldSx}
+                >
+                    {sampleVidList.map((vid, index) => {
+                        return <MenuItem value={vid} key={index}>{vid}</MenuItem>
+                    })}
+                </TextField>
+}
         </Box>
     )
 }
