@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import YouTube, { YouTubeEvent, YouTubePlayer, YouTubeProps } from 'react-youtube'
+import { YouTubePlayer } from 'react-youtube'
 import { Box } from '@mui/material'
 
-import { SummaryRequestBody, SummaryResponseBody } from './components/types'
+import { SummaryResponseBody } from './components/types'
 import { Header } from './components/Header'
 import { InputVid } from './components/InputVid'
+import { VideoArea } from './components/VideoArea'
 import { Result } from './components/Result'
+import { Loading }  from './components/Loading'
 import './App.css'
 
 
@@ -16,50 +18,18 @@ function App() {
     const [summary, setSummary] = useState<SummaryResponseBody|null>(null)
     const [loading, setLoading] = useState<boolean>(false)
 
-    const onReadyHanler: YouTubeProps['onReady'] = (event: YouTubeEvent) => {
-        setYtPlayer(event.target)
-        setSummary(null)
-        setLoading(true)
-
-        const requestBody: SummaryRequestBody = {
-            vid: vid
-        }
-        fetch(
-            '/summary',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            }
-        )
-        .then((res => res.json()))
-        .then((res => {
-            setSummary(res);
-            setLoading(false);
-        }))
-        .catch((err) => {
-            console.log(err);
-            alert('要約作成中にエラーが発生しました。');
-            setLoading(false);
-        })
-    }
-
     return (
         <Box>
             <Header />
             <InputVid vid={vid} setVid={setVid} />
-            <YouTube
-                videoId={vid}
-                onReady={onReadyHanler}
+            <VideoArea
+                vid={vid}
+                setYtPlayer={setYtPlayer}
+                setSummary={setSummary}
+                setLoading={setLoading}
             />
-            {
-                summary && !loading && <Result summary={summary} />
-            }
-            {
-                !summary && loading && <div className='div-loading' />
-            }
+            { summary && !loading && <Result summary={summary} /> }
+            { !summary && loading && <Loading /> }
         </Box>
     )
 }
