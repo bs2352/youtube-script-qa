@@ -32,14 +32,20 @@ export function VideoArea (props: VideoAreaProps) {
                 body: JSON.stringify(requestBody)
             }
         )
-        .then((res => res.json()))
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
         .then((res => {
             setSummary(res);
             setLoading(false);
         }))
         .catch((err) => {
-            console.log(err);
-            alert('要約作成中にエラーが発生しました。');
+            const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
             setLoading(false);
         })
     }

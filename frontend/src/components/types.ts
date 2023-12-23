@@ -23,3 +23,9 @@ export type TopicType = {
     abstract: string[];
 }
 
+export type SampleVideoInfo = {
+    vid: string;
+    title: string;
+    author: string;
+    lengthSeconds: number;
+}

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Box, TextField, MenuItem } from '@mui/material'
 
+import { SampleVideoInfo } from './types';
+
+
 interface InputVidProps {
     vid: string;
     setVid: React.Dispatch<React.SetStateAction<string>>;
@@ -13,16 +16,21 @@ const vidInputBoxSx = {
 const textFieldSx = {
     marginLeft: "15px",
     marginRight: "15px",
+    maxWidth: "150px"
+}
+
+const menuItemSx = {
+    // maxWidth: "500px"
 }
 
 export function InputVid (props: InputVidProps) {
     const { vid, setVid } = props;
-    const [ sampleVidList, setSampleVidList ] = useState<string[]|null>(null);
+    const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
 
     useEffect(() => {
         fetch ("/sample")
         .then((res => res.json()))
-        .then((res => setSampleVidList(res.vid)))
+        .then((res => setSampleVideoList(res.info)))
         .catch((err) => console.log(err))
     }, []);
 
@@ -43,22 +51,29 @@ export function InputVid (props: InputVidProps) {
             <TextField
                 label="Video ID"
                 defaultValue={vid}
-                value={vid}
                 onKeyDown={onKeyDownHandlerVid}
                 size="small"
                 sx={textFieldSx}
             />
-            { sampleVidList &&
+            { sampleVideoList &&
                 <TextField
                     select
-                    label="Sample Video ID"
-                    defaultValue={sampleVidList[0]}
+                    label="Sample Video"
+                    defaultValue={vid}
                     onChange={onChangeHandlerSelect}
                     size="small"
                     sx={textFieldSx}
                 >
-                    {sampleVidList.map((vid, index) => {
-                        return <MenuItem value={vid} key={index}>{vid}</MenuItem>
+                    {sampleVideoList.map((video, index) => {
+                        return (
+                            <MenuItem
+                                key={index}
+                                value={video.vid}
+                                sx={menuItemSx}
+                            >
+                                ({video.title})
+                            </MenuItem>
+                        )
                     })}
                 </TextField>
 }
