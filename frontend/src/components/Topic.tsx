@@ -1,10 +1,4 @@
-import Box from '@mui/material/Box'
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
+import { Box, List, ListItem, Divider } from '@mui/material';
 
 import { SummaryType } from "./types";
 
@@ -16,64 +10,54 @@ const boxSx = {
     width: "auto",
     margin: "0 auto",
     padding: "2em",
-    paddingTop: "1em",
-}
-
-const tableSx = {
-    // border: "1px solid",
-    // borderColor: "red",
-    // borderCollapse: "collapse",
-}
-
-const tableRowSx = {
-    textAlign: "left",
-}
-
-const tableCellSx = {
+    paddingTop: "0.0em",
+    paddingBottom: "0.0em",
     border: "1px solid",
     borderColor: "darkgrey",
-    padding: "0.8em",
-    paddingLeft: "3em",
-    paddingRight: "3em",
-    paddingTop: "0em",
-    // whiteSpace: "nowrap",
-    width: "auto",
+}
+
+const listSx = {
+    // margin: "1em",
+    // marginTop: "0"
 }
 
 const listItemTitleSx = {
     fontWeight: "bold",
-    fontSize: "118%",
+    fontSize: "110%",
     textDecoration: "underline",
     textDecorationThickness: "10%",
-    paddingBottom: "0.2em",
+    // paddingBottom: "0.2em",
 }
 
 const listItemAbstractSx = {
     paddingLeft: "3em",
 }
 
+const dividerSx = {
+    marginTop: "0.5em",
+    // marginBottom: "0.5em",
+}
+
 export function Topic (props: TopicProps) {
     const { summary } = props;
     return (
         <Box sx={boxSx}>
-            <Table sx={tableSx}>
-                <TableBody>
-                    {summary.topic.map((topic, idx) =>
-                        <TableRow sx={tableRowSx} key={idx}>
-                            <TableCell sx={tableCellSx}>
-                                <List disablePadding>
-                                    <ListItem sx={listItemTitleSx}>{topic.title}</ListItem>
-                                    <List disablePadding>
-                                        {topic.abstract.map((abstract, idx) =>
-                                            <ListItem key={idx} sx={listItemAbstractSx} disablePadding>{abstract}</ListItem>
-                                        )}
-                                    </List>
-                                </List>
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
+            <List sx={listSx}>
+                {summary.topic.map((topic, idx) =>
+                {
+                    return (
+                        <>
+                            <ListItem key={idx} sx={listItemTitleSx}>{topic.title}</ListItem>
+                            <List>
+                                {topic.abstract.map((abstract, idx) =>
+                                    <ListItem key={idx} sx={listItemAbstractSx} disablePadding >{abstract}</ListItem>
+                                )}
+                            </List>
+                            { idx < summary.topic.length -1 && <Divider sx={dividerSx} /> }
+                        </>
+                    )
+                })}
+            </List>
         </Box>
     )
 }

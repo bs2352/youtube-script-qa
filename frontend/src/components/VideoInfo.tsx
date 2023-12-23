@@ -1,8 +1,4 @@
-import Box from '@mui/material/Box'
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
+import { Box, Table, TableBody, TableRow, TableCell } from '@mui/material';
 
 import { SummaryType } from "./types"
 
@@ -20,7 +16,7 @@ interface VideInfoProps {
 }
 
 const boxSx = {
-    width: "75%",
+    width: "auto",
     margin: "0 auto",
     padding: "2em",
     paddingTop: "1em",
@@ -30,6 +26,8 @@ const tableSx = {
     // border: "1px solid",
     // borderColor: "red",
     // borderCollapse: "collapse",
+    width: "60%",
+    margin: "0 auto"
 }
 
 const tableRowSx = {

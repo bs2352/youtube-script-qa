@@ -11,8 +11,8 @@ const vidInputBoxSx = {
 }
 
 const textFieldSx = {
-    marginLeft: "10px",
-    marginRight: "10px",
+    marginLeft: "15px",
+    marginRight: "15px",
 }
 
 export function InputVid (props: InputVidProps) {

@@ -1,6 +1,4 @@
-import Box from '@mui/material/Box'
-import Tabs from '@mui/material/Tabs'
-import Tab from '@mui/material/Tab'
+import { Box, Tabs, Tab } from '@mui/material'
 import { useState } from 'react'
 
 import { SummaryResponseBody } from "./types"
