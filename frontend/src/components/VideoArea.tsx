@@ -11,6 +11,11 @@ interface VideoAreaProps {
     setLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+const boxSx = {
+    width: "100%",
+    margin: "0 auto",
+}
+
 export function VideoArea (props: VideoAreaProps) {
     const { vid, setYtPlayer, setSummary, setLoading } = props;
 
@@ -51,7 +56,7 @@ export function VideoArea (props: VideoAreaProps) {
     }
 
     return (
-        <Box>
+        <Box sx={boxSx} id="videoarea-box-01">
             <YouTube
                 videoId={vid}
                 onReady={onReadyHanler}

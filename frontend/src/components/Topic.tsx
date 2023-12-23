@@ -7,26 +7,26 @@ interface TopicProps {
 }
 
 const boxSx = {
-    width: "auto",
+    width: "100%",
     margin: "0 auto",
-    padding: "2em",
-    paddingTop: "0.0em",
-    paddingBottom: "0.0em",
+}
+
+const listBoxSx = {
+    width: "80%",
+    margin: "0 auto",
     border: "1px solid",
     borderColor: "darkgrey",
 }
 
 const listSx = {
-    // margin: "1em",
-    // marginTop: "0"
+    margin: "1em",
+    marginTop: "0",
 }
 
 const listItemTitleSx = {
     fontWeight: "bold",
-    fontSize: "110%",
     textDecoration: "underline",
     textDecorationThickness: "10%",
-    // paddingBottom: "0.2em",
 }
 
 const listItemAbstractSx = {
@@ -34,30 +34,31 @@ const listItemAbstractSx = {
 }
 
 const dividerSx = {
-    marginTop: "0.5em",
-    // marginBottom: "0.5em",
+    marginTop: "1em",
 }
 
 export function Topic (props: TopicProps) {
     const { summary } = props;
     return (
-        <Box sx={boxSx}>
-            <List sx={listSx}>
-                {summary.topic.map((topic, idx) =>
-                {
-                    return (
-                        <>
-                            <ListItem key={idx} sx={listItemTitleSx}>{topic.title}</ListItem>
-                            <List>
-                                {topic.abstract.map((abstract, idx) =>
-                                    <ListItem key={idx} sx={listItemAbstractSx} disablePadding >{abstract}</ListItem>
-                                )}
-                            </List>
-                            { idx < summary.topic.length -1 && <Divider sx={dividerSx} /> }
-                        </>
-                    )
-                })}
-            </List>
+        <Box sx={boxSx} id="topic-box-01" >
+            <Box sx={listBoxSx}>
+                <List id="topic-list-01" sx={listSx} disablePadding >
+                    {summary.topic.map((topic, idx) =>
+                    {
+                        return (
+                            <Box>
+                                <ListItem key={idx} sx={listItemTitleSx}>{topic.title}</ListItem>
+                                <List disablePadding>
+                                    {topic.abstract.map((abstract, idx) =>
+                                        <ListItem key={idx} sx={listItemAbstractSx} disablePadding >{abstract}</ListItem>
+                                    )}
+                                </List>
+                                { idx < summary.topic.length -1 && <Divider sx={dividerSx} /> }
+                            </Box>
+                        )
+                    })}
+                </List>
+            </Box>
         </Box>
     )
 }

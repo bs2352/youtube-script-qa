@@ -16,7 +16,20 @@ interface TabPanelProps {
 }
 
 interface ResultProps {
-    summary: SummaryResponseBody
+    summary: SummaryResponseBody;
+    vid: string;
+}
+
+const boxSx = {
+    width: "100%",
+    margin: "0 auto",
+}
+
+const boxTabsSx = {
+    width: '100%',
+    bgcolor: 'background.paper',
+    marginBottom: 0.5,
+    marginTop: 1
 }
 
 function TabPanel (props: TabPanelProps) {
@@ -38,7 +51,7 @@ function TabPanel (props: TabPanelProps) {
 
 
 export function Result (props: ResultProps) {
-    const { summary } = props;
+    const { summary, vid } = props;
     const [ value, setValue ] = useState<number>(0)
 
     const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA', '字幕']
@@ -48,8 +61,8 @@ export function Result (props: ResultProps) {
     }
 
     return (
-        <Box>
-            <Box sx={{ width: '100%', bgcolor: 'background.paper', marginTop: 3 }}>
+        <Box sx={boxSx} id="result-box-01" >
+            <Box sx={boxTabsSx} id="result-box-02" >
                 <Tabs
                     value={value}
                     onChange={onTabChangeHandler}
@@ -70,7 +83,7 @@ export function Result (props: ResultProps) {
                 <Topic summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={3}>
-                <QA />
+                <QA vid={vid} />
             </TabPanel>
             <TabPanel value={value} index={4}>
                 <Transcript />

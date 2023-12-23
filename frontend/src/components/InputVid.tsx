@@ -9,18 +9,16 @@ interface InputVidProps {
     setVid: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const vidInputBoxSx = {
-    padding: "2em",
+const boxSx = {
+    width: "100%",
+    margin: "0 auto",
 }
 
 const textFieldSx = {
+    margin: "30px",
     marginLeft: "15px",
     marginRight: "15px",
     maxWidth: "150px"
-}
-
-const menuItemSx = {
-    // maxWidth: "500px"
 }
 
 export function InputVid (props: InputVidProps) {
@@ -47,7 +45,7 @@ export function InputVid (props: InputVidProps) {
     }
 
     return (
-        <Box sx={vidInputBoxSx}>
+        <Box sx={boxSx} id="inputvid-box-01">
             <TextField
                 label="Video ID"
                 defaultValue={vid}
@@ -69,7 +67,6 @@ export function InputVid (props: InputVidProps) {
                             <MenuItem
                                 key={index}
                                 value={video.vid}
-                                sx={menuItemSx}
                             >
                                 ({video.title})
                             </MenuItem>

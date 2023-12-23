@@ -8,18 +8,16 @@ interface DetailSummaryProps {
 }
 
 const boxSx = {
-    width: "auto",
+    width: "100%",
     margin: "0 auto",
-    padding: "2em",
-    paddingTop: "0em",
 }
 
 const boxListSx = {
-    width: "60%",
+    width: "80%",
     margin: "0 auto",
     border: "1px solid",
     borderColor: "darkgrey",
-    padding: "2em",
+    padding: "1.0em",
     paddingTop: "0.5em",
     paddingBottom: "0.5em",
 }
@@ -30,7 +28,7 @@ const listSx = {
 
 const listItemSx = {
     margin: "100",
-    padding: "100",
+    // padding: "100",
 }
 
 const dividerSx = {

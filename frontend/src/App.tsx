@@ -19,7 +19,7 @@ function App() {
     const [loading, setLoading] = useState<boolean>(false)
 
     return (
-        <Box>
+        <Box sx={{width: "70%", margin: "0 auto"}} id="app-box-01">
             <Header />
             <InputVid vid={vid} setVid={setVid} />
             <VideoArea
@@ -28,8 +28,8 @@ function App() {
                 setSummary={setSummary}
                 setLoading={setLoading}
             />
-            { summary && !loading && <Result summary={summary} /> }
-            { !summary && loading && <Loading /> }
+            { !loading && summary && <Result summary={summary} vid={vid} /> }
+            { loading && <Loading /> }
         </Box>
     )
 }

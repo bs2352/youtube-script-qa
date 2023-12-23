@@ -16,17 +16,12 @@ interface VideInfoProps {
 }
 
 const boxSx = {
-    width: "auto",
+    width: "100%",
     margin: "0 auto",
-    padding: "2em",
-    paddingTop: "1em",
 }
 
 const tableSx = {
-    // border: "1px solid",
-    // borderColor: "red",
-    // borderCollapse: "collapse",
-    width: "60%",
+    width: "90%",
     margin: "0 auto"
 }
 
@@ -44,7 +39,6 @@ const tableCellSx = {
 const tableCellTitleSx = {
     whiteSpace: "nowrap",
     fontWeight: "bold",
-    // backgroundColor: "bisque",
     backgroundColor: "lightgrey",
     ...tableCellSx
 }
@@ -53,8 +47,8 @@ const tableCellTitleSx = {
 export function VideoInfo (props: VideInfoProps) {
     const { summary } = props;
     return (
-        <Box sx={boxSx}>
-            <Table sx={tableSx}>
+        <Box sx={boxSx} id="videoinfo-box-01">
+            <Table sx={tableSx} id="videoinfo-table-01">
                 <TableBody>
                     <TableRow sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>タイトル</TableCell>
