@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 
 import { Box, TextField, IconButton } from '@mui/material'
-import { PlayArrow } from '@mui/icons-material'
+import { Send } from '@mui/icons-material'
 
 import { QaRequestBody, QaAnswerSource, QaResponseBody } from './types'
 import { Loading } from './Loading'
@@ -19,7 +19,7 @@ const boxSx = {
 const boxQaSx = {
     width: "80%",
     margin: "0 auto",
-    marginBottom: "1em"
+    marginBottom: "1em",
 }
 
 const textFieldQuestionSx = {
@@ -29,16 +29,14 @@ const textFieldQuestionSx = {
 
 const iconButtonSendSx = {
     verticalAlign: "bottom",
+    marginLeft: "5px",
 }
 
 const textFieldAnswerSx = {
-    width: "85%",
+    width: "87%",
     margin: "0 auto",
     marginTop: "1em",
-    padding: "0.5em",
-    paddingTop: "0",
-    // readOnly: "true",
-    pointerEvents: "none"
+    pointerEvents: "none",
 }
 
 
@@ -115,14 +113,41 @@ export function QA (props: QAProps) {
                 sx={textFieldAnswerSx}
                 multiline
                 id="qa-answer-01"
-                // disabled
             />
         )
     }
 
+    const Sources = () => {
+        if (!answer) {
+            return <></>;
+        }
+        const sourceList = answer.sources.map((source: QaAnswerSource, idx: number) => {
+            return (
+                <TextField
+                    key={idx}
+                    sx={textFieldAnswerSx}
+                    label={
+                        <a onClick={()=>alert(`${source.time}`)}>
+                            {`${source.time} （スコア：${Math.round(source.score*1000)/1000}）`}
+                        </a>
+                    }
+                    variant="outlined"
+                    value={source.source}
+                    multiline
+                    rows={5}
+                />
+            )
+        })
+
+        return (
+            <>{sourceList}</>
+        )
+    }
+
+
     return (
         <Box sx={boxSx} >
-            <Box sx={boxQaSx}>
+            <Box sx={boxQaSx} id="qa-box-02" >
                 <TextField
                     label="質問"
                     variant="outlined"
@@ -131,20 +156,22 @@ export function QA (props: QAProps) {
                     multiline
                     rows={3}
                     sx={textFieldQuestionSx}
-                    size="small"
+                    // size="small"
                     onChange={onChangeHandlerQuestion}
                 />
                 <IconButton
                     sx={iconButtonSendSx}
                     onClick={onClickHandlerSendQuestion}
                     disabled={disabledSendButton}
+                    size='small'
                 >
-                    <PlayArrow fontSize='large' />
+                    <Send fontSize='large' />
                 </IconButton>
             </Box>
-            <Box sx={boxQaSx} >
+            <Box sx={boxQaSx} id="qa-box-03" >
                 {loading && <Loading />}
                 {answer && <Answer />}
+                {answer && <Sources />}
             </Box>
         </Box>
     )
