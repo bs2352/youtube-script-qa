@@ -52,6 +52,7 @@ export function InputVid (props: InputVidProps) {
                 onKeyDown={onKeyDownHandlerVid}
                 size="small"
                 sx={textFieldSx}
+                // InputLabelProps={{shrink: true}}
             />
             { sampleVideoList &&
                 <TextField
@@ -61,6 +62,7 @@ export function InputVid (props: InputVidProps) {
                     onChange={onChangeHandlerSelect}
                     size="small"
                     sx={textFieldSx}
+                    // InputLabelProps={{shrink: true}}
                 >
                     {sampleVideoList.map((video, index) => {
                         return (

@@ -1,5 +1,6 @@
 import { Box, Tabs, Tab } from '@mui/material'
 import { useState } from 'react'
+import { YouTubePlayer } from 'react-youtube'
 
 import { SummaryResponseBody } from "./types"
 import { VideoInfo } from './VideoInfo'
@@ -18,6 +19,7 @@ interface TabPanelProps {
 interface ResultProps {
     summary: SummaryResponseBody;
     vid: string;
+    ytplayer: YouTubePlayer
 }
 
 const boxSx = {
@@ -51,7 +53,8 @@ function TabPanel (props: TabPanelProps) {
 
 
 export function Result (props: ResultProps) {
-    const { summary, vid } = props;
+    const { summary, vid, ytplayer } = props;
+
     const [ value, setValue ] = useState<number>(0)
 
     const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA', '字幕']
@@ -83,7 +86,7 @@ export function Result (props: ResultProps) {
                 <Topic summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={3}>
-                <QA vid={vid} />
+                <QA vid={vid} ytplayer={ytplayer} />
             </TabPanel>
             <TabPanel value={value} index={4}>
                 <Transcript />

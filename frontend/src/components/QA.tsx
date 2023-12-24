@@ -1,14 +1,17 @@
 import { useRef, useState } from 'react'
 
-import { Box, TextField, IconButton } from '@mui/material'
+import { Box, TextField, IconButton, Link } from '@mui/material'
 import { Send } from '@mui/icons-material'
+import { YouTubePlayer } from 'react-youtube'
 
 import { QaRequestBody, QaAnswerSource, QaResponseBody } from './types'
 import { Loading } from './Loading'
+import { hms2s } from '../utils'
 
 
 interface QAProps {
     vid: string;
+    ytplayer: YouTubePlayer;
 }
 
 const boxSx = {
@@ -36,12 +39,12 @@ const textFieldAnswerSx = {
     width: "87%",
     margin: "0 auto",
     marginTop: "1em",
-    pointerEvents: "none",
+    // pointerEvents: "none",
 }
 
 
 export function QA (props: QAProps) {
-    const { vid } = props;
+    const { vid, ytplayer } = props;
 
     const [ disabledSendButton, setDisabledSendButton] = useState<boolean>(true);
     const [ loading, setLoading ] = useState<boolean>(false);
@@ -109,32 +112,58 @@ export function QA (props: QAProps) {
             <TextField
                 variant='outlined'
                 label='回答'
-                value={answer?.answer}
+                defaultValue={answer?.answer}
                 sx={textFieldAnswerSx}
                 multiline
                 id="qa-answer-01"
+                inputProps={{readOnly: true}}
             />
         )
     }
 
+    const onClickHandlerSource = (time: string) => {
+        // alert(time);
+        ytplayer.seekTo(hms2s(time), true);
+    }
+
+    const LabelLink = (props: {source: QaAnswerSource}) => {
+        const { source } = props;
+        return (
+            <Link
+                href="#"
+                onClick={()=>onClickHandlerSource(source.time)}
+                underline="hover"
+            >
+                {`${source.time} （スコア：${Math.round(source.score*1000)/1000}）`}
+            </Link>
+        )
+    }
+
     const Sources = () => {
-        if (!answer) {
+        if (!answer || !answer.sources) {
             return <></>;
         }
-        const sourceList = answer.sources.map((source: QaAnswerSource, idx: number) => {
+        // とりあえず時間順で並べる（スコア順でよい？）
+        const sorted_sources: QaAnswerSource[] = answer.sources.sort((a, b) => {
+            if (a.time > b.time) {
+                return 1;
+            } else if (a.time < b.time) {
+                return -1;
+            } else {
+                return 0;
+            }
+        });
+        const sourceList = sorted_sources.map((source: QaAnswerSource, idx: number) => {
             return (
                 <TextField
                     key={idx}
                     sx={textFieldAnswerSx}
-                    label={
-                        <a onClick={()=>alert(`${source.time}`)}>
-                            {`${source.time} （スコア：${Math.round(source.score*1000)/1000}）`}
-                        </a>
-                    }
+                    label={<LabelLink source={source} />}
                     variant="outlined"
-                    value={source.source}
+                    defaultValue={source.source}
                     multiline
                     rows={5}
+                    inputProps={{readOnly: true}}
                 />
             )
         })
@@ -156,8 +185,9 @@ export function QA (props: QAProps) {
                     multiline
                     rows={3}
                     sx={textFieldQuestionSx}
-                    // size="small"
+                    size="small"
                     onChange={onChangeHandlerQuestion}
+                    InputLabelProps={{shrink: true}}
                 />
                 <IconButton
                     sx={iconButtonSendSx}

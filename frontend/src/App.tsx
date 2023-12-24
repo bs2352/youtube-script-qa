@@ -28,7 +28,12 @@ function App() {
                 setSummary={setSummary}
                 setLoading={setLoading}
             />
-            { !loading && summary && <Result summary={summary} vid={vid} /> }
+            { !loading && summary && ytplayer &&
+                <Result
+                    summary={summary}
+                    vid={vid}
+                    ytplayer={ytplayer}
+                /> }
             { loading && <Loading /> }
         </Box>
     )
