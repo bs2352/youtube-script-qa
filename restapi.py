@@ -3,8 +3,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from youtube_transcript_api import YouTubeTranscriptApi
+from pytube import YouTube
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -70,6 +71,15 @@ class TranscriptResponseModel (BaseModel):
     vid: str
     transcripts: List[TranscriptModel]
 
+class VideInfo (BaseModel):
+    vid: str
+    title: str
+    author: str
+    lengthSeconds: int
+
+class SampleVidModel (BaseModel):
+    info: List[VideInfo]
+
 
 @app.post (
     "/summary",
@@ -85,7 +95,7 @@ async def summary (request_body: SummaryRequestModel):
             raise Exception("summary not found")
     except Exception as e:
         logging.error(f"[{vid}] {str(e)}", exc_info=True)
-        return {"vid": request_body.vid, "error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
     return SummaruResponseModel(vid=vid, summary=summary)
 
 
@@ -107,7 +117,7 @@ async def qa (request_body: QARequestModel):
             sources.append(SourceModel(score=score, time=time, source=source))
     except Exception as e:
         logging.error(f"[{vid}] {str(e)}", exc_info=True)
-        return {"vid": request_body.vid, "error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
     return QAResponseModel(
         vid=vid, question=question, answer=answer, sources=sources
     )
@@ -125,7 +135,7 @@ async def transcript (request_body: TranscriptRequestModel):
         transcripts: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(vid, languages=DEFAULT_TRANSCRIPT_LANGUAGES)
     except Exception as e:
         logging.error(f"[{vid}] {str(e)}", exc_info=True)
-        return {"vid": request_body.vid, "error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
     return TranscriptResponseModel(
         vid=vid,
         transcripts=[
@@ -136,6 +146,37 @@ async def transcript (request_body: TranscriptRequestModel):
             ) for transcript in transcripts
         ]
     )
+
+
+@app.get (
+    "/sample",
+    summary="get sample video IDs",
+    description="get sample video IDs",
+    tags=["Sample"]
+)
+async def sample ():
+    if not os.path.exists("vid.txt"):
+        raise HTTPException(status_code=404, detail="file not found")
+
+    video_infos: List[VideInfo] = []
+    with open("vid.txt", "r") as f:
+        vids: List[str] = f.read().splitlines()
+    try:
+        for vid in vids:
+            url: str = f'https://www.youtube.com/watch?v={vid.strip()}'
+            vinfo = YouTube(url).vid_info["videoDetails"]
+            video_infos.append(VideInfo(
+                vid=vid,
+                title=vinfo["title"],
+                author=vinfo["author"],
+                lengthSeconds=int(vinfo["lengthSeconds"])
+            ))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return SampleVidModel(info=video_infos)
+
+
 
 # if __name__ == "__main__":
 #     import uvicorn

@@ -1,8 +1,4 @@
-import Box from '@mui/material/Box'
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
+import { Box, List, ListItem, Divider } from '@mui/material';
 
 import { SummaryType } from "./types"
 
@@ -12,44 +8,51 @@ interface DetailSummaryProps {
 }
 
 const boxSx = {
-    width: "75%",
+    width: "100%",
     margin: "0 auto",
-    padding: "2em",
-    paddingTop: "1em",
 }
 
-const tableSx = {
-    // border: "1px solid",
-    // borderColor: "red",
-    // borderCollapse: "collapse",
-}
-
-const tableRowSx = {
-    textAlign: "left",
-}
-
-const tableCellSx = {
+const boxListSx = {
+    width: "80%",
+    margin: "0 auto",
     border: "1px solid",
     borderColor: "darkgrey",
     padding: "1.0em",
-    paddingRight: "1.0em",
+    paddingTop: "0.5em",
+    paddingBottom: "0.5em",
+}
+
+const listSx = {
+    marginTop: "0",
+}
+
+const listItemSx = {
+    margin: "100",
+    // padding: "100",
+}
+
+const dividerSx = {
+    marginTop: "0.5em",
+    marginBottom: "0.5em",
 }
 
 export function DetailSummary (props: DetailSummaryProps) {
     const { summary } = props;
     return (
         <Box sx={boxSx}>
-            <Table sx={tableSx}>
-                <TableBody>
+            <Box sx={boxListSx} >
+                <List sx={listSx} disablePadding >
                     {summary.detail.map((detail, idx) =>
-                        <TableRow sx={tableRowSx} key={idx}>
-                            <TableCell sx={tableCellSx}>
-                                {detail}
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
+                    {
+                        return (
+                            <>
+                                <ListItem key={idx} sx={listItemSx}>{detail}</ListItem>
+                                { (idx < summary.detail.length - 1) && <Divider sx={dividerSx} /> }
+                            </>
+                        )
+                    })}
+                </List>
+            </Box>
         </Box>
     )
 }

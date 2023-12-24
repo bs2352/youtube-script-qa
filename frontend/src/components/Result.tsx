@@ -1,13 +1,13 @@
-import Box from '@mui/material/Box'
-import Tabs from '@mui/material/Tabs'
-import Tab from '@mui/material/Tab'
+import { Box, Tabs, Tab } from '@mui/material'
 import { useState } from 'react'
+import { YouTubePlayer } from 'react-youtube'
 
 import { SummaryResponseBody } from "./types"
 import { VideoInfo } from './VideoInfo'
 import { DetailSummary } from './DetailSummary'
 import { Topic } from './Topic'
 import { QA } from './QA'
+import { Transcript } from './Transcript'
 
 
 interface TabPanelProps {
@@ -17,7 +17,21 @@ interface TabPanelProps {
 }
 
 interface ResultProps {
-    summary: SummaryResponseBody
+    summary: SummaryResponseBody;
+    vid: string;
+    ytplayer: YouTubePlayer
+}
+
+const boxSx = {
+    width: "100%",
+    margin: "0 auto",
+}
+
+const boxTabsSx = {
+    width: '100%',
+    bgcolor: 'background.paper',
+    marginBottom: 0.5,
+    marginTop: 1
 }
 
 function TabPanel (props: TabPanelProps) {
@@ -39,18 +53,19 @@ function TabPanel (props: TabPanelProps) {
 
 
 export function Result (props: ResultProps) {
-    const { summary } = props;
+    const { summary, vid, ytplayer } = props;
+
     const [ value, setValue ] = useState<number>(0)
 
-    const tabItemList: string[] = ['概要', 'トピック', '詳細', 'QA']
+    const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA', '字幕']
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
     }
 
     return (
-        <>
-            <Box sx={{ width: '100%', bgcolor: 'background.paper', marginTop: 3 }}>
+        <Box sx={boxSx} id="result-box-01" >
+            <Box sx={boxTabsSx} id="result-box-02" >
                 <Tabs
                     value={value}
                     onChange={onTabChangeHandler}
@@ -65,14 +80,17 @@ export function Result (props: ResultProps) {
                 <VideoInfo summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={1}>
-                <Topic summary={summary.summary} />
-            </TabPanel>
-            <TabPanel value={value} index={2}>
                 <DetailSummary summary={summary.summary} />
             </TabPanel>
-            <TabPanel value={value} index={3}>
-                <QA />
+            <TabPanel value={value} index={2}>
+                <Topic summary={summary.summary} />
             </TabPanel>
-        </>
+            <TabPanel value={value} index={3}>
+                <QA vid={vid} ytplayer={ytplayer} />
+            </TabPanel>
+            <TabPanel value={value} index={4}>
+                <Transcript />
+            </TabPanel>
+        </Box>
     ) 
 }

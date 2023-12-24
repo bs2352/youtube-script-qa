@@ -23,3 +23,28 @@ export type TopicType = {
     abstract: string[];
 }
 
+export type SampleVideoInfo = {
+    vid: string;
+    title: string;
+    author: string;
+    lengthSeconds: number;
+}
+
+export type QaRequestBody = {
+    vid: string;
+    question: string;
+    ref_source: number;
+}
+
+export type QaAnswerSource = {
+    score: number;
+    time: string;
+    source: string;
+}
+
+export type QaResponseBody = {
+    vis: string;
+    question: string;
+    answer: string;
+    sources: QaAnswerSource[]
+}

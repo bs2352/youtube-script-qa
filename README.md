@@ -51,7 +51,7 @@ MAX_TOPIC_ITEM_MARGIN=1.3
 MAX_RETRY_COUNT=3
 ```
 
-## 実行
+## コマンド実行
 
 ### QA実行
 
@@ -86,19 +86,11 @@ options:
 ```
 
 
-## APIサーバー
-```
-$ gunicorn -c gunicorn_config.py api:app
-```
+## Webアプリ
 
-* http://127.0.0.1:8080/　※フロントエンドのビルドが必要
-* http://127.0.0.1:8080/docs
+### フロントエンド
 
-
-
-## フロントエンド
-
-### 開発
+#### 開発
 ```
 $ cd frontend
 $ npm install
@@ -107,8 +99,22 @@ $ npm run dev
 
 * http://localhost:5173
 
-### ビルド
+#### ビルド
 ```
 $ npm run build
 ```
 
+### バックエンド
+#### 実行
+```
+$ gunicorn -c gunicorn_config.py restapi:app
+```
+
+* http://127.0.0.1:8080/
+  * こちらでトップ画面にアクセスする場合はフロントエンドをビルドしておく必要がある
+
+#### 開発
+* http://127.0.0.1:8080/docs
+
+#### 備考
+* vid.txtにVideoIDを1行1エントリ形式で記載しておくとトップ画面で選択できるようになる。開発用の隠し機能。
