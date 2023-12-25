@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 
-import { Box, TextField, IconButton, Link } from '@mui/material'
+import { Box, TextField, IconButton, Link, Typography } from '@mui/material'
 import { Send } from '@mui/icons-material'
 import { YouTubePlayer } from 'react-youtube'
 
@@ -26,7 +26,7 @@ const boxQaSx = {
 }
 
 const textFieldQuestionSx = {
-    width: "80%",
+    width: "87%",
     verticalAlign: "bottom",
 }
 
@@ -36,7 +36,7 @@ const iconButtonSendSx = {
 }
 
 const textFieldAnswerSx = {
-    width: "87%",
+    width: "93%",
     margin: "0 auto",
     marginTop: "1em",
     // pointerEvents: "none",
@@ -108,10 +108,17 @@ export function QA (props: QAProps) {
     }
 
     const Answer = () => {
+        const Label = () => {
+            return (
+                <Typography variant='h6'>
+                    回答
+                </Typography>
+            )
+        }
         return (
             <TextField
                 variant='outlined'
-                label='回答'
+                label={<Label />}
                 defaultValue={answer?.answer}
                 sx={textFieldAnswerSx}
                 multiline
@@ -124,19 +131,6 @@ export function QA (props: QAProps) {
     const onClickHandlerSource = (time: string) => {
         // alert(time);
         ytplayer.seekTo(hms2s(time), true);
-    }
-
-    const LabelLink = (props: {source: QaAnswerSource}) => {
-        const { source } = props;
-        return (
-            <Link
-                href="#"
-                onClick={()=>onClickHandlerSource(source.time)}
-                underline="hover"
-            >
-                {`${source.time} （スコア：${Math.round(source.score*1000)/1000}）`}
-            </Link>
-        )
     }
 
     const Sources = () => {
@@ -153,6 +147,19 @@ export function QA (props: QAProps) {
                 return 0;
             }
         });
+        const LabelLink = (props: {source: QaAnswerSource}) => {
+            const { source } = props;
+            return (
+                <Link
+                    href="#"
+                    onClick={()=>onClickHandlerSource(source.time)}
+                    underline="always"
+                    variant='h6'
+                >
+                    {`${source.time} （スコア：${Math.round(source.score*1000)/1000}）`}
+                </Link>
+            )
+        }
         const sourceList = sorted_sources.map((source: QaAnswerSource, idx: number) => {
             return (
                 <TextField
@@ -173,12 +180,19 @@ export function QA (props: QAProps) {
         )
     }
 
+    const QuestionLebel = () => {
+        return (
+            <Typography variant='h6'>
+                質問
+            </Typography>
+        )
+    }
 
     return (
         <Box sx={boxSx} >
             <Box sx={boxQaSx} id="qa-box-02" >
                 <TextField
-                    label="質問"
+                    label={<QuestionLebel/>}
                     variant="outlined"
                     placeholder='質問を入力してください。'
                     inputRef={questionRef}
@@ -195,7 +209,7 @@ export function QA (props: QAProps) {
                     disabled={disabledSendButton}
                     size='small'
                 >
-                    <Send fontSize='large' />
+                    <Send fontSize='medium' />
                 </IconButton>
             </Box>
             <Box sx={boxQaSx} id="qa-box-03" >

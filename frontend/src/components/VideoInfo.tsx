@@ -1,4 +1,4 @@
-import { Box, Table, TableBody, TableRow, TableCell } from '@mui/material';
+import { Box, Table, TableBody, TableRow, TableCell, Link } from '@mui/material';
 
 import { SummaryType } from "./types"
 
@@ -61,6 +61,12 @@ export function VideoInfo (props: VideInfoProps) {
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>時間</TableCell>
                         <TableCell sx={tableCellSx}>{s2hms(summary.lengthSeconds)}</TableCell>
+                    </TableRow>
+                    <TableRow  sx={tableRowSx}>
+                        <TableCell sx={tableCellTitleSx}>URL</TableCell>
+                        <TableCell sx={tableCellSx}>
+                            <Link href={summary.url}>{summary.url}</Link>
+                        </TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>要約</TableCell>

@@ -48,3 +48,20 @@ export type QaResponseBody = {
     answer: string;
     sources: QaAnswerSource[]
 }
+
+export type TranscriptRequestBody = {
+    vid: string;
+}
+
+export type TranscriptType = {
+    id: string;
+    text: string;
+    start: number;
+    duration: number;
+    overlap: number;
+}
+
+export type TranscriptResponseBody = {
+    vid: string;
+    transcripts: TranscriptType[];
+}

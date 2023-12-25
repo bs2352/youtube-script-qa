@@ -50,7 +50,11 @@ export function Topic (props: TopicProps) {
                                 <ListItem key={idx} sx={listItemTitleSx}>{topic.title}</ListItem>
                                 <List disablePadding>
                                     {topic.abstract.map((abstract, idx) =>
-                                        <ListItem key={idx} sx={listItemAbstractSx} disablePadding >{abstract}</ListItem>
+                                        <ListItem
+                                            key={`topic-abstract-${idx}`}
+                                            sx={listItemAbstractSx}
+                                            disablePadding
+                                        >{abstract}</ListItem>
                                     )}
                                 </List>
                                 { idx < summary.topic.length -1 && <Divider sx={dividerSx} /> }

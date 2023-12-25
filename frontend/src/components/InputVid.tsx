@@ -67,7 +67,7 @@ export function InputVid (props: InputVidProps) {
                     {sampleVideoList.map((video, index) => {
                         return (
                             <MenuItem
-                                key={index}
+                                key={`sample-vid-${index}`}
                                 value={video.vid}
                             >
                                 ({video.title})
