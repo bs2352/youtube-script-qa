@@ -2,7 +2,7 @@ import { Box, Tabs, Tab } from '@mui/material'
 import { useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
-import { SummaryResponseBody } from "./types"
+import { SummaryResponseBody, TranscriptType } from "./types"
 import { VideoInfo } from './VideoInfo'
 import { DetailSummary } from './DetailSummary'
 import { Topic } from './Topic'
@@ -56,6 +56,7 @@ export function Result (props: ResultProps) {
     const { summary, vid, ytplayer } = props;
 
     const [ value, setValue ] = useState<number>(0)
+    const [ transcripts, setTranscripts] = useState<TranscriptType[]|null>(null);
 
     const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA', '字幕']
 
@@ -89,7 +90,12 @@ export function Result (props: ResultProps) {
                 <QA vid={vid} ytplayer={ytplayer} />
             </TabPanel>
             <TabPanel value={value} index={4}>
-                <Transcript />
+                <Transcript
+                    vid={vid}
+                    ytplayer={ytplayer}
+                    transcripts={transcripts}
+                    setTranscripts={setTranscripts}
+                />
             </TabPanel>
         </Box>
     ) 

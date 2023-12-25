@@ -46,7 +46,7 @@ export function DetailSummary (props: DetailSummaryProps) {
                     {
                         return (
                             <>
-                                <ListItem key={idx} sx={listItemSx}>{detail}</ListItem>
+                                <ListItem key={`detail-summary-${idx}`} sx={listItemSx}>{detail}</ListItem>
                                 { (idx < summary.detail.length - 1) && <Divider sx={dividerSx} /> }
                             </>
                         )

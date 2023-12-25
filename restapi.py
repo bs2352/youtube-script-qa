@@ -11,7 +11,8 @@ from pydantic import BaseModel
 
 from yts.summarize import YoutubeSummarize
 from yts.qa import YoutubeQA
-from yts.types import SummaryResultModel, YoutubeTranscriptType
+from yts.types import SummaryResultModel, YoutubeTranscriptType, TranscriptChunkModel
+from yts.utils import divide_transcriptions_into_chunks
 
 
 STATIC_FILES_DIR = "frontend/dist"
@@ -69,7 +70,7 @@ class TranscriptModel (BaseModel):
 
 class TranscriptResponseModel (BaseModel):
     vid: str
-    transcripts: List[TranscriptModel]
+    transcripts: List[TranscriptChunkModel]
 
 class VideInfo (BaseModel):
     vid: str
@@ -132,19 +133,20 @@ async def qa (request_body: QARequestModel):
 async def transcript (request_body: TranscriptRequestModel):
     vid: str = request_body.vid
     try:
+        # 細切れすぎるのでまとめる
         transcripts: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(vid, languages=DEFAULT_TRANSCRIPT_LANGUAGES)
+        chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+            transcripts,
+            maxlength = 300,
+            overlap_length = 0,
+            id_prefix = vid
+        )
     except Exception as e:
         logging.error(f"[{vid}] {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     return TranscriptResponseModel(
         vid=vid,
-        transcripts=[
-            TranscriptModel(
-                text=transcript["text"],
-                start=transcript["start"],
-                duration=transcript["duration"]
-            ) for transcript in transcripts
-        ]
+        transcripts=chunks
     )
 
 
