@@ -20,6 +20,8 @@ const boxListSx = {
     padding: "1.0em",
     paddingTop: "0.5em",
     paddingBottom: "0.5em",
+    height: "400px",
+    overflowY: "scroll",
 }
 
 const listSx = {
@@ -45,10 +47,10 @@ export function DetailSummary (props: DetailSummaryProps) {
                     {summary.detail.map((detail, idx) =>
                     {
                         return (
-                            <>
-                                <ListItem key={`detail-summary-${idx}`} sx={listItemSx}>{detail}</ListItem>
+                            <Box key={`detail-summary-${idx}`}>
+                                <ListItem key={`item-detail-summary-${idx}`} sx={listItemSx}>{detail}</ListItem>
                                 { (idx < summary.detail.length - 1) && <Divider sx={dividerSx} /> }
-                            </>
+                            </Box>
                         )
                     })}
                 </List>

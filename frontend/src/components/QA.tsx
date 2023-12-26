@@ -12,6 +12,10 @@ import { hms2s } from '../utils'
 interface QAProps {
     vid: string;
     ytplayer: YouTubePlayer;
+    question: string | null;
+    setQuestion: React.Dispatch<React.SetStateAction<string|null>>;
+    answer: QaResponseBody | null;
+    setAnswer: React.Dispatch<React.SetStateAction<QaResponseBody | null>>;
 }
 
 const boxSx = {
@@ -19,10 +23,18 @@ const boxSx = {
     margin: "0 auto",
 }
 
-const boxQaSx = {
+const boxQuestionSx = {
     width: "80%",
     margin: "0 auto",
     marginBottom: "1em",
+}
+
+const boxAnswerSx = {
+    width: "80%",
+    margin: "0 auto",
+    marginBottom: "1em",
+    height: "300px",
+    overflowY: "scroll",
 }
 
 const textFieldQuestionSx = {
@@ -44,11 +56,10 @@ const textFieldAnswerSx = {
 
 
 export function QA (props: QAProps) {
-    const { vid, ytplayer } = props;
+    const { vid, ytplayer, question, setQuestion, answer, setAnswer } = props;
 
     const [ disabledSendButton, setDisabledSendButton] = useState<boolean>(true);
     const [ loading, setLoading ] = useState<boolean>(false);
-    const [ answer, setAnswer ] = useState<QaResponseBody|null>(null);
 
     const questionRef = useRef<HTMLInputElement>(null);
 
@@ -70,6 +81,7 @@ export function QA (props: QAProps) {
         }
         setLoading(true);
         setDisabledSendButton(true);
+        setQuestion(null);
         setAnswer(null);
         const questionInput = questionRef.current as HTMLInputElement;
         const requestBody: QaRequestBody = {
@@ -94,6 +106,7 @@ export function QA (props: QAProps) {
             return res.json();
         }))
         .then((res => {
+            setQuestion(questionInput.value);
             setAnswer(res);
             setLoading(false);
             setDisabledSendButton(false);
@@ -190,7 +203,7 @@ export function QA (props: QAProps) {
 
     return (
         <Box sx={boxSx} >
-            <Box sx={boxQaSx} id="qa-box-02" >
+            <Box sx={boxQuestionSx} id="qa-box-02" >
                 <TextField
                     label={<QuestionLebel/>}
                     variant="outlined"
@@ -199,9 +212,9 @@ export function QA (props: QAProps) {
                     multiline
                     rows={3}
                     sx={textFieldQuestionSx}
-                    size="small"
                     onChange={onChangeHandlerQuestion}
                     InputLabelProps={{shrink: true}}
+                    defaultValue={question}
                 />
                 <IconButton
                     sx={iconButtonSendSx}
@@ -212,7 +225,7 @@ export function QA (props: QAProps) {
                     <Send fontSize='medium' />
                 </IconButton>
             </Box>
-            <Box sx={boxQaSx} id="qa-box-03" >
+            <Box sx={boxAnswerSx} id="qa-box-03" >
                 {loading && <Loading />}
                 {answer && <Answer />}
                 {answer && <Sources />}

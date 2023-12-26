@@ -16,6 +16,9 @@ const listBoxSx = {
     margin: "0 auto",
     border: "1px solid",
     borderColor: "darkgrey",
+    height: "400px",
+    overflow: "scroll",
+    padding: "5px",
 }
 
 const listSx = {
@@ -46,9 +49,9 @@ export function Topic (props: TopicProps) {
                     {summary.topic.map((topic, idx) =>
                     {
                         return (
-                            <Box>
-                                <ListItem key={idx} sx={listItemTitleSx}>{topic.title}</ListItem>
-                                <List disablePadding>
+                            <Box key={`topic-${idx}`}>
+                                <ListItem sx={listItemTitleSx}>{topic.title}</ListItem>
+                                <List disablePadding >
                                     {topic.abstract.map((abstract, idx) =>
                                         <ListItem
                                             key={`topic-abstract-${idx}`}

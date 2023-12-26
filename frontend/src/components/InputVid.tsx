@@ -14,11 +14,18 @@ const boxSx = {
     margin: "0 auto",
 }
 
-const textFieldSx = {
-    margin: "30px",
+const textFieldVidSx = {
+    margin: "20px",
     marginLeft: "15px",
     marginRight: "15px",
     maxWidth: "150px"
+}
+
+const textFieldSampleSx = {
+    margin: "20px",
+    marginLeft: "15px",
+    marginRight: "15px",
+    maxWidth: "300px",
 }
 
 export function InputVid (props: InputVidProps) {
@@ -51,7 +58,7 @@ export function InputVid (props: InputVidProps) {
                 defaultValue={vid}
                 onKeyDown={onKeyDownHandlerVid}
                 size="small"
-                sx={textFieldSx}
+                sx={textFieldVidSx}
                 // InputLabelProps={{shrink: true}}
             />
             { sampleVideoList &&
@@ -61,15 +68,12 @@ export function InputVid (props: InputVidProps) {
                     defaultValue={vid}
                     onChange={onChangeHandlerSelect}
                     size="small"
-                    sx={textFieldSx}
+                    sx={textFieldSampleSx}
                     // InputLabelProps={{shrink: true}}
                 >
                     {sampleVideoList.map((video, index) => {
                         return (
-                            <MenuItem
-                                key={`sample-vid-${index}`}
-                                value={video.vid}
-                            >
+                            <MenuItem key={`sample-vid-${index}`} value={video.vid} >
                                 ({video.title})
                             </MenuItem>
                         )
