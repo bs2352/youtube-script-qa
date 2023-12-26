@@ -1447,14 +1447,23 @@ def test_topic_similarity ():
         return
     for topic in summary.topic:
         content = re.sub(r"^\d+\.?", "", topic.title).strip()
-        content += " " + " ".join(topic.abstract)
-        print("## ", content)
-        yqa = YoutubeQA(vid=vid, detail=True, ref_sources=10)
-        _ = yqa.run(content)
-        starts = [
-            time for _, _, time, _ in yqa.get_source()
-        ]
-        starts.sort(); print(starts); print("")
+        for abstract in topic.abstract:
+            query =  content + " " + abstract.strip()
+            print("## ", query)
+            yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
+            _ = yqa.run(query)
+            starts = [
+                time for _, _, time, _ in yqa.get_source()
+            ]
+            starts.sort(); print(starts); print("")
+        # content += " " + " ".join(topic.abstract)
+        # print("## ", content)
+        # yqa = YoutubeQA(vid=vid, detail=True, ref_sources=10)
+        # _ = yqa.run(content)
+        # starts = [
+        #     time for _, _, time, _ in yqa.get_source()
+        # ]
+        # starts.sort(); print(starts); print("")
         # for score, id, time, source in yqa.get_source():
         #     print(f"--- {time} ({id} [{score}]) ---\n {source}")
         #     print("")
@@ -1473,10 +1482,10 @@ if __name__ == "__main__":
     # qa_with_function_calling()
     # test_loading()
     # print(test_decorate_loading())
-    embedding_async()
+    # embedding_async()
     # which_document_to_read()
     # test_check_comprehensively()
     # test_extract_keyword()
     # get_topic_from_summary_kwd()
     # test_function()
-    # test_topic_similarity()
+    test_topic_similarity()
