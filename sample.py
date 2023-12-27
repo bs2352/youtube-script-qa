@@ -718,26 +718,62 @@ def test_function_calling ():
         },
     ]
 
+    functions = [
+        {
+            "name": "answer_question_about_specific_things",
+            # "description": "Answer questions about specific things mentioned in a given video.",
+            "description": "Answer questions about specific things mentioned in a given video. Effective for questions asking what, where, when, why and how.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "動画のタイトル"
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "質問",
+                    }
+                },
+                "required": ["title", "question"]
+            }
+        },
+        {
+            "name": "answer_question_about_general_content",
+            # "description": "View the entire video and Answer questions about the general content of a given video",
+            "description": "View the entire video and Answer questions about the general content of a given video. Effective for summarizing and extracting topics.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "動画のタイトル",
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "質問",
+                    }
+                },
+                "required": ["title", "question"]
+            }
+        },
+    ]
+
     question_prefix = "「Azure OpenAI Developers セミナー第 2 回」というタイトルの動画から次の質問に回答してください。"
     # question_prefix = "「邪馬台国はどこにあった？」というタイトルの動画から質問に回答してください。"
     questions = [
         ("この動画ではどのようなトピックについて話されていますか？", 1),
-        ("ベクトル検索とは何ですか？", 0),
-        ("どのような話題がありますか？", 1),
+        ("この動画のトピックを箇条書きで列挙してください。", 1),
         ("動画の内容を簡単に教えて", 1),
+        ("どのような話題がありますか？", 1),
+        ("どのようなトピックがありますか？", 1),
+        ("この動画に登場する人物を全て教えてください。", 1),
+        ("ターゲットを絞って簡潔に要約してください。", 1),
+        ("ベクトル検索とは何ですか？", 0),
         ("ベクトル検索、ハイブリッド検索、セマンティック検索の違いを教えてください。", 0),
         ("インストール手順を教えて", 0),
-        ("この動画で話しているのは人を全て教えてください。", 1),
-        ("この動画で話している人は誰ですか？", 0),
-        ("この動画に登場する人物を全て教えてください。", 1),
-        ("邪馬台国の候補地を全て教えてください。", 1),
         ("邪馬台国の候補地は？", 0),
-        ("邪馬台国の候補地は？全て答えてください。", 1),
-        ("動画内で紹介されている邪馬台国の候補地を全て答えてください。", 1),
         ("一般的に邪馬台国はどこにあったと言われていますか？", 0),
-        ("動画内で紹介されている邪馬台国の所在地を全て答えてください。", 1),
-        ("Please tell me all the candidate locations for Yamataikoku.", 1),
-        ("邪馬台国はどこにあったのですか？考えられる地域を全て答えてください", 1),
     ]
 
     openai.api_key = os.environ['OPENAI_API_KEY']
@@ -751,7 +787,8 @@ def test_function_calling ():
             ],
             functions=functions, # type: ignore
             function_call="auto",
-            temperature=0.3,
+            # temperature=0.3,
+            temperature=0.0,
         )
         for question in questions
     ]
@@ -1478,7 +1515,7 @@ if __name__ == "__main__":
     # kmeans_embedding()
     # async_run()
     # count_tokens()
-    # test_function_calling()
+    test_function_calling()
     # qa_with_function_calling()
     # test_loading()
     # print(test_decorate_loading())
@@ -1488,4 +1525,4 @@ if __name__ == "__main__":
     # test_extract_keyword()
     # get_topic_from_summary_kwd()
     # test_function()
-    test_topic_similarity()
+    # test_topic_similarity()

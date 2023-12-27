@@ -40,7 +40,7 @@ WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES = ["title", "question"]
 WHICH_RUN_MODE_FUNCTIONS = [
     {
         "name": "answer_question_about_specific_things",
-        "description": "Answer questions about specific things mentioned in a given video",
+        "description": "Answer questions about specific things mentioned in a given video. Effective for questions asking what, where, when, why and how.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -58,7 +58,7 @@ WHICH_RUN_MODE_FUNCTIONS = [
     },
     {
         "name": "answer_question_about_general_content",
-        "description": "View the entire video and Answer questions about the general content of a given video",
+        "description": "View the entire video and Answer questions about the general content of a given video. Effective for summarizing and extracting topics.",
         "parameters": {
             "type": "object",
             "properties": {
