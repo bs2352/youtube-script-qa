@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Box, TextField, MenuItem } from '@mui/material'
 
 import { SampleVideoInfo } from './types';
@@ -31,6 +31,7 @@ const textFieldSampleSx = {
 export function InputVid (props: InputVidProps) {
     const { vid, setVid } = props;
     const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
+    const vidRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetch ("/sample")
@@ -49,6 +50,8 @@ export function InputVid (props: InputVidProps) {
     const onChangeHandlerSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const inputElement = event.target as HTMLInputElement;
         setVid(inputElement.value);
+        if (vidRef && vidRef.current)
+            vidRef.current.value = inputElement.value
     }
 
     return (
@@ -60,6 +63,7 @@ export function InputVid (props: InputVidProps) {
                 size="small"
                 sx={textFieldVidSx}
                 // InputLabelProps={{shrink: true}}
+                inputRef={vidRef}
             />
             { sampleVideoList &&
                 <TextField
