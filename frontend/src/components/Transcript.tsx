@@ -4,7 +4,7 @@ import { YouTubePlayer } from 'react-youtube'
 
 import { TranscriptType } from './types'
 import { Loading } from './Loading'
-import { s2hms } from '../utils'
+import { s2hms } from './utils'
 
 
 interface TranscriptProps {

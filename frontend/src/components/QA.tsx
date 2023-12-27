@@ -6,7 +6,7 @@ import { YouTubePlayer } from 'react-youtube'
 
 import { QaRequestBody, QaAnswerSource, QaResponseBody } from './types'
 import { Loading } from './Loading'
-import { hms2s } from '../utils'
+import { hms2s } from './utils'
 
 
 interface QAProps {
