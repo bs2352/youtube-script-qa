@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from yts.summarize import YoutubeSummarize
 from yts.qa import YoutubeQA
-from yts.types import SummaryResultModel, YoutubeTranscriptType, TranscriptChunkModel
+from yts.types import SummaryResultModel, YoutubeTranscriptType, TranscriptChunkModel, SourceModel
 from yts.utils import divide_transcriptions_into_chunks
 
 
@@ -49,15 +49,20 @@ class QARequestModel (BaseModel):
     question: str = DEFAULT_QUESTION
     ref_sources: int = DEFAULT_REF_SOURCES
 
-class SourceModel (BaseModel):
-    score: float
-    time: str
-    source: str
-
 class QAResponseModel (BaseModel):
     vid: str
     question: str
     answer: str
+    sources: List[SourceModel]
+
+class RetrieveRequestModel (BaseModel):
+    vid: str = DEFAULT_VIDEO_ID
+    query: str = DEFAULT_QUESTION
+    ref_sources: int = DEFAULT_REF_SOURCES
+
+class RetrieveResponseModel (BaseModel):
+    vid: str
+    query: str
     sources: List[SourceModel]
 
 class TranscriptRequestModel (BaseModel):
@@ -114,13 +119,35 @@ async def qa (request_body: QARequestModel):
     try:
         yqa: YoutubeQA = YoutubeQA(vid, ref_sources, True, False, False)
         answer: str = await yqa.arun(question)
-        for score, _, time, source in yqa.get_source():
-            sources.append(SourceModel(score=score, time=time, source=source))
+        for source in yqa.get_source():
+            sources.append(source)
     except Exception as e:
         logging.error(f"[{vid}] {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     return QAResponseModel(
         vid=vid, question=question, answer=answer, sources=sources
+    )
+
+
+@app.post (
+    "/retrieve",
+    summary="Retrieve for Youtube video content",
+    description="Please specify video ID (such as cEynsEWpXdA, nYx5UaKI8mE) and search query.",
+    tags=["Retrieve"]
+)
+async def retrieve (request_body: RetrieveRequestModel):
+    vid: str = request_body.vid
+    query: str = request_body.query
+    ref_sources: int = request_body.ref_sources
+    sources: List[SourceModel] = []
+    try:
+        yqa: YoutubeQA = YoutubeQA(vid, ref_sources, True, False, False)
+        sources: List[SourceModel] = await yqa.aretrieve(query)
+    except Exception as e:
+        logging.error(f"[{vid}] {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    return RetrieveResponseModel(
+        vid=vid, query=query, sources=sources
     )
 
 

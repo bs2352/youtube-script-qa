@@ -37,6 +37,7 @@ export type QaRequestBody = {
 }
 
 export type QaAnswerSource = {
+    id: string;
     score: number;
     time: string;
     source: string;

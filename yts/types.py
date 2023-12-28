@@ -36,3 +36,8 @@ class SummaryResultModel (BaseModel):
     topic: List[TopicModel] = Field([])
     keyword: List[str] = Field([])
 
+class SourceModel (BaseModel):
+    id: str = Field("")
+    score: float = Field(0)
+    time: str = Field("")
+    source: str = Field("")

@@ -13,13 +13,14 @@ from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.schema import NodeWithScore
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.prompts import ChatPromptTemplate
+from llama_index.retrievers import BaseRetriever
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import LLMResult, ChatGeneration
 
-from .types import TranscriptChunkModel, YoutubeTranscriptType, SummaryResultModel
+from .types import TranscriptChunkModel, YoutubeTranscriptType, SummaryResultModel, SourceModel
 from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
 from .summarize import YoutubeSummarize
 
@@ -380,35 +381,99 @@ class YoutubeQA:
         return
 
 
-    def get_source (self) -> Generator[Tuple[float, str, str, str], None, None]:
+    def _id2time (self, id: str) -> str:
+        if id == "":
+            return ""
+        sec: int = int(float(id.rsplit('-', 1)[1]))
+        s = sec % 60
+        m = (sec // 60) % 60
+        h = (sec // 60) // 60
+        return f'{h:02}:{m:02}:{s:02}'
+
+
+    # 暫定版（もっと良い取り方があるはず）
+    def _get_id (self, node: NodeWithScore) -> str:
+        id: str = ""
+        for _, val in node.node.dict()["relationships"].items():
+            if "node_id" in val.keys():
+                id = val["node_id"]
+                if id.startswith(self.vid):
+                    break
+        if id.startswith(self.vid) is False:
+            return ""
+        return id
+
+
+    def get_source (self) -> Generator[SourceModel, None, None]:
         if self.query_response is None:
             return None
-
-        def _id2time (id: str) -> str:
-            if id == "":
-                return ""
-            sec: int = int(float(id.rsplit('-', 1)[1]))
-            s = sec % 60
-            m = (sec // 60) % 60
-            h = (sec // 60) // 60
-            return f'{h:02}:{m:02}:{s:02}'
-        
-        # 暫定版（もっと良い取り方があるはず）
-        def _get_id (node: NodeWithScore) -> str:
-            id: str = ""
-            for _, val in node.node.dict()["relationships"].items():
-                if "node_id" in val.keys():
-                    id = val["node_id"]
-                    if id.startswith(self.vid):
-                        break
-            if id.startswith(self.vid) is False:
-                return ""
-            return id
-
         for node in self.query_response.source_nodes:
-            id = _get_id(node)
+            id = self._get_id(node)
+            time = self._id2time(id)
             score: float = node.score if node.score is not None else 0.0
             source: str = node.node.get_content()
-            yield score, id, _id2time(id), source
+            yield SourceModel(
+                id=id,
+                time=time,
+                score=score,
+                source=source
+            )
 
+
+    def retrieve (self, query: str) -> List[SourceModel]:
+        loop = asyncio.get_event_loop()
+        tasks = [self.aretrieve(query)]
+        gather = asyncio.gather(*tasks)
+        result = loop.run_until_complete(gather)[0]
+        return result
+
+
+    async def aretrieve (self, query: str) -> List[SourceModel]:
+        if self.loading is True:
+            return await self._aretrieve_with_loading(query)
+        return await self._aretrieve(query)
+
+
+    async def _aretrieve_with_loading (self, query: str) -> List[SourceModel]:
+        # メインスレッドでQAを行う
+        # 別スレッドでloadingを行う（QAが終われば停止する）
+        results: List[SourceModel] = []
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future_loading = executor.submit(self._loading)
+            try:
+                results = await self._aretrieve(query)
+            except Exception as e:
+                raise e
+            finally:
+                self.loading_canceled = True
+                while future_loading.done() is False:
+                    time.sleep(0.5)
+        return results
+
+
+    async def _aretrieve (self, query: str) -> List[SourceModel]:
+        if self.index is None:
+            self.index = self._prepare_index()
+            if self.index is None:
+                return []
+
+        retriver: BaseRetriever = self.index.as_retriever(
+            similarity_top_k=self.ref_source,
+        )
+        match_nodes: List[NodeWithScore] = await retriver.aretrieve(query)
+
+        results: List[SourceModel] = []
+        for node in match_nodes:
+            id = self._get_id(node)
+            time: str = self._id2time(id)
+            score: float = node.score if node.score is not None else 0.0
+            source: str = node.node.get_content()
+            results.append(SourceModel(
+                id=id,
+                time=time,
+                score=score,
+                source=source)
+            )
+
+        return results
 

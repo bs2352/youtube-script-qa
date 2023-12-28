@@ -5,7 +5,7 @@ import json
 
 from yts.qa import YoutubeQA
 from yts.summarize import YoutubeSummarize, MODE_ALL, MODE_DETAIL
-from yts.types import SummaryResultModel
+from yts.types import SummaryResultModel, SourceModel
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 DEFAULT_REF_SOURCE = 3
@@ -29,10 +29,33 @@ def qa (args):
         answer = yqa.run(query)
         print(f'Answer: {answer}\n')
 
-        if args.detail:
-            for score, id, time, source in yqa.get_source():
-                print(f"--- {time} ({id} [{score}]) ---\n {source}")
-            print("")
+        if args.detail is False:
+            return
+
+        for source in yqa.get_source():
+            print(f"--- {source.time} ({source.id} [{source.score}]) ---\n {source.source}")
+        print("")
+
+
+def retrieve (args):
+    yqa = YoutubeQA(args.vid, args.source, args.detail, not args.debug, args.debug)
+
+    # ちょっとサービス（要約はあれば表示する）
+    if os.path.exists(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}'):
+        with open(f'{os.environ["SUMMARY_STORE_DIR"]}/{args.vid}', 'r') as f:
+            summary: SummaryResultModel = SummaryResultModel(**json.load(f))
+        YoutubeSummarize.print(summary, MODE_ALL & ~MODE_DETAIL)
+    else:
+        print(f'[Title]\n{yqa.title}\n')
+
+    while True:
+        query = input("Query: ").strip()
+        if query == "":
+            break
+        results = yqa.retrieve(query)
+        for result in results:
+            print(f"--- {result.time} ({result.id} [{result.score}]) ---\n {result.source}")
+        print("")
 
 
 def summary (args):
@@ -48,10 +71,15 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--detail', action='store_true', help='回答生成する際に参照した検索結果を表示する')
     parser.add_argument('--debug', action='store_true', help='デバッグ情報を出力する')
     parser.add_argument('-s', '--summary', action='store_true', help='要約する')
+    parser.add_argument('-r', '--retrieve', action='store_true', help='検索する')
     args = parser.parse_args()
-
-    if args.summary is False:
-        qa(args)
 
     if args.summary is True:
         summary(args)
+
+    if args.retrieve is True:
+        retrieve(args)
+
+    if args.summary is False and args.retrieve is False:
+        qa(args)
+
