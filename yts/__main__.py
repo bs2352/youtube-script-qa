@@ -53,6 +53,7 @@ def retrieve (args):
         if query == "":
             break
         results = yqa.retrieve(query)
+        print("Results: ")
         for result in results:
             print(f"--- {result.time} ({result.id} [{result.score}]) ---\n {result.source}")
         print("")

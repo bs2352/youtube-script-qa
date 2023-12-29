@@ -59,8 +59,9 @@ export function Result (props: ResultProps) {
     const [ transcripts, setTranscripts] = useState<TranscriptType[]|null>(null);
     const [ qaQuestion, setQaQuestion] = useState<string|null>(null);
     const [ qaAnswer, setQaAnswer ] = useState<QaResponseBody|null>(null);
+    const [ alignment, setAlignment ] = useState<string>('qa')
 
-    const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA', '字幕']
+    const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA/検索', '字幕']
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
@@ -96,6 +97,8 @@ export function Result (props: ResultProps) {
                     setQuestion={setQaQuestion}
                     answer={qaAnswer}
                     setAnswer={setQaAnswer}
+                    alignment={alignment}
+                    setAlignment={setAlignment}
                 />
             </TabPanel>
             <TabPanel value={value} index={4}>

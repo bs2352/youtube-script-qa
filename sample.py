@@ -1488,9 +1488,9 @@ def test_topic_similarity ():
             query =  content + " " + abstract.strip()
             print("## ", query)
             yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
-            _ = yqa.run(query)
+            results = yqa.retrieve(query)
             starts = [
-                time for _, _, time, _ in yqa.get_source()
+                result.time for result in results
             ]
             starts.sort(); print(starts); print("")
         # content += " " + " ".join(topic.abstract)
@@ -1515,7 +1515,7 @@ if __name__ == "__main__":
     # kmeans_embedding()
     # async_run()
     # count_tokens()
-    test_function_calling()
+    # test_function_calling()
     # qa_with_function_calling()
     # test_loading()
     # print(test_decorate_loading())
@@ -1525,4 +1525,4 @@ if __name__ == "__main__":
     # test_extract_keyword()
     # get_topic_from_summary_kwd()
     # test_function()
-    # test_topic_similarity()
+    test_topic_similarity()

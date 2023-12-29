@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/summary': 'http://localhost:8080',
       '/qa': 'http://localhost:8080',
+      '/retrieve': 'http://localhost:8080',
       '/transcript': 'http://localhost:8080',
       "/sample": 'http://localhost:8080'
     }

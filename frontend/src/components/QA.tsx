@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 
-import { Box, TextField, IconButton, Link, Typography } from '@mui/material'
+import { Box, TextField, IconButton, Link, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material'
 import { Send } from '@mui/icons-material'
 import { YouTubePlayer } from 'react-youtube'
 
@@ -16,6 +16,8 @@ interface QAProps {
     setQuestion: React.Dispatch<React.SetStateAction<string|null>>;
     answer: QaResponseBody | null;
     setAnswer: React.Dispatch<React.SetStateAction<QaResponseBody | null>>;
+    alignment: string;
+    setAlignment: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const boxSx = {
@@ -24,7 +26,7 @@ const boxSx = {
 }
 
 const boxQuestionSx = {
-    width: "80%",
+    width: "85%",
     margin: "0 auto",
     marginBottom: "1em",
 }
@@ -48,20 +50,34 @@ const iconButtonSendSx = {
 }
 
 const textFieldAnswerSx = {
-    width: "93%",
+    width: "98%",
     margin: "0 auto",
     marginTop: "1em",
     // pointerEvents: "none",
 }
 
+const boxToggleButton = {
+    marginBottom: "20px",
+    marginLeft: '4%',
+    textAlign: 'left',
+}
+
 
 export function QA (props: QAProps) {
-    const { vid, ytplayer, question, setQuestion, answer, setAnswer } = props;
+    const { vid, ytplayer, question, setQuestion, answer, setAnswer, alignment, setAlignment  } = props;
 
     const [ disabledSendButton, setDisabledSendButton] = useState<boolean>(true);
     const [ loading, setLoading ] = useState<boolean>(false);
 
     const questionRef = useRef<HTMLInputElement>(null);
+
+
+    const onChangeHandlerMode = (
+        _: React.MouseEvent<HTMLElement, MouseEvent>,
+        newAlignment: string|null
+    ) => {
+        setAlignment(newAlignment !== null ? newAlignment : 'qa');
+    }
 
     const onChangeHandlerQuestion = () => {
         if (questionRef.current === undefined) {
@@ -84,13 +100,15 @@ export function QA (props: QAProps) {
         setQuestion(null);
         setAnswer(null);
         const questionInput = questionRef.current as HTMLInputElement;
+        const url: string = alignment !== 'retrieve' ? '/qa' : '/retrieve';
+        const ref_source: number = alignment !== 'retrieve' ? 3 : 5;
         const requestBody: QaRequestBody = {
             vid: vid,
             question: questionInput.value,
-            ref_source: 3,
+            ref_sources: ref_source,
         }
         fetch(
-            '/qa',
+            url,
             {
                 method: 'POST',
                 headers: {
@@ -121,6 +139,9 @@ export function QA (props: QAProps) {
     }
 
     const Answer = () => {
+        if (!answer?.answer) {
+            return (<></>)
+        }
         const Label = () => {
             return (
                 <Typography variant='h6'>
@@ -182,7 +203,7 @@ export function QA (props: QAProps) {
                     variant="outlined"
                     defaultValue={source.source}
                     multiline
-                    rows={5}
+                    rows={4}
                     inputProps={{readOnly: true}}
                 />
             )
@@ -196,7 +217,7 @@ export function QA (props: QAProps) {
     const QuestionLebel = () => {
         return (
             <Typography variant='h6'>
-                質問
+                { alignment !== 'retrieve' ? '質問' : '検索クエリ' }
             </Typography>
         )
     }
@@ -204,30 +225,43 @@ export function QA (props: QAProps) {
     return (
         <Box sx={boxSx} >
             <Box sx={boxQuestionSx} id="qa-box-02" >
-                <TextField
-                    label={<QuestionLebel/>}
-                    variant="outlined"
-                    placeholder='質問を入力してください。'
-                    inputRef={questionRef}
-                    multiline
-                    rows={3}
-                    sx={textFieldQuestionSx}
-                    onChange={onChangeHandlerQuestion}
-                    InputLabelProps={{shrink: true}}
-                    defaultValue={question}
-                />
-                <IconButton
-                    sx={iconButtonSendSx}
-                    onClick={onClickHandlerSendQuestion}
-                    disabled={disabledSendButton}
-                    size='small'
-                >
-                    <Send fontSize='medium' />
-                </IconButton>
+                <Box sx={boxToggleButton} >
+                    <ToggleButtonGroup
+                        value={alignment}
+                        exclusive
+                        size='small'
+                        onChange={onChangeHandlerMode}
+                    >
+                        <ToggleButton value="qa">QA</ToggleButton>
+                        <ToggleButton value="retrieve">検索</ToggleButton>
+                    </ToggleButtonGroup>
+                </Box>
+                <Box>
+                    <TextField
+                        label={<QuestionLebel/>}
+                        variant="outlined"
+                        placeholder='質問を入力してください。'
+                        inputRef={questionRef}
+                        multiline
+                        rows={3}
+                        sx={textFieldQuestionSx}
+                        onChange={onChangeHandlerQuestion}
+                        InputLabelProps={{shrink: true}}
+                        defaultValue={question}
+                    />
+                    <IconButton
+                        sx={iconButtonSendSx}
+                        onClick={onClickHandlerSendQuestion}
+                        disabled={disabledSendButton}
+                        size='small'
+                    >
+                        <Send fontSize='medium' />
+                    </IconButton>
+                </Box>
             </Box>
             <Box sx={boxAnswerSx} id="qa-box-03" >
                 {loading && <Loading />}
-                {answer && <Answer />}
+                {answer?.answer && <Answer />}
                 {answer && <Sources />}
             </Box>
         </Box>

@@ -33,7 +33,7 @@ export type SampleVideoInfo = {
 export type QaRequestBody = {
     vid: string;
     question: string;
-    ref_source: number;
+    ref_sources: number;
 }
 
 export type QaAnswerSource = {
