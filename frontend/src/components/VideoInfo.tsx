@@ -21,7 +21,7 @@ const boxSx = {
 }
 
 const tableSx = {
-    width: "90%",
+    width: "85%",
     margin: "0 auto"
 }
 
@@ -67,14 +67,6 @@ export function VideoInfo (props: VideInfoProps) {
                         <TableCell sx={tableCellSx}>
                             <Link href={summary.url}>{summary.url}</Link>
                         </TableCell>
-                    </TableRow>
-                    <TableRow  sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>要約</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.concise}</TableCell>
-                    </TableRow>
-                    <TableRow  sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>キーワード</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.keyword.join(', ')}</TableCell>
                     </TableRow>
                </TableBody>
             </Table>

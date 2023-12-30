@@ -4,8 +4,7 @@ import { YouTubePlayer } from 'react-youtube'
 
 import { SummaryResponseBody, TranscriptType, QaResponseBody } from "./types"
 import { VideoInfo } from './VideoInfo'
-import { DetailSummary } from './DetailSummary'
-import { Topic } from './Topic'
+import { Summary } from './Summary'
 import { QA } from './QA'
 import { Transcript } from './Transcript'
 
@@ -61,11 +60,13 @@ export function Result (props: ResultProps) {
     const [ qaAnswer, setQaAnswer ] = useState<QaResponseBody|null>(null);
     const [ alignment, setAlignment ] = useState<string>('qa')
 
-    const tabItemList: string[] = ['概要', '詳細', 'トピック', 'QA/検索', '字幕']
-
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
     }
+
+    const tabItemList: string[] = [
+        '概要','要約', 'QA/検索', '字幕'
+    ]
 
     return (
         <Box sx={boxSx} id="result-box-01" >
@@ -84,12 +85,9 @@ export function Result (props: ResultProps) {
                 <VideoInfo summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={1}>
-                <DetailSummary summary={summary.summary} />
+                <Summary summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={2}>
-                <Topic summary={summary.summary} />
-            </TabPanel>
-            <TabPanel value={value} index={3}>
                 <QA
                     vid={vid}
                     ytplayer={ytplayer}
@@ -101,7 +99,7 @@ export function Result (props: ResultProps) {
                     setAlignment={setAlignment}
                 />
             </TabPanel>
-            <TabPanel value={value} index={4}>
+            <TabPanel value={value} index={3}>
                 <Transcript
                     vid={vid}
                     ytplayer={ytplayer}
