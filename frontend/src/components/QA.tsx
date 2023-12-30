@@ -181,8 +181,8 @@ export function QA (props: QAProps) {
                 return 0;
             }
         });
-        const LabelLink = (props: {source: QaAnswerSource}) => {
-            const { source } = props;
+        const LabelLink = (props: {idx: number, source: QaAnswerSource}) => {
+            const { idx, source } = props;
             return (
                 <Link
                     href="#"
@@ -190,7 +190,7 @@ export function QA (props: QAProps) {
                     underline="always"
                     variant='h6'
                 >
-                    {`${source.time} （スコア：${Math.round(source.score*1000)/1000}）`}
+                    {`[${idx+1}/${sorted_sources.length}]　${source.time}（スコア：${Math.round(source.score*1000)/1000}）`}
                 </Link>
             )
         }
@@ -199,7 +199,7 @@ export function QA (props: QAProps) {
                 <TextField
                     key={idx}
                     sx={textFieldAnswerSx}
-                    label={<LabelLink source={source} />}
+                    label={<LabelLink idx={idx} source={source} />}
                     variant="outlined"
                     defaultValue={source.source}
                     multiline

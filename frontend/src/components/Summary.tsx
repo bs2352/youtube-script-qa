@@ -80,8 +80,8 @@ const listItemSx = {
 }
 
 const dividerSx = {
-    marginTop: "0.5em",
-    marginBottom: "0.5em",
+    marginTop: "0em",
+    marginBottom: "0em",
 }
 
 const listItemTitleSx = {
@@ -132,7 +132,12 @@ function Detail (props: SummaryProps) {
                     {
                         return (
                             <Box key={`detail-${idx}`}>
-                                <ListItem key={`item-detail-summary-${idx}`} sx={listItemSx}>{detail}</ListItem>
+                                <ListItem key={`item-detail-summary-${idx}`} sx={listItemSx}>
+                                    <span>
+                                        <span style={{fontWeight: "bold"}}>{`[${idx+1}/${summary.detail.length}] `}</span>
+                                        {detail}
+                                    </span>
+                                </ListItem>
                                 { (idx < summary.detail.length - 1) && <Divider sx={dividerSx} /> }
                             </Box>
                         )

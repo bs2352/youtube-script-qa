@@ -21,7 +21,7 @@ const boxSx = {
 }
 
 const tableSx = {
-    width: "85%",
+    width: "80%",
     margin: "0 auto"
 }
 
@@ -33,11 +33,10 @@ const tableCellSx = {
     border: "1px solid",
     borderColor: "darkgrey",
     padding: "1.0em",
-    paddingRight: "1.0em",
 }
 
 const tableCellTitleSx = {
-    whiteSpace: "nowrap",
+    // whiteSpace: "nowrap",
     fontWeight: "bold",
     backgroundColor: "lightgrey",
     ...tableCellSx
