@@ -57,8 +57,17 @@ MAX_RETRY_COUNT=3
 
 ```
 $ python -m yts
-Query: <クエリを入力>
+Query: <質問を入力>
 Answer: <回答が出力される>
+```
+
+### 検索実行
+
+```
+$ python -m yts --retrieve
+Query: <検索クエリを入力>
+-- hh:mm:ss (vid [score]) ---
+........
 ```
 
 ### 要約実行
@@ -83,6 +92,7 @@ options:
   -d, --detail         回答生成する際に参照した検索結果を表示する
   --debug          デバッグ情報を出力する
   -s, --summary        要約する
+  -r, --retrieve     検索する
 ```
 
 
