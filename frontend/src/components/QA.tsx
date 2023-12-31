@@ -101,11 +101,14 @@ export function QA (props: QAProps) {
         setAnswer(null);
         const questionInput = questionRef.current as HTMLInputElement;
         const url: string = alignment !== 'retrieve' ? '/qa' : '/retrieve';
-        const ref_source: number = alignment !== 'retrieve' ? 3 : 5;
-        const requestBody: QaRequestBody = {
+        const requestBody: QaRequestBody = alignment !== 'retrieve' ? {
             vid: vid,
             question: questionInput.value,
-            ref_sources: ref_source,
+            ref_sources: 3,
+        } : {
+            vid: vid,
+            query: questionInput.value,
+            ref_sources: 5,
         }
         fetch(
             url,
