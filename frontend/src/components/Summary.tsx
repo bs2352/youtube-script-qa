@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
     Box, ToggleButton, ToggleButtonGroup,
     Table, TableBody, TableRow, TableCell,
@@ -10,6 +9,8 @@ import { SummaryType } from "./types"
 
 interface SummaryProps {
     summary: SummaryType;
+    alignment: string;
+    setAlignment: React.Dispatch<React.SetStateAction<string>>;
 }
 
 
@@ -99,7 +100,7 @@ const topicDividerSx = {
 }
 
 
-function Concise (props: SummaryProps) {
+function Concise (props: {summary: SummaryType}) {
     const { summary } = props;
 
     return (
@@ -122,7 +123,7 @@ function Concise (props: SummaryProps) {
 }
 
 
-function Detail (props: SummaryProps) {
+function Detail (props: {summary: SummaryType}) {
     const { summary } = props;
 
     return (
@@ -150,7 +151,7 @@ function Detail (props: SummaryProps) {
 }
 
 
-function Topic (props: SummaryProps) {
+function Topic (props: {summary: SummaryType}) {
     const { summary } = props;
 
     return (
@@ -184,9 +185,7 @@ function Topic (props: SummaryProps) {
 
 
 export function Summary (props: SummaryProps) {
-    const { summary } = props;
-
-    const [ alignment, setAlignment] = useState<string|null>('summary')
+    const { summary, alignment, setAlignment } = props;
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,
