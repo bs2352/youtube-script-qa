@@ -286,7 +286,7 @@ export function QA (props: QAProps) {
                             <Send fontSize='medium' />
                         </IconButton>
                     </ButtonGroup>
-                    </Box>
+                </Box>
             </Box>
             <Box sx={boxAnswerSx} id="qa-box-03" >
                 {loading && <Loading />}
