@@ -35,8 +35,8 @@ const boxAnswerSx = {
     width: "80%",
     margin: "0 auto",
     marginBottom: "1em",
-    height: "300px",
-    overflowY: "scroll",
+    // height: "300px",
+    // overflowY: "scroll",
 }
 
 const textFieldQuestionSx = {

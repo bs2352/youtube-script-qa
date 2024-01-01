@@ -66,8 +66,8 @@ const detailBoxSx = {
     padding: "1.0em",
     paddingTop: "0.5em",
     paddingBottom: "0.5em",
-    height: "400px",
-    overflowY: "scroll",
+    // height: "400px",
+    // overflowY: "scroll",
 }
 
 const listSx = {
