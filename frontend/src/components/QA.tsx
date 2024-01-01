@@ -150,6 +150,13 @@ export function QA (props: QAProps) {
         })
     }
 
+    const onKeyDownHandlerQuestion = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter' && event.shiftKey) {
+            event.preventDefault();
+            onClickHandlerSendQuestion();
+        }
+    }
+
     const Answer = () => {
         if (!answer?.answer) {
             return (<></>)
@@ -252,12 +259,13 @@ export function QA (props: QAProps) {
                     <TextField
                         label={<QuestionLebel/>}
                         variant="outlined"
-                        placeholder='質問を入力してください。'
+                        placeholder='質問を入力してください。(Shift + Enterで送信します）'
                         inputRef={questionRef}
                         multiline
                         rows={3}
                         sx={textFieldQuestionSx}
                         onChange={onChangeHandlerQuestion}
+                        onKeyDown={onKeyDownHandlerQuestion}
                         InputLabelProps={{shrink: true}}
                         defaultValue={question}
                     />
