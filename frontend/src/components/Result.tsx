@@ -83,7 +83,7 @@ export function Result (props: ResultProps) {
                 </Tabs>
             </Box>
             <TabPanel value={value} index={0}>
-                <VideoInfo summary={summary.summary} />
+                <VideoInfo vid={vid} summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={1}>
                 <Summary

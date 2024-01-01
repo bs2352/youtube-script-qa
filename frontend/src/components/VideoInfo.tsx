@@ -13,6 +13,7 @@ function s2hms (seconds: number) {
 
 interface VideInfoProps {
     summary: SummaryType;
+    vid: string;
 }
 
 const boxSx = {
@@ -44,7 +45,7 @@ const tableCellTitleSx = {
 
 
 export function VideoInfo (props: VideInfoProps) {
-    const { summary } = props;
+    const { summary, vid } = props;
     return (
         <Box sx={boxSx} id="videoinfo-box-01">
             <Table sx={tableSx} id="videoinfo-table-01">
@@ -66,6 +67,10 @@ export function VideoInfo (props: VideInfoProps) {
                         <TableCell sx={tableCellSx}>
                             <Link href={summary.url}>{summary.url}</Link>
                         </TableCell>
+                    </TableRow>
+                    <TableRow  sx={tableRowSx}>
+                        <TableCell sx={tableCellTitleSx}>Video ID</TableCell>
+                        <TableCell sx={tableCellSx}>{vid}</TableCell>
                     </TableRow>
                </TableBody>
             </Table>
