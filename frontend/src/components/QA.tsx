@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 
-import { Box, TextField, IconButton, Link, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material'
-import { Send } from '@mui/icons-material'
+import { Box, TextField, IconButton, Link, Typography, ToggleButtonGroup, ToggleButton, ButtonGroup } from '@mui/material'
+import { Send, Clear } from '@mui/icons-material'
 import { YouTubePlayer } from 'react-youtube'
 
 import { QaRequestBody, QaAnswerSource, QaResponseBody } from './types'
@@ -89,6 +89,15 @@ export function QA (props: QAProps) {
         } else {
             setDisabledSendButton(true);
         }
+    }
+
+    const onClickHandlerClearQuestion = () => {
+        setQuestion(null);
+        setAnswer(null);
+        if (questionRef.current === undefined) {
+            return;
+        }
+        questionRef.current!.value = "";
     }
 
     const onClickHandlerSendQuestion = () => {
@@ -252,15 +261,24 @@ export function QA (props: QAProps) {
                         InputLabelProps={{shrink: true}}
                         defaultValue={question}
                     />
-                    <IconButton
-                        sx={iconButtonSendSx}
-                        onClick={onClickHandlerSendQuestion}
-                        disabled={disabledSendButton}
-                        size='small'
-                    >
-                        <Send fontSize='medium' />
-                    </IconButton>
-                </Box>
+                    <ButtonGroup orientation='vertical'>
+                        <IconButton
+                            sx={iconButtonSendSx}
+                            onClick={onClickHandlerClearQuestion}
+                            size='small'
+                        >
+                            <Clear fontSize='medium' />
+                        </IconButton>
+                        <IconButton
+                            sx={iconButtonSendSx}
+                            onClick={onClickHandlerSendQuestion}
+                            disabled={disabledSendButton}
+                            size='small'
+                        >
+                            <Send fontSize='medium' />
+                        </IconButton>
+                    </ButtonGroup>
+                    </Box>
             </Box>
             <Box sx={boxAnswerSx} id="qa-box-03" >
                 {loading && <Loading />}
