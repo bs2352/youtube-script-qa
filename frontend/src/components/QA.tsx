@@ -241,6 +241,11 @@ export function QA (props: QAProps) {
         )
     }
 
+    const makePlaceholder = () => {
+        const type: string = alignment !== 'retrieve' ? "質問" : "検索クエリ";
+        return `${type}を入力してください。(Shift + Enterで送信します）`;
+    }
+
     return (
         <Box sx={boxSx} >
             <Box sx={boxQuestionSx} id="qa-box-02" >
@@ -259,7 +264,7 @@ export function QA (props: QAProps) {
                     <TextField
                         label={<QuestionLebel/>}
                         variant="outlined"
-                        placeholder='質問を入力してください。(Shift + Enterで送信します）'
+                        placeholder={makePlaceholder()}
                         inputRef={questionRef}
                         multiline
                         rows={3}
