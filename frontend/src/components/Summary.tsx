@@ -1,16 +1,20 @@
 import {
     Box, ToggleButton, ToggleButtonGroup,
     Table, TableBody, TableRow, TableCell,
-    List, ListItem, Divider
+    List, ListItem, Divider,
+    Link
 } from '@mui/material'
+import { YouTubePlayer } from 'react-youtube'
 
 import { SummaryType } from "./types"
+import { s2hms } from './utils'
 
 
 interface SummaryProps {
     summary: SummaryType;
     alignment: string;
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
+    ytplayer: YouTubePlayer;
 }
 
 
@@ -123,8 +127,12 @@ function Concise (props: {summary: SummaryType}) {
 }
 
 
-function Detail (props: {summary: SummaryType}) {
-    const { summary } = props;
+function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
+    const { summary, ytplayer } = props;
+
+    const onClickHandlerDetailSummary = (start: number) => {
+        ytplayer.seekTo(start, true);
+    }
 
     return (
         <Box sx={detailBoxSx} id="detail-box" >
@@ -136,7 +144,16 @@ function Detail (props: {summary: SummaryType}) {
                                 <ListItem key={`item-detail-summary-${idx}`} sx={listItemSx}>
                                     <span>
                                         <span style={{fontWeight: "bold"}}>{`[${idx+1}/${summary.detail.length}] `}</span>
-                                        {detail}
+                                        {`(`}
+                                        <Link
+                                            href="#"
+                                            onClick={()=>onClickHandlerDetailSummary(Math.round(detail.start))}
+                                            underline="always"
+                                        >
+                                            {`${s2hms(detail.start)}`}
+                                        </Link>
+                                        {`) `}
+                                        {detail.text}
                                     </span>
                                 </ListItem>
                                 { (idx < summary.detail.length - 1) && <Divider sx={dividerSx} /> }
@@ -185,7 +202,7 @@ function Topic (props: {summary: SummaryType}) {
 
 
 export function Summary (props: SummaryProps) {
-    const { summary, alignment, setAlignment } = props;
+    const { summary, alignment, setAlignment, ytplayer } = props;
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,
@@ -213,7 +230,7 @@ export function Summary (props: SummaryProps) {
                     {alignment === null || alignment === 'summary' &&
                         <Concise summary={summary} />
                     }
-                    {alignment === 'detail' && <Detail summary={summary} />}
+                    {alignment === 'detail' && <Detail summary={summary} ytplayer={ytplayer} />}
                     {alignment === 'topic' && <Topic summary={summary} />}
                 </Box>
             </Box>

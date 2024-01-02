@@ -90,6 +90,7 @@ export function Result (props: ResultProps) {
                     summary={summary.summary}
                     alignment={summaryAlignment}
                     setAlignment={setSummaryAlignment}
+                    ytplayer={ytplayer}
                 />
             </TabPanel>
             <TabPanel value={value} index={2}>
