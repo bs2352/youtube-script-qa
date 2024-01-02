@@ -22,6 +22,10 @@ class YoutubeTranscriptType (TypedDict):
     start: float
     duration: float
 
+class DetailSummary (BaseModel):
+    text: str = Field("")
+    start: float = Field(0)
+
 class TopicModel (BaseModel):
     title: str = Field("")
     abstract: List[str] = Field([])
@@ -32,7 +36,7 @@ class SummaryResultModel (BaseModel):
     lengthSeconds: int = Field(0)
     url: str = Field("")
     concise: str = Field("")
-    detail: List[str] = Field([])
+    detail: List[DetailSummary] = Field([])
     topic: List[TopicModel] = Field([])
     keyword: List[str] = Field([])
 

@@ -58,7 +58,8 @@ export function Result (props: ResultProps) {
     const [ transcripts, setTranscripts] = useState<TranscriptType[]|null>(null);
     const [ qaQuestion, setQaQuestion] = useState<string|null>(null);
     const [ qaAnswer, setQaAnswer ] = useState<QaResponseBody|null>(null);
-    const [ alignment, setAlignment ] = useState<string>('qa')
+    const [ qaAlignment, setQaAlignment ] = useState<string>('qa');
+    const [ summaryAlignment, setSummaryAlignment ] = useState<string>('summary');
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
@@ -82,10 +83,15 @@ export function Result (props: ResultProps) {
                 </Tabs>
             </Box>
             <TabPanel value={value} index={0}>
-                <VideoInfo summary={summary.summary} />
+                <VideoInfo vid={vid} summary={summary.summary} />
             </TabPanel>
             <TabPanel value={value} index={1}>
-                <Summary summary={summary.summary} />
+                <Summary
+                    summary={summary.summary}
+                    alignment={summaryAlignment}
+                    setAlignment={setSummaryAlignment}
+                    ytplayer={ytplayer}
+                />
             </TabPanel>
             <TabPanel value={value} index={2}>
                 <QA
@@ -95,8 +101,8 @@ export function Result (props: ResultProps) {
                     setQuestion={setQaQuestion}
                     answer={qaAnswer}
                     setAnswer={setQaAnswer}
-                    alignment={alignment}
-                    setAlignment={setAlignment}
+                    alignment={qaAlignment}
+                    setAlignment={setQaAlignment}
                 />
             </TabPanel>
             <TabPanel value={value} index={3}>

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 
-import { Box, TextField, IconButton, Link, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material'
-import { Send } from '@mui/icons-material'
+import { Box, TextField, IconButton, Link, Typography, ToggleButtonGroup, ToggleButton, ButtonGroup } from '@mui/material'
+import { Send, Clear } from '@mui/icons-material'
 import { YouTubePlayer } from 'react-youtube'
 
 import { QaRequestBody, QaAnswerSource, QaResponseBody } from './types'
@@ -35,8 +35,8 @@ const boxAnswerSx = {
     width: "80%",
     margin: "0 auto",
     marginBottom: "1em",
-    height: "300px",
-    overflowY: "scroll",
+    // height: "300px",
+    // overflowY: "scroll",
 }
 
 const textFieldQuestionSx = {
@@ -91,6 +91,15 @@ export function QA (props: QAProps) {
         }
     }
 
+    const onClickHandlerClearQuestion = () => {
+        setQuestion(null);
+        setAnswer(null);
+        if (questionRef.current === undefined) {
+            return;
+        }
+        questionRef.current!.value = "";
+    }
+
     const onClickHandlerSendQuestion = () => {
         if (questionRef.current === undefined) {
             return;
@@ -139,6 +148,13 @@ export function QA (props: QAProps) {
             setLoading(false);
             setDisabledSendButton(false);
         })
+    }
+
+    const onKeyDownHandlerQuestion = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter' && event.shiftKey) {
+            event.preventDefault();
+            onClickHandlerSendQuestion();
+        }
     }
 
     const Answer = () => {
@@ -225,6 +241,11 @@ export function QA (props: QAProps) {
         )
     }
 
+    const makePlaceholder = () => {
+        const type: string = alignment !== 'retrieve' ? "質問" : "検索クエリ";
+        return `${type}を入力してください。(Shift + Enterで送信します）`;
+    }
+
     return (
         <Box sx={boxSx} >
             <Box sx={boxQuestionSx} id="qa-box-02" >
@@ -243,23 +264,33 @@ export function QA (props: QAProps) {
                     <TextField
                         label={<QuestionLebel/>}
                         variant="outlined"
-                        placeholder='質問を入力してください。'
+                        placeholder={makePlaceholder()}
                         inputRef={questionRef}
                         multiline
                         rows={3}
                         sx={textFieldQuestionSx}
                         onChange={onChangeHandlerQuestion}
+                        onKeyDown={onKeyDownHandlerQuestion}
                         InputLabelProps={{shrink: true}}
                         defaultValue={question}
                     />
-                    <IconButton
-                        sx={iconButtonSendSx}
-                        onClick={onClickHandlerSendQuestion}
-                        disabled={disabledSendButton}
-                        size='small'
-                    >
-                        <Send fontSize='medium' />
-                    </IconButton>
+                    <ButtonGroup orientation='vertical'>
+                        <IconButton
+                            sx={iconButtonSendSx}
+                            onClick={onClickHandlerClearQuestion}
+                            size='small'
+                        >
+                            <Clear fontSize='medium' />
+                        </IconButton>
+                        <IconButton
+                            sx={iconButtonSendSx}
+                            onClick={onClickHandlerSendQuestion}
+                            disabled={disabledSendButton}
+                            size='small'
+                        >
+                            <Send fontSize='medium' />
+                        </IconButton>
+                    </ButtonGroup>
                 </Box>
             </Box>
             <Box sx={boxAnswerSx} id="qa-box-03" >

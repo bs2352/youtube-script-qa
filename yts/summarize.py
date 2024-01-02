@@ -18,7 +18,7 @@ from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
-from .types import SummaryResultModel, TopicModel
+from .types import SummaryResultModel, TopicModel, DetailSummary
 
 
 MODE_CONCISE = 0x01
@@ -170,7 +170,8 @@ class YoutubeSummarize:
                     print("  ", "\n  ".join(topic.abstract), sep="")
             print("")
         if mode & MODE_DETAIL > 0:
-            print("[Detail Summary]"); print("・", "\n・".join(summary.detail)); print("")
+            detail_summary: List[str] = [ s.text for s in summary.detail]
+            print("[Detail Summary]"); print("・", "\n・".join(detail_summary)); print("")
         return
 
 
@@ -238,7 +239,7 @@ class YoutubeSummarize:
             mode |= MODE_DETAIL
 
         # 詳細な要約
-        detail_summary: List[str] = await self._summarize_in_detail()
+        detail_summary: List[DetailSummary] = await self._summarize_in_detail()
 
         # 簡潔な要約、トピック抽出、キーワード抽出（非同期で並行処理）
         (concise_summary, topic, keyword) = await self._arun_with_detail_summary(mode, detail_summary)
@@ -264,7 +265,7 @@ class YoutubeSummarize:
         return summary
 
 
-    async def _summarize_in_detail (self) -> List[str]:
+    async def _summarize_in_detail (self) -> List[DetailSummary]:
         def _prepare_summarize_chain () -> BaseCombineDocumentsChain:
             return load_summarize_chain(
                 llm=self.llm,
@@ -294,23 +295,27 @@ class YoutubeSummarize:
         tasks = [
             chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
         ]
-        results: List[str] = await asyncio.gather(*tasks)
+        summaries: List[str] = await asyncio.gather(*tasks)
+        results: List[DetailSummary] = [
+            DetailSummary(text=s, start=c[0].start) for c, s in zip(chunk_groups, summaries)
+        ]
 
         return results
 
 
     async def _arun_with_detail_summary (
         self,
-        mode,
-        detail_summary
+        mode: int,
+        detail_summary: List[DetailSummary]
     ) -> Tuple[str, List[TopicModel], List[str]]:
         if mode & (MODE_CONCISE | MODE_TOPIC | MODE_KEYWORD) == 0:
             return ("", [], [])
 
+        summaries: List[str] = [ s.text for s in detail_summary]
         tasks = []
-        tasks.append(self._summarize_concisely(detail_summary, mode & MODE_CONCISE > 0))
-        tasks.append(self._extract_keyword(detail_summary, mode & MODE_KEYWORD > 0))
-        tasks.append(self._extract_topic(detail_summary, mode & MODE_TOPIC > 0))
+        tasks.append(self._summarize_concisely(summaries, mode & MODE_CONCISE > 0))
+        tasks.append(self._extract_keyword(summaries, mode & MODE_KEYWORD > 0))
+        tasks.append(self._extract_topic(summaries, mode & MODE_TOPIC > 0))
 
         results: List[Any] = await asyncio.gather(*tasks)
 

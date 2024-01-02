@@ -2,13 +2,18 @@ export type SummaryRequestBody = {
     vid: string;
 }
 
+export type DetailSummaryType = {
+    start: number;
+    text: string;
+}
+
 export type SummaryType = {
     title: string;
     author: string;
     lengthSeconds: number;
     url: string;
     concise: string;
-    detail: string[];
+    detail: DetailSummaryType[];
     topic: TopicType[];
     keyword: string[];
 }
