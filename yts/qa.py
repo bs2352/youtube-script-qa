@@ -340,7 +340,7 @@ class YoutubeQA:
     async def _asummarize_and_answer (self, query: str) -> str:
         if self.summary is None:
             summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(self.vid)
-            self.summary = "\n".join(summary.detail) if summary is not None else None
+            self.summary = "\n".join([ d.text for d in summary.detail]) if summary is not None else None
         llm = setup_llm_from_environment()
         prompt = PromptTemplate(
             template=QA_SUMMARIZE_PROMPT_TEMPLATE,
