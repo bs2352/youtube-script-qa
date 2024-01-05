@@ -99,7 +99,7 @@ const listItemAbstractSx = {
     paddingLeft: "3em",
 }
 
-const topicDividerSx = {
+const agendaDividerSx = {
     marginTop: "1em",
 }
 
@@ -168,28 +168,28 @@ function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
 }
 
 
-function Topic (props: {summary: SummaryType}) {
+function Agenda (props: {summary: SummaryType}) {
     const { summary } = props;
 
     return (
         <Box >
-            <Box sx={detailBoxSx} id="topic-box">
-                <List id="topic-list-01" sx={listSx} disablePadding >
-                    {summary.topic.map((topic, idx) =>
+            <Box sx={detailBoxSx} id="agenda-box">
+                <List id="agenda-list-01" sx={listSx} disablePadding >
+                    {summary.agenda.map((agenda, idx) =>
                     {
                         return (
-                            <Box key={`topic-${idx}`}>
-                                <ListItem sx={listItemTitleSx}>{topic.title}</ListItem>
+                            <Box key={`agenda-${idx}`}>
+                                <ListItem sx={listItemTitleSx}>{agenda.title}</ListItem>
                                 <List disablePadding >
-                                    {topic.abstract.map((abstract, idx) =>
+                                    {agenda.subtitle.map((subtitle, idx) =>
                                         <ListItem
-                                            key={`topic-abstract-${idx}`}
+                                            key={`agenda-subtitle-${idx}`}
                                             sx={listItemAbstractSx}
                                             disablePadding
-                                        >{abstract}</ListItem>
+                                        >{subtitle}</ListItem>
                                     )}
                                 </List>
-                                { idx < summary.topic.length -1 && <Divider sx={topicDividerSx} /> }
+                                { idx < summary.agenda.length -1 && <Divider sx={agendaDividerSx} /> }
                             </Box>
                         )
                     })}
@@ -223,7 +223,7 @@ export function Summary (props: SummaryProps) {
                         >
                             <ToggleButton value="summary">要約</ToggleButton>
                             <ToggleButton value="detail">あらすじ</ToggleButton>
-                            <ToggleButton value="topic">トピック</ToggleButton>
+                            <ToggleButton value="agenda">目次</ToggleButton>
                         </ToggleButtonGroup>
                 </Box>
                 <Box sx={boxContentSx} >
@@ -231,7 +231,7 @@ export function Summary (props: SummaryProps) {
                         <Concise summary={summary} />
                     }
                     {alignment === 'detail' && <Detail summary={summary} ytplayer={ytplayer} />}
-                    {alignment === 'topic' && <Topic summary={summary} />}
+                    {alignment === 'agenda' && <Agenda summary={summary} />}
                 </Box>
             </Box>
         </Box>
