@@ -458,7 +458,7 @@ Agenda:
         "title": summary.title,
         # "summaries": summaries,
         # "abstract": summary["concise"],
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
     }
     # print(prompt.format(**inputs))
     # print(f"mode={mode}")
@@ -1139,7 +1139,7 @@ def test_check_comprehensively ():
 
     title = summary.title
     concise = summary.concise
-    detail = "\n".join(summary.detail)
+    detail = "\n".join([ d.text for d in summary.detail])
     topic = ""
     for t in summary.topic:
         topic += f"{t.title}\n"
@@ -1299,7 +1299,7 @@ Keywords:
     )
 
     args = {
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
     }
     result = chain.run(**args)
     print(result)
@@ -1307,7 +1307,7 @@ Keywords:
     print("--------------")
 
     args = {
-        "content": "\n".join(reversed(summary.detail)),
+        "content": "\n".join(reversed([ d.text for d in summary.detail])),
     }
     result_r = chain.run(**args)
     print(result_r)
@@ -1420,7 +1420,7 @@ Agenda:
     )
     inputs = {
         "title": summary.title,
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
         # "content": summary.concise,
     }
     # print(inputs)
@@ -1431,7 +1431,7 @@ Agenda:
     )
     inputs_kw = {
         "title": summary.title,
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
         "keyword": ", ".join(summary.keyword),
     }
 
