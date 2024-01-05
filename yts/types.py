@@ -26,9 +26,9 @@ class DetailSummary (BaseModel):
     text: str = Field("")
     start: float = Field(0)
 
-class TopicModel (BaseModel):
+class AgendaModel (BaseModel):
     title: str = Field("")
-    abstract: List[str] = Field([])
+    subtitle: List[str] = Field([])
 
 class SummaryResultModel (BaseModel):
     title: str = Field("")
@@ -37,7 +37,7 @@ class SummaryResultModel (BaseModel):
     url: str = Field("")
     concise: str = Field("")
     detail: List[DetailSummary] = Field([])
-    topic: List[TopicModel] = Field([])
+    agenda: List[AgendaModel] = Field([])
     keyword: List[str] = Field([])
 
 class SourceModel (BaseModel):

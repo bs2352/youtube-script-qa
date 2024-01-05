@@ -18,19 +18,19 @@ from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
-from .types import SummaryResultModel, TopicModel, DetailSummary
+from .types import SummaryResultModel, AgendaModel, DetailSummary
 
 
-MODE_CONCISE = 0x01
-MODE_DETAIL  = 0x02
-MODE_TOPIC   = 0x04
-MODE_KEYWORD = 0x08
-MODE_ALL     = MODE_CONCISE | MODE_DETAIL | MODE_TOPIC | MODE_KEYWORD
+MODE_CONCISE  = 0x01
+MODE_DETAIL   = 0x02
+MODE_AGENDA   = 0x04
+MODE_KEYWORD  = 0x08
+MODE_ALL = MODE_CONCISE | MODE_DETAIL | MODE_AGENDA | MODE_KEYWORD
 
 MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "300"))
 MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "2.0"))
-MAX_TOPIC_ITEMS = int(os.getenv("MAX_TOPIC_ITEM", "10"))
-MAX_TOPIC_ITEMS_MARGIN_MULTIPLIER = float(os.getenv("MAX_TOPIC_ITEM_MARGIN", "1.3"))
+MAX_AGENDA_ITEMS = int(os.getenv("MAX_AGENDA_ITEM", "10"))
+MAX_AGENDA_ITEMS_MARGIN_MULTIPLIER = float(os.getenv("MAX_AGENDA_ITEM_MARGIN", "1.3"))
 MAX_KEYWORDS = int(os.getenv("MAX_KEYWORD", "20"))
 MAX_KEYWORDS_MARGIN_MULTIPLIER = float(os.getenv("MAX_KEYWORD_MARGIN", "1.3"))
 EXCLUDE_KEYWORDS = [
@@ -68,7 +68,7 @@ CONCISELY_PROMPT_TEMPLATE = \
 """
 CONCISELY_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
-TOPIC_PROMPT_TEMPLATE = \
+AGENDA_PROMPT_TEMPLATE = \
 """I am creating an agenda for Youtube videos.
 Below are notes on creating an agenda, as well as video content.
 Please follow the notes carefully and create an agenda from the content.
@@ -88,7 +88,7 @@ Content:
 
 Agenda:
 """
-TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
+AGENDA_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
 KEYWORD_PROMPT_TEMPLATE = \
 """Please extract impressive keywords from the video content listed below.
@@ -138,7 +138,7 @@ class YoutubeSummarize:
         self.loading_canceled: bool = False
 
         self.tmp_concise_summary: str = ""
-        self.tmp_topic: List[TopicModel] = []
+        self.tmp_agenda: List[AgendaModel] = []
         self.tmp_keyword: List[str] = []
 
 
@@ -162,12 +162,12 @@ class YoutubeSummarize:
             print("[Summary]"); print(summary.concise); print("")
         if mode & MODE_KEYWORD > 0:
             print("[Keyword]"); print(", ".join(summary.keyword)); print("")
-        if mode & MODE_TOPIC > 0:
-            print("[Topic]")
-            for topic in summary.topic:
-                print(f'{topic.title}')
-                if len(topic.abstract) > 0:
-                    print("  ", "\n  ".join(topic.abstract), sep="")
+        if mode & MODE_AGENDA > 0:
+            print("[Agenda]")
+            for agenda in summary.agenda:
+                print(f'{agenda.title}')
+                if len(agenda.subtitle) > 0:
+                    print("  ", "\n  ".join(agenda.subtitle), sep="")
             print("")
         if mode & MODE_DETAIL > 0:
             detail_summary: List[str] = [ s.text for s in summary.detail]
@@ -242,7 +242,7 @@ class YoutubeSummarize:
         detail_summary: List[DetailSummary] = await self._summarize_in_detail()
 
         # 簡潔な要約、トピック抽出、キーワード抽出（非同期で並行処理）
-        (concise_summary, topic, keyword) = await self._arun_with_detail_summary(mode, detail_summary)
+        (concise_summary, agenda, keyword) = await self._arun_with_detail_summary(mode, detail_summary)
 
         summary: SummaryResultModel = SummaryResultModel(
             title=self.title,
@@ -251,7 +251,7 @@ class YoutubeSummarize:
             url=self.url,
             concise=concise_summary,
             detail=detail_summary,
-            topic=topic,
+            agenda=agenda,
             keyword=keyword
         )
 
@@ -307,23 +307,23 @@ class YoutubeSummarize:
         self,
         mode: int,
         detail_summary: List[DetailSummary]
-    ) -> Tuple[str, List[TopicModel], List[str]]:
-        if mode & (MODE_CONCISE | MODE_TOPIC | MODE_KEYWORD) == 0:
+    ) -> Tuple[str, List[AgendaModel], List[str]]:
+        if mode & (MODE_CONCISE | MODE_AGENDA | MODE_KEYWORD) == 0:
             return ("", [], [])
 
         summaries: List[str] = [ s.text for s in detail_summary]
         tasks = []
         tasks.append(self._summarize_concisely(summaries, mode & MODE_CONCISE > 0))
         tasks.append(self._extract_keyword(summaries, mode & MODE_KEYWORD > 0))
-        tasks.append(self._extract_topic(summaries, mode & MODE_TOPIC > 0))
+        tasks.append(self._extract_agenda(summaries, mode & MODE_AGENDA > 0))
 
         results: List[Any] = await asyncio.gather(*tasks)
 
-        concise_summary: str    = results[0]
-        keyword: List[str]      = results[1]
-        topic: List[TopicModel] = results[2]
+        concise_summary: str      = results[0]
+        keyword: List[str]        = results[1]
+        agenda: List[AgendaModel] = results[2]
 
-        return (concise_summary, topic, keyword)
+        return (concise_summary, agenda, keyword)
 
 
     async def _summarize_concisely (
@@ -447,51 +447,51 @@ class YoutubeSummarize:
         return keyword
 
 
-    async def _extract_topic (
+    async def _extract_agenda (
         self,
         detail_summary: List[str],
         enable: bool = True
-    ) -> List[TopicModel]:
-        def _check (topic: List[TopicModel]) -> bool:
-            if len(topic) > MAX_TOPIC_ITEMS * MAX_TOPIC_ITEMS_MARGIN_MULTIPLIER:
-                if len(self.tmp_topic) == 0:
-                    self.tmp_topic = topic
-                elif len(topic) < len(self.tmp_topic):
-                    self.tmp_topic = topic
-                self._debug(f"topic too much. - ({len(topic)})")
+    ) -> List[AgendaModel]:
+        def _check (agenda: List[AgendaModel]) -> bool:
+            if len(agenda) > MAX_AGENDA_ITEMS * MAX_AGENDA_ITEMS_MARGIN_MULTIPLIER:
+                if len(self.tmp_agenda) == 0:
+                    self.tmp_agenda = agenda
+                elif len(agenda) < len(self.tmp_agenda):
+                    self.tmp_agenda = agenda
+                self._debug(f"agenda too much. - ({len(agenda)})")
                 return False
-            if len(topic) == 0:
-                self._debug(f"topic is empty.\n{topic}")
+            if len(agenda) == 0:
+                self._debug(f"agenda is empty.\n{agenda}")
                 return False
             return True
 
-        def _parse_topic (topic_string: str) -> List[TopicModel]:
-            topics: List[TopicModel] = []
-            topic: TopicModel = TopicModel(title="", abstract=[])
-            for line in topic_string.split("\n"):
+        def _parse_agenda (agenda_string: str) -> List[AgendaModel]:
+            agenda: List[AgendaModel] = []
+            one_agenda: Optional[AgendaModel] = None
+            for line in agenda_string.split("\n"):
                 line = line.strip()
                 if line == "":
                     continue
                 if line[0].isdigit():
-                    if topic.title != "":
-                        topics.append(topic)
-                    topic = TopicModel(title=line, abstract=[])
+                    if one_agenda is not None:
+                        agenda.append(one_agenda)
+                    one_agenda = AgendaModel(title=line, subtitle=[])
                     continue
-                if line[0] == "-":
-                    topic.abstract.append(line)
-                else:
-                    topic.abstract.append(f"- {line}")
-            return topics
+                if one_agenda is not None:
+                    one_agenda.subtitle.append(line if line[0] == "-" else f"- {line}")
+            if one_agenda is not None:
+                agenda.append(one_agenda)
+            return agenda
 
         @retry(
             stop=stop_after_attempt(MAX_RETRY_COUNT),
             wait=wait_fixed(RETRY_INTERVAL),
             retry=retry_if_not_result(_check)
         )
-        async def _extract () -> List[TopicModel]:
+        async def _extract () -> List[AgendaModel]:
             result: str = await chain.arun(**args)
-            topic: List[TopicModel] = _parse_topic(result)
-            return topic
+            agenda: List[AgendaModel] = _parse_agenda(result)
+            return agenda
 
 
         if enable is False:
@@ -499,8 +499,8 @@ class YoutubeSummarize:
 
         # 準備
         prompt = PromptTemplate(
-            template=TOPIC_PROMPT_TEMPLATE,
-            input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
+            template=AGENDA_PROMPT_TEMPLATE,
+            input_variables=AGENDA_PROMPT_TEMPLATE_VARIABLES,
         )
         chain = LLMChain(
             llm=self.llm,
@@ -509,20 +509,20 @@ class YoutubeSummarize:
         )
         args: Dict[str, str|int] = {
             "content": "\n".join(detail_summary) if len(detail_summary) > 0 else "",
-            "max": MAX_TOPIC_ITEMS,
+            "max": MAX_AGENDA_ITEMS,
         }
-        self.tmp_topic = []
-        topic: List[TopicModel] = []
+        self.tmp_agenda = []
+        agenda: List[AgendaModel] = []
 
         # リトライしても改善されない場合は一番マシなもので我慢する
         try:
-            topic = await _extract()
+            agenda = await _extract()
         except RetryError:
-            topic = self.tmp_topic
+            agenda = self.tmp_agenda
         except Exception as e:
             raise e
 
-        return topic
+        return agenda
 
 
     def _divide_chunks_into_N_groups_evenly (
