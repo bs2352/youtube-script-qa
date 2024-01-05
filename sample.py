@@ -1473,7 +1473,79 @@ def test_agenda_similarity ():
     from yts.summarize import YoutubeSummarize
     from yts.types import SummaryResultModel
     from yts.qa import YoutubeQA
+    from yts.utils import setup_embedding_from_environment
     import re
+    import sys
+    import numpy as np
+    import math
+    from typing import Tuple, List
+
+    def cosine_similarity(query_embedding: np.ndarray, target_embeddings: np.ndarray) -> np.ndarray:
+        similarities = [
+            (np.dot(query_embedding, target_embedding) / (np.linalg.norm(query_embedding) * np.linalg.norm(target_embedding)))
+            for target_embedding in target_embeddings
+        ]
+        return np.array(similarities).reshape(len(target_embeddings))
+
+    def argmax_top_k (
+        array: np.ndarray,
+        k: int = 2,
+        diff: float = 0.10
+    ) -> np.ndarray:
+        k = len(array) if k > len(array) else k
+        top_k: np.ndarray = np.argsort(array)[::-1][:k]
+        if k == 1:
+            return top_k
+        high = array[top_k[0]]
+        low = array[top_k[1]]
+        results = [top_k[0]]
+        if abs(top_k[0] - top_k[1]) == 1 and high - low < diff:
+            results.append(top_k[1])
+        return np.sort(np.array(results))
+
+    def s2hms (seconds):
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return "%d:%02d:%02d" % (h, m, s)
+
+    def hms2s (hms):
+        h, m, s = hms.split(':')
+        return int(h) * 3600 + int(m) * 60 + int(s)
+
+    def get_most_likely_summary (
+        query_embedding: np.ndarray,
+        summary_embeddings: np.ndarray,
+    ) -> Tuple[int, np.ndarray]:
+        similarities = cosine_similarity(query_embedding, summary_embeddings)
+        index = int(np.argmax(similarities))
+        return (index, similarities)
+
+    def get_time_range (
+        index: int,
+        summary: SummaryResultModel
+    ) -> Tuple[str, str]:
+        start = s2hms(math.floor(summary.detail[index].start))
+        end = s2hms(summary.lengthSeconds)
+        if index + 1 < len(summary.detail):
+            end = s2hms(math.floor(summary.detail[index + 1].start))
+        return (start, end)
+
+    def select_valid_starts (
+        provisional_starts: List[str],
+        s_index: int,
+        summary: SummaryResultModel
+    ) -> List[str]:
+        margin: int = 60
+        valid_starts: List[str] = []
+        time_range: Tuple[str, str] = get_time_range(s_index, summary)
+        for p_start in provisional_starts:
+            if hms2s(p_start) < hms2s(time_range[0]) - margin:
+                continue
+            if hms2s(time_range[1]) < hms2s(p_start):
+                continue
+            valid_starts.append(p_start)
+        return valid_starts
+
 
     vid = DEFAULT_VID
     if len(sys.argv) >= 2:
@@ -1482,20 +1554,41 @@ def test_agenda_similarity ():
     summary: Optional[SummaryResultModel] = YoutubeSummarize.summary(vid)
     if summary is None:
         return
+    llm_embedding = setup_embedding_from_environment()
+    summary_embeddings = np.array(llm_embedding.embed_documents([ d.text for d in summary.detail]))
+
     yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
     for agenda in summary.agenda:
-        content = re.sub(r"^\d+\.?", "", agenda.title).strip()
-        for subtitle in agenda.subtitle:
-            query =  content + " " + subtitle.strip()
-            print("## ", query)
-            results = yqa.retrieve(query)
-            starts = [
+        # この章はどの要約(detail_summary)から生成されたものかを確認する
+        title = re.sub(r"^\d+\.?", "", agenda.title).strip()
+        query = " ".join([
+            title,
+            *agenda.subtitle
+        ])
+        query_embeding = np.array(llm_embedding.embed_documents([ query ]))
+        s_index, similarities = get_most_likely_summary(query_embeding, summary_embeddings)
+        # print("# ", f'{topic.title}, {s_index}, {similarities}')
+
+        if len(agenda.subtitle) == 0:
+            results = yqa.retrieve(title)
+            provisinal_starts = sorted([
                 result.time for result in results
-            ]
-            starts.sort(); print(starts); print("")
+            ])
+            starts = select_valid_starts(provisinal_starts, s_index, summary)
+            print("## ", agenda.title);print(starts);# print("")
+            continue
+
+        for subtitle in agenda.subtitle:
+            a_query =  title + " " + subtitle.strip()
+            # a_query =  abstract.strip()
+            results = yqa.retrieve(a_query)
+            provisinal_starts = sorted([
+                result.time for result in results
+            ])
+            starts = select_valid_starts(provisinal_starts, s_index, summary)
+            print("## ", agenda.title, subtitle);print(starts);# print("")
         # content += " " + " ".join(topic.abstract)
         # print("## ", content)
-        # yqa = YoutubeQA(vid=vid, detail=True, ref_sources=10)
         # _ = yqa.run(content)
         # starts = [
         #     time for _, _, time, _ in yqa.get_source()
