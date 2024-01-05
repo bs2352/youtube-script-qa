@@ -458,7 +458,7 @@ Agenda:
         "title": summary.title,
         # "summaries": summaries,
         # "abstract": summary["concise"],
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
     }
     # print(prompt.format(**inputs))
     # print(f"mode={mode}")
@@ -1139,12 +1139,12 @@ def test_check_comprehensively ():
 
     title = summary.title
     concise = summary.concise
-    detail = "\n".join(summary.detail)
-    topic = ""
-    for t in summary.topic:
-        topic += f"{t.title}\n"
-        topic += "\n".join(t.abstract) + "\n"
-    topic = topic.strip()
+    detail = "\n".join([ d.text for d in summary.detail])
+    agenda = ""
+    for a in summary.agenda:
+        agenda += f"{a.title}\n"
+        agenda += "\n".join(a.subtitle) + "\n"
+    agenda = agenda.strip()
 
     prompt_template = """次の{target}には本文の内容が網羅的に含まれていますか？
 含まれている場合はYesとだけ回答してください。
@@ -1178,8 +1178,8 @@ def test_check_comprehensively ():
             "content": detail,
         },
         {
-            "target": "トピック",
-            "summary": topic,
+            "target": "目次",
+            "summary": agenda,
             "content": detail,
         }
     ]
@@ -1299,7 +1299,7 @@ Keywords:
     )
 
     args = {
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
     }
     result = chain.run(**args)
     print(result)
@@ -1307,7 +1307,7 @@ Keywords:
     print("--------------")
 
     args = {
-        "content": "\n".join(reversed(summary.detail)),
+        "content": "\n".join(reversed([ d.text for d in summary.detail])),
     }
     result_r = chain.run(**args)
     print(result_r)
@@ -1420,7 +1420,7 @@ Agenda:
     )
     inputs = {
         "title": summary.title,
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
         # "content": summary.concise,
     }
     # print(inputs)
@@ -1431,7 +1431,7 @@ Agenda:
     )
     inputs_kw = {
         "title": summary.title,
-        "content": "\n".join(summary.detail),
+        "content": "\n".join([ d.text for d in summary.detail]),
         "keyword": ", ".join(summary.keyword),
     }
 
@@ -1469,7 +1469,7 @@ def test_function ():
     YoutubeSummarize.print(summary=summary, mode=MODE_ALL&~MODE_DETAIL)
 
 
-def test_topic_similarity ():
+def test_agenda_similarity ():
     from yts.summarize import YoutubeSummarize
     from yts.types import SummaryResultModel
     from yts.qa import YoutubeQA
@@ -1482,12 +1482,12 @@ def test_topic_similarity ():
     summary: Optional[SummaryResultModel] = YoutubeSummarize.summary(vid)
     if summary is None:
         return
-    for topic in summary.topic:
-        content = re.sub(r"^\d+\.?", "", topic.title).strip()
-        for abstract in topic.abstract:
-            query =  content + " " + abstract.strip()
+    yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
+    for agenda in summary.agenda:
+        content = re.sub(r"^\d+\.?", "", agenda.title).strip()
+        for subtitle in agenda.subtitle:
+            query =  content + " " + subtitle.strip()
             print("## ", query)
-            yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
             results = yqa.retrieve(query)
             starts = [
                 result.time for result in results
@@ -1525,4 +1525,4 @@ if __name__ == "__main__":
     # test_extract_keyword()
     # get_topic_from_summary_kwd()
     # test_function()
-    test_topic_similarity()
+    test_agenda_similarity()
