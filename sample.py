@@ -1543,7 +1543,14 @@ async def _atest_agenda_similarity ():
         similarities_list: List[numpy.ndarray] = []
         for agenda in summary.agenda:
             if len(agenda.subtitle) == 0:
-                agenda.subtitle.append("") # forを通すためにダミーで空文字を入れておく
+                similarities = numpy.array([
+                    _cosine_similarity(agenda_embs[idx], summary_emb) for summary_emb in summary_embs
+                ])
+                index = int(numpy.argmax(similarities))
+                likely_summary.append(index)
+                similarities_list.append(similarities)
+                idx += 1
+                continue
             for _ in agenda.subtitle:
                 similarities = numpy.array([
                     _cosine_similarity(agenda_embs[idx], summary_emb) for summary_emb in summary_embs
@@ -1791,6 +1798,7 @@ async def _atest_agenda_similarity ():
             # print("")
             continue
         if len(agenda.subtitle) > 0:
+            agenda.time.append([])
             for subtitle in agenda.subtitle:
                 a_query =  title + " " + subtitle.strip()
                 # a_query =  abstract.strip()
