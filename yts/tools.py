@@ -6,7 +6,7 @@ import asyncio
 import os
 
 from .types import SummaryResultModel
-from yts.summarize import YoutubeSummarize
+from .summarize import YoutubeSummarize
 from .qa import YoutubeQA
 from .utils import setup_embedding_from_environment
 
