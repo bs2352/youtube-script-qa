@@ -172,6 +172,9 @@ function Agenda (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
     const { summary, ytplayer } = props;
 
     const onClickHandlerTimeLink = (start_str: string) => {
+        if (start_str.slice(-1) === "*") {
+            start_str = start_str.slice(0, -1);
+        }
         const start: number = hms2s(start_str);
         ytplayer.seekTo(start, true);
     }
@@ -181,18 +184,20 @@ function Agenda (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
         return (
             <span style={{marginLeft: 10}}>
                 {`(`}
-                {time.map((t, tidx) =>
-                    <span key={`time-${tidx}`}>
-                        <Link
-                            href="#"
-                            underline="hover"
-                            onClick={()=>onClickHandlerTimeLink(t)}
-                        >
-                            {t}
-                        </Link>
-                        {tidx < time.length - 1 && ", "}
-                    </span>
-                )}
+                {time.map((t, tidx) => {
+                    return (
+                        <span key={`time-${tidx}`}>
+                            <Link
+                                href="#"
+                                underline="hover"
+                                onClick={()=>onClickHandlerTimeLink(t)}
+                            >
+                                {t}
+                            </Link>
+                            {tidx < time.length - 1 && ", "}
+                        </span>
+                    )
+                })}
                 {`)`}
             </span>
         )

@@ -1763,6 +1763,28 @@ async def _atest_agenda_similarity ():
 
         return valid_starts
 
+    def _aggregate_starts (starts: List[str]) -> List[str]:
+        aggregated: List[str] = []
+        idx: int = 0
+        while idx < len(starts):
+            if idx == len(starts) - 1:
+                aggregated.append(starts[idx])
+                break
+            cur: int = _hms2s(starts[idx])
+            next_idx: int = idx + 1
+            while next_idx < len(starts):
+                next: int = _hms2s(starts[next_idx])
+                if next - cur > 60:
+                    break
+                cur = next
+                next_idx += 1
+            if next_idx - idx > 1:
+                aggregated.append(f'{starts[idx]}*')
+            else:
+                aggregated.append(starts[idx])
+            idx = next_idx
+
+        return aggregated
 
     vid = DEFAULT_VID
     if len(sys.argv) >= 2:
@@ -1789,6 +1811,7 @@ async def _atest_agenda_similarity ():
             tmp_starts = sorted([ result.time for result in results])
             summary_priority = _mk_summary_priority(likely_summary[idx], similarities_list[idx])
             starts = _select_valid_starts(tmp_starts, summary_priority, summary)
+            starts = _aggregate_starts(starts)
             agenda.time.append(starts)
             idx += 1
             # print("## ", agenda.title)
@@ -1806,6 +1829,7 @@ async def _atest_agenda_similarity ():
                 tmp_starts = sorted([ result.time for result in results])
                 summary_priority = _mk_summary_priority(likely_summary[idx], similarities_list[idx])
                 starts = _select_valid_starts(tmp_starts, summary_priority, summary)
+                starts = _aggregate_starts(starts)
                 agenda.time.append(starts)
                 idx += 1
                 # print("## ", agenda.title, subtitle)
