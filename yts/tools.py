@@ -316,3 +316,20 @@ class YoutubeAgendaTimeTable:
         gather = asyncio.gather(*tasks)
         result: SummaryResultModel = loop.run_until_complete(gather)[0]
         return result
+
+
+    @classmethod
+    def print (
+        cls,
+        summary: Optional[SummaryResultModel] = None,
+    ) -> None:
+        if summary is None:
+            return
+        for agenda in summary.agenda:
+            print(f'{agenda.title}', end="")
+            if len(agenda.time[0]) > 0:
+                print("  (", " ".join(agenda.time[0]), ")", sep="", end="")
+            print("")
+            for idx, subtitle in enumerate(agenda.subtitle):
+                print(f'  {subtitle} ({", ".join(agenda.time[idx+1])})')
+            print("")

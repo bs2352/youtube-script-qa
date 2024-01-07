@@ -2,10 +2,13 @@ from typing import Optional
 import argparse
 import os
 import json
+import sys
 
 from yts.qa import YoutubeQA
 from yts.summarize import YoutubeSummarize, MODE_ALL, MODE_DETAIL
 from yts.types import SummaryResultModel, SourceModel
+from yts.tools import YoutubeAgendaTimeTable
+
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
 DEFAULT_REF_SOURCE = 3
@@ -30,7 +33,7 @@ def qa (args):
         print(f'Answer: {answer}\n')
 
         if args.detail is False:
-            return
+            continue
 
         for source in yqa.get_source():
             print(f"--- {source.time} ({source.id} [{source.score}]) ---\n {source.source}")
@@ -65,6 +68,12 @@ def summary (args):
     YoutubeSummarize.print(sm, MODE_ALL if args.detail else MODE_ALL & ~MODE_DETAIL)
 
 
+def agenda (args):
+    ys = YoutubeSummarize(args.vid, not args.debug, args.debug)
+    sm: Optional[SummaryResultModel] = ys.run()
+    sm = YoutubeAgendaTimeTable.make(vid=args.vid, summary=sm, store=True)
+    YoutubeAgendaTimeTable.print(sm)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Youtube動画の視聴を支援するスクリプト')
     parser.add_argument('-v', '--vid', default=DEFAULT_VIDEO_ID, help=f'Youtube動画のID（default:{DEFAULT_VIDEO_ID}）')
@@ -73,14 +82,21 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action='store_true', help='デバッグ情報を出力する')
     parser.add_argument('-s', '--summary', action='store_true', help='要約する')
     parser.add_argument('-r', '--retrieve', action='store_true', help='検索する')
+    parser.add_argument('-a', '--agenda', action='store_true', help='アジェンダのタイムテーブルを作成する')
     args = parser.parse_args()
 
     if args.summary is True:
         summary(args)
+        sys.exit(0)
 
     if args.retrieve is True:
         retrieve(args)
+        sys.exit(0)
 
-    if args.summary is False and args.retrieve is False:
-        qa(args)
+    if args.agenda is True:
+        agenda(args)
+        sys.exit(0)
+
+    qa(args)
+    sys.exit(0)
 
