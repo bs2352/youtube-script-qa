@@ -3,6 +3,7 @@ import re
 import numpy
 import math
 import asyncio
+import os
 
 from .types import SummaryResultModel
 from yts.summarize import YoutubeSummarize
@@ -11,7 +12,7 @@ from .utils import setup_embedding_from_environment
 
 
 async def amake_agenda_time_table (
-    vid: str = "", summary: Optional[SummaryResultModel] = None
+    vid: str = "", summary: Optional[SummaryResultModel] = None, store: bool = False,
 ) -> SummaryResultModel:
 
     def _cosine_similarity(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
@@ -228,6 +229,11 @@ async def amake_agenda_time_table (
     if summary is None:
         raise ValueError("no summary")
 
+    if len(summary.agenda) == 0:
+        return summary
+    if len(summary.agenda[0].time) > 0:
+        return summary
+
     likely_summary, similarities_list = await _aget_likely_summary(summary)
     likely_summary = _fix_likely_summary(likely_summary, similarities_list)
 
@@ -255,14 +261,21 @@ async def amake_agenda_time_table (
                 agenda.time.append(starts)
                 idx += 1
 
+    if store:
+        summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
+        if not os.path.isdir(os.path.dirname(summary_file)):
+            os.makedirs(os.path.dirname(summary_file))
+        with open(summary_file, "w") as f:
+            f.write(summary.model_dump_json())
+
     return summary
 
 
 def make_agenda_time_table (
-    vid: str = "", summary: Optional[SummaryResultModel] = None
+    vid: str = "", summary: Optional[SummaryResultModel] = None, store: bool = False,
 ) -> SummaryResultModel:
     loop = asyncio.get_event_loop()
-    tasks = [amake_agenda_time_table(vid, summary)]
+    tasks = [amake_agenda_time_table(vid, summary, store)]
     gather = asyncio.gather(*tasks)
     result: SummaryResultModel = loop.run_until_complete(gather)[0]
     return result

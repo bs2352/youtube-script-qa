@@ -98,7 +98,7 @@ async def summary (request_body: SummaryRequestModel):
     vid: str = request_body.vid
     try:
         summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid)
-        summary = await amake_agenda_time_table(vid=vid, summary=summary)
+        summary = await amake_agenda_time_table(vid=vid, summary=summary, store=True)
         if summary is None:
             raise Exception("summary not found")
     except Exception as e:
