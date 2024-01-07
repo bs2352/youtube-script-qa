@@ -1470,65 +1470,57 @@ def test_function ():
 
 
 async def _atest_agenda_similarity ():
+    from typing import Tuple, List, Any
+    import re
+    import sys
+    import numpy
+    import math
+    from typing import Tuple, List, Any
     from yts.summarize import YoutubeSummarize
     from yts.types import SummaryResultModel
     from yts.qa import YoutubeQA
     from yts.utils import setup_embedding_from_environment
-    import re
-    import sys
-    import numpy as np
-    import math
-    from typing import Tuple, List, Any
 
-    def cosine_similarity(
-        query_embedding: np.ndarray,
-        target_embeddings: np.ndarray
-    ) -> np.ndarray:
-        similarities = [
-            (np.dot(query_embedding, target_embedding) / (np.linalg.norm(query_embedding) * np.linalg.norm(target_embedding)))
-            for target_embedding in target_embeddings
-        ]
-        return np.array(similarities).reshape(len(target_embeddings))
+    def _cosine_similarity(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
+        return numpy.dot(a, b) / (numpy.linalg.norm(a) * numpy.linalg.norm(b))
 
-    def argmax_top_k (
-        array: np.ndarray,
-        k: int = 2,
-        diff: float = 0.10
-    ) -> np.ndarray:
-        k = len(array) if k > len(array) else k
-        top_k: np.ndarray = np.argsort(array)[::-1][:k]
-        if k == 1:
-            return top_k
-        high = array[top_k[0]]
-        low = array[top_k[1]]
-        results = [top_k[0]]
-        if abs(top_k[0] - top_k[1]) == 1 and high - low < diff:
-            results.append(top_k[1])
-        return np.sort(np.array(results))
+    # def argmax_top_k (
+    #     array: np.ndarray,
+    #     k: int = 2,
+    #     diff: float = 0.10
+    # ) -> np.ndarray:
+    #     k = len(array) if k > len(array) else k
+    #     top_k: np.ndarray = np.argsort(array)[::-1][:k]
+    #     if k == 1:
+    #         return top_k
+    #     high = array[top_k[0]]
+    #     low = array[top_k[1]]
+    #     results = [top_k[0]]
+    #     if abs(top_k[0] - top_k[1]) == 1 and high - low < diff:
+    #         results.append(top_k[1])
+    #     return np.sort(np.array(results))
 
-    def s2hms (seconds):
+    def _s2hms (seconds: int) -> str:
         m, s = divmod(seconds, 60)
         h, m = divmod(m, 60)
         return "%d:%02d:%02d" % (h, m, s)
 
-    def hms2s (hms):
+    def _hms2s (hms: str) -> int:
         h, m, s = hms.split(':')
         return int(h) * 3600 + int(m) * 60 + int(s)
 
-    async def aget_likely_summary (
-        summary: SummaryResultModel
-    ) -> Tuple[List[int], List[np.ndarray]]:
+    async def _aget_likely_summary (summary: SummaryResultModel) -> Tuple[List[int], List[numpy.ndarray]]:
 
-        def _get_all_agenda (summary: SummaryResultModel) -> List[str]:
-            all_agenda: List[str] = []
+        def _get_agenda_items (summary: SummaryResultModel) -> List[str]:
+            items: List[str] = []
             for agenda in summary.agenda:
-                title = re.sub(r"^\d+\.?", "", agenda.title).strip()
+                title: str = re.sub(r"^\d+\.?", "", agenda.title).strip()
                 if len(agenda.subtitle) == 0:
-                    all_agenda.append(title)
+                    items.append(title)
                     continue
                 for subtitle in agenda.subtitle:
-                    all_agenda.append(f"{title} {subtitle}")
-            return all_agenda
+                    items.append(f"{title} {subtitle}")
+            return items
 
         # def _get_summary_and_similarities (
         #     query_emb: np.ndarray, summary_embs: np.ndarray
@@ -1538,48 +1530,48 @@ async def _atest_agenda_similarity ():
         #     return (likely_summary, similarities)
 
         llm_embedding = setup_embedding_from_environment()
-        # summary_embeddings = np.array(llm_embedding.embed_documents([ d.text for d in summary.detail]))
         tasks = [
             llm_embedding.aembed_documents([ d.text for d in summary.detail]),
-            llm_embedding.aembed_documents(_get_all_agenda(summary))
+            llm_embedding.aembed_documents(_get_agenda_items(summary))
         ]
         results: List[Any] = await asyncio.gather(*tasks)
-        summary_embeddings = np.array(results[0])
-        agenda_embeddings = [ np.array(a) for a in results[1]]
+        summary_embs: numpy.ndarray = numpy.array(results[0])
+        agenda_embs: List[numpy.ndarray] = [ numpy.array(a) for a in results[1]]
 
         idx: int = 0
         likely_summary: List[int] = []
-        similarities_list: List[np.ndarray] = []
+        similarities_list: List[numpy.ndarray] = []
         for agenda in summary.agenda:
             if len(agenda.subtitle) == 0:
-                agenda.subtitle.append("")
+                agenda.subtitle.append("") # forを通すためにダミーで空文字を入れておく
             for _ in agenda.subtitle:
-                query_embeding = agenda_embeddings[idx]
-                similarities = cosine_similarity(query_embeding, summary_embeddings)
-                index = int(np.argmax(similarities))
+                similarities = numpy.array([
+                    _cosine_similarity(agenda_embs[idx], summary_emb) for summary_emb in summary_embs
+                ])
+                index = int(numpy.argmax(similarities))
                 likely_summary.append(index)
                 similarities_list.append(similarities)
                 idx += 1
 
         return (likely_summary, similarities_list)
 
-    def fix_likely_summary(
-        likely_summary: List[int], similarities_list: List[np.ndarray]
+    def _fix_likely_summary(
+        likely_summary: List[int], similarities_list: List[numpy.ndarray]
     ) -> List[int]:
 
-        def _which_is_most_similar (
-            candidates_idx: List[int], similarities: np.ndarray
+        def __which_is_most_similar (
+            candidates_idx: List[int], similarities: numpy.ndarray
         ) -> int:
-            max_idx: int = candidates_idx[0]
+            similar_idx: int = candidates_idx[0]
             for idx in candidates_idx:
                 if idx >= len(similarities):
                     break
-                if similarities[max_idx] < similarities[idx]:
-                    max_idx = idx
-            return max_idx
+                if similarities[similar_idx] < similarities[idx]:
+                    similar_idx = idx
+            return similar_idx
 
-        def _force_change (
-            likely_summary: List[int], similarities_list: List[np.ndarray]
+        def __force_change (
+            likely_summary: List[int], similarities_list: List[numpy.ndarray]
         ) -> List[int]:
             if len(likely_summary) <= 2:
                 return likely_summary
@@ -1637,47 +1629,46 @@ async def _atest_agenda_similarity ():
         #         reviewed_likely_summary.append(s_index)
         #     return reviewed_likely_summary
 
-        def _compare_with_neiborhood (
-            likely_summary: List[int], similarities_list: List[np.ndarray],
+        def __compare_with_neiborhood (
+            likely_summary: List[int], similarities_list: List[numpy.ndarray],
         ) -> List[int]:
 
-            def _get_next_summary (base_index: int, likely_summary: List[int]) -> int:
+            def __get_next_summary (base_index: int, likely_summary: List[int]) -> int:
                 for idx in range(base_index+1, len(likely_summary)):
                     if likely_summary[idx] != likely_summary[base_index]:
                         return likely_summary[idx]
                 return base_index
 
-            reviewed: List[int] = []
+            fixed: List[int] = []
             for idx, cur_summary in enumerate(likely_summary):
                 if idx == 0 or idx == len(likely_summary) - 1:
-                    reviewed.append(cur_summary)
+                    fixed.append(cur_summary)
                     continue
-                similarities: np.ndarray = similarities_list[idx]
-                prev_summary = reviewed[idx-1] if idx > 0 else 0
-                next_summary = _get_next_summary(idx, likely_summary)
+                similarities: numpy.ndarray = similarities_list[idx]
+                prev_summary = fixed[idx-1] if idx > 0 else 0
+                next_summary = __get_next_summary(idx, likely_summary)
                 if prev_summary > cur_summary:
                     if prev_summary >= next_summary:
-                        reviewed.append(prev_summary)
+                        fixed.append(prev_summary)
                     else:
                         candidates: List[int] = [ i for i in range(prev_summary, next_summary)]
-                        reviewed.append(_which_is_most_similar(candidates, similarities))
+                        fixed.append(__which_is_most_similar(candidates, similarities))
                     continue
                 if cur_summary - prev_summary > 2:
                     # candidates: List[int] = [ i for i in range(prev_summary + 1, cur_summary)]
                     candidates: List[int] = [prev_summary, prev_summary + 1]
-                    reviewed.append(_which_is_most_similar(candidates, similarities))
+                    fixed.append(__which_is_most_similar(candidates, similarities))
                     # reviewed.append(prev_summary + 1)
                     continue
                 if cur_summary - prev_summary == 2:
-                    reviewed.append(prev_summary + 1)
+                    fixed.append(prev_summary + 1)
                     continue
                 candidates: List[int] = [prev_summary, prev_summary + 1]
-                cur_summary = _which_is_most_similar(candidates, similarities)
-                reviewed.append(cur_summary)
+                fixed.append(__which_is_most_similar(candidates, similarities))
 
-            return reviewed
+            return fixed
 
-        def _check_sequence (likely_summary: List[int]) -> bool:
+        def __check_sequence (likely_summary: List[int]) -> bool:
             for idx in range(len(likely_summary)):
                 cur = likely_summary[idx]
                 prev = likely_summary[idx-1] if idx > 0 else likely_summary[0]
@@ -1686,33 +1677,30 @@ async def _atest_agenda_similarity ():
                     return False
             return True
 
-        def _fix (
-            likely_summary: List[int], similarities_list: List[np.ndarray]
+        def __fix (
+            likely_summary: List[int], similarities_list: List[numpy.ndarray]
         ) -> List[int]:
-            likely_summary = _force_change(likely_summary, similarities_list)
+            likely_summary = __force_change(likely_summary, similarities_list)
             # likely_summary= _compare_with_previous(likely_summary, similarities_list)
             # likely_summary= _compare_with_next(likely_summary, similarities_list)
-            likely_summary = _compare_with_neiborhood(likely_summary, similarities_list)
+            likely_summary = __compare_with_neiborhood(likely_summary, similarities_list)
             return likely_summary
 
         for _ in range(5):
-            likely_summary = _fix(likely_summary, similarities_list)
-            if _check_sequence(likely_summary):
+            likely_summary = __fix(likely_summary, similarities_list)
+            if __check_sequence(likely_summary):
                 break
 
         return likely_summary
 
-    def get_time_range (
-        index: int,
-        summary: SummaryResultModel
-    ) -> Tuple[str, str]:
-        start = s2hms(math.floor(summary.detail[index].start))
-        end = s2hms(summary.lengthSeconds)
+    def _get_time_range (index: int, summary: SummaryResultModel) -> Tuple[str, str]:
+        start = _s2hms(math.floor(summary.detail[index].start))
+        end = _s2hms(summary.lengthSeconds)
         if index + 1 < len(summary.detail):
-            end = s2hms(math.floor(summary.detail[index + 1].start))
+            end = _s2hms(math.floor(summary.detail[index + 1].start))
         return (start, end)
 
-    def mk_summary_priority (s_index: int, simimalities: np.ndarray) -> List[int]:
+    def _mk_summary_priority (s_index: int, simimalities: numpy.ndarray) -> List[int]:
         priority: List[int] = [s_index]
         for width in range(1, len(simimalities)):
             left: Optional[float] = None
@@ -1737,13 +1725,13 @@ async def _atest_agenda_similarity ():
             priority.append(s_index - width)
         return priority
 
-    def select_valid_starts (
+    def _select_valid_starts (
         tmp_starts: List[str],
         summary_priority: List[int],
         summary: SummaryResultModel,
     ) -> List[str]:
 
-        def _select (
+        def __select (
             tmp_starts: List[str],
             s_index: int,
             summary: SummaryResultModel,
@@ -1751,18 +1739,18 @@ async def _atest_agenda_similarity ():
             margin_right: int = 0,
         ) -> List[str]:
             valid_starts: List[str] = []
-            time_range: Tuple[str, str] = get_time_range(s_index, summary)
+            time_range: Tuple[str, str] = _get_time_range(s_index, summary)
             for start in tmp_starts:
-                if hms2s(start) < hms2s(time_range[0]) - margin_left:
+                if _hms2s(start) < _hms2s(time_range[0]) - margin_left:
                     continue
-                if hms2s(time_range[1]) + margin_right  < hms2s(start):
+                if _hms2s(time_range[1]) + margin_right  < _hms2s(start):
                     continue
                 valid_starts.append(start)
             return valid_starts
 
         valid_starts: List[str] = []
         for s_index in summary_priority:
-            valid_starts = _select(tmp_starts, s_index, summary)
+            valid_starts = __select(tmp_starts, s_index, summary)
             if len(valid_starts) > 0:
                 break
 
@@ -1779,22 +1767,21 @@ async def _atest_agenda_similarity ():
     # llm_embedding = setup_embedding_from_environment()
     # summary_embeddings = np.array(llm_embedding.embed_documents([ d.text for d in summary.detail]))
 
-    likely_summary, similarities_list = await aget_likely_summary(summary)
+    likely_summary, similarities_list = await _aget_likely_summary(summary)
     # print(likely_summary)
-    likely_summary = fix_likely_summary(likely_summary, similarities_list)
+    likely_summary = _fix_likely_summary(likely_summary, similarities_list)
     # print(likely_summary)
     # return
 
     idx = 0
-    time_table: List[Any] = []
     yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
     for agenda in summary.agenda:
         title = re.sub(r"^\d+\.?", "", agenda.title).strip()
         if len(agenda.subtitle) == 0:
             results = yqa.retrieve(title)
             tmp_starts = sorted([ result.time for result in results])
-            summary_priority = mk_summary_priority(likely_summary[idx], similarities_list[idx])
-            starts = select_valid_starts(tmp_starts, summary_priority, summary)
+            summary_priority = _mk_summary_priority(likely_summary[idx], similarities_list[idx])
+            starts = _select_valid_starts(tmp_starts, summary_priority, summary)
             agenda.time.append(starts)
             idx += 1
             # print("## ", agenda.title)
@@ -1809,8 +1796,8 @@ async def _atest_agenda_similarity ():
                 # a_query =  abstract.strip()
                 results = yqa.retrieve(a_query)
                 tmp_starts = sorted([ result.time for result in results])
-                summary_priority = mk_summary_priority(likely_summary[idx], similarities_list[idx])
-                starts = select_valid_starts(tmp_starts, summary_priority, summary)
+                summary_priority = _mk_summary_priority(likely_summary[idx], similarities_list[idx])
+                starts = _select_valid_starts(tmp_starts, summary_priority, summary)
                 agenda.time.append(starts)
                 idx += 1
                 # print("## ", agenda.title, subtitle)
