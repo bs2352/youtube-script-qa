@@ -13,7 +13,7 @@ from yts.summarize import YoutubeSummarize
 from yts.qa import YoutubeQA
 from yts.types import SummaryResultModel, YoutubeTranscriptType, TranscriptChunkModel, SourceModel
 from yts.utils import divide_transcriptions_into_chunks
-from yts.tools import amake_agenda_time_table
+from yts.tools import YoutubeAgendaTimeTable
 
 
 STATIC_FILES_DIR = "frontend/dist"
@@ -98,7 +98,7 @@ async def summary (request_body: SummaryRequestModel):
     vid: str = request_body.vid
     try:
         summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid)
-        summary = await amake_agenda_time_table(vid=vid, summary=summary, store=True)
+        summary = await YoutubeAgendaTimeTable.amake(vid=vid, summary=summary, store=True)
         if summary is None:
             raise Exception("summary not found")
     except Exception as e:
