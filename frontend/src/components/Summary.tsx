@@ -175,21 +175,21 @@ function Agenda (props: {summary: SummaryType}) {
         <Box >
             <Box sx={detailBoxSx} id="agenda-box">
                 <List id="agenda-list-01" sx={listSx} disablePadding >
-                    {summary.agenda.map((agenda, idx) =>
+                    {summary.agenda.map((agenda, aidx) =>
                     {
                         return (
-                            <Box key={`agenda-${idx}`}>
+                            <Box key={`agenda-${aidx}`}>
                                 <ListItem sx={listItemTitleSx}>{agenda.title}</ListItem>
                                 <List disablePadding >
-                                    {agenda.subtitle.map((subtitle, idx) =>
+                                    {agenda.subtitle.map((subtitle, sidx) =>
                                         <ListItem
-                                            key={`agenda-subtitle-${idx}`}
+                                            key={`agenda-subtitle-${sidx}`}
                                             sx={listItemAbstractSx}
                                             disablePadding
                                         >{subtitle}</ListItem>
                                     )}
                                 </List>
-                                { idx < summary.agenda.length -1 && <Divider sx={agendaDividerSx} /> }
+                                { aidx < summary.agenda.length -1 && <Divider sx={agendaDividerSx} /> }
                             </Box>
                         )
                     })}

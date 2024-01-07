@@ -29,6 +29,7 @@ class DetailSummary (BaseModel):
 class AgendaModel (BaseModel):
     title: str = Field("")
     subtitle: List[str] = Field([])
+    time: List[List[str]] = Field([])
 
 class SummaryResultModel (BaseModel):
     title: str = Field("")

@@ -1789,20 +1789,13 @@ async def _atest_agenda_similarity ():
     time_table: List[Any] = []
     yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
     for agenda in summary.agenda:
-        tt = {
-            "title": agenda.title,
-            "subtitle": agenda.subtitle,
-            "time": [],
-        }
-
         title = re.sub(r"^\d+\.?", "", agenda.title).strip()
-
         if len(agenda.subtitle) == 0:
             results = yqa.retrieve(title)
             tmp_starts = sorted([ result.time for result in results])
             summary_priority = mk_summary_priority(likely_summary[idx], similarities_list[idx])
             starts = select_valid_starts(tmp_starts, summary_priority, summary)
-            tt["time"].append(starts)
+            agenda.time.append(starts)
             idx += 1
             # print("## ", agenda.title)
             # print(tmp_starts)
@@ -1810,7 +1803,6 @@ async def _atest_agenda_similarity ():
             # print(starts)
             # print("")
             continue
-
         if len(agenda.subtitle) > 0:
             for subtitle in agenda.subtitle:
                 a_query =  title + " " + subtitle.strip()
@@ -1819,7 +1811,7 @@ async def _atest_agenda_similarity ():
                 tmp_starts = sorted([ result.time for result in results])
                 summary_priority = mk_summary_priority(likely_summary[idx], similarities_list[idx])
                 starts = select_valid_starts(tmp_starts, summary_priority, summary)
-                tt["time"].append(starts)
+                agenda.time.append(starts)
                 idx += 1
                 # print("## ", agenda.title, subtitle)
                 # print(tmp_starts)
@@ -1827,19 +1819,19 @@ async def _atest_agenda_similarity ():
                 # print(starts)
                 # print("")
 
-        time_table.append(tt)
-
-    return time_table
+    return summary
 
 def test_agenda_similarity ():
     import asyncio
     import json
+    from yts.types import SummaryResultModel
+
     # asyncio.run(_atest_agenda_similarity())
     loop = asyncio.get_event_loop()
     tasks = [_atest_agenda_similarity()]
     gather = asyncio.gather(*tasks)
-    result = loop.run_until_complete(gather)[0]
-    print(json.dumps(result, ensure_ascii=False))
+    result: SummaryResultModel = loop.run_until_complete(gather)[0]
+    print(result.model_dump_json())
     print("")
 
 
