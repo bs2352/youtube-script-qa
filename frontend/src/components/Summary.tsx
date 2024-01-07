@@ -7,7 +7,7 @@ import {
 import { YouTubePlayer } from 'react-youtube'
 
 import { SummaryType } from "./types"
-import { s2hms } from './utils'
+import { s2hms, hms2s } from './utils'
 
 
 interface SummaryProps {
@@ -168,25 +168,57 @@ function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
 }
 
 
-function Agenda (props: {summary: SummaryType}) {
-    const { summary } = props;
+function Agenda (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
+    const { summary, ytplayer } = props;
+
+    const onClickHandlerTimeLink = (start_str: string) => {
+        const start: number = hms2s(start_str);
+        ytplayer.seekTo(start, true);
+    }
+
+    const TimeLink = (props: {time: string[]}) => {
+        const { time } = props;
+        return (
+            <span style={{marginLeft: 10}}>
+                {`(`}
+                {time.map((t, tidx) =>
+                    <span key={`time-${tidx}`}>
+                        <Link
+                            href="#"
+                            underline="hover"
+                            onClick={()=>onClickHandlerTimeLink(t)}
+                        >
+                            {t}
+                        </Link>
+                        {tidx < time.length - 1 && ", "}
+                    </span>
+                )}
+                {`)`}
+            </span>
+        )
+    }
 
     return (
         <Box >
             <Box sx={detailBoxSx} id="agenda-box">
                 <List id="agenda-list-01" sx={listSx} disablePadding >
-                    {summary.agenda.map((agenda, aidx) =>
-                    {
+                    {summary.agenda.map((agenda, aidx) => {
                         return (
                             <Box key={`agenda-${aidx}`}>
-                                <ListItem sx={listItemTitleSx}>{agenda.title}</ListItem>
+                                <ListItem sx={listItemTitleSx}>
+                                    {agenda.title}
+                                    {agenda.time[0].length > 0 && <TimeLink time={agenda.time[0]} />}
+                                </ListItem>
                                 <List disablePadding >
                                     {agenda.subtitle.map((subtitle, sidx) =>
                                         <ListItem
                                             key={`agenda-subtitle-${sidx}`}
                                             sx={listItemAbstractSx}
                                             disablePadding
-                                        >{subtitle}</ListItem>
+                                        >
+                                            {subtitle}
+                                            {agenda.time[sidx+1].length > 0 && <TimeLink time={agenda.time[sidx+1]} />}
+                                        </ListItem>
                                     )}
                                 </List>
                                 { aidx < summary.agenda.length -1 && <Divider sx={agendaDividerSx} /> }
@@ -231,7 +263,7 @@ export function Summary (props: SummaryProps) {
                         <Concise summary={summary} />
                     }
                     {alignment === 'detail' && <Detail summary={summary} ytplayer={ytplayer} />}
-                    {alignment === 'agenda' && <Agenda summary={summary} />}
+                    {alignment === 'agenda' && <Agenda summary={summary} ytplayer={ytplayer} />}
                 </Box>
             </Box>
         </Box>
