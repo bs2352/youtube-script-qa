@@ -24,6 +24,11 @@ export function VideoArea (props: VideoAreaProps) {
         setSummary(null);
         setLoading(true);
 
+        if (vid === "") {
+            setLoading(false);
+            return;
+        }
+
         const requestBody: SummaryRequestBody = {
             vid: vid
         }

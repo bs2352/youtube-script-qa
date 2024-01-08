@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, TextField, MenuItem } from '@mui/material'
+import { Box, TextField, MenuItem, IconButton } from '@mui/material'
+import { Clear } from '@mui/icons-material'
 
 import { SampleVideoInfo } from './types';
 
@@ -17,7 +18,7 @@ const boxSx = {
 const textFieldVidSx = {
     margin: "20px",
     marginLeft: "15px",
-    marginRight: "15px",
+    marginRight: "0px",
     maxWidth: "150px"
 }
 
@@ -26,6 +27,13 @@ const textFieldSampleSx = {
     marginLeft: "15px",
     marginRight: "15px",
     maxWidth: "300px",
+}
+
+const iconButtonClearSx = {
+    verticalAlign: "bottom",
+    margin: "20px",
+    marginLeft: "0px",
+    marginRight: "10px",
 }
 
 export function InputVid (props: InputVidProps) {
@@ -54,6 +62,13 @@ export function InputVid (props: InputVidProps) {
             vidRef.current.value = inputElement.value
     }
 
+    const onClickHandlerClearVid = () => {
+        // setVid("");
+        if (vidRef && vidRef.current) {
+            vidRef.current.value = "";
+        }
+    }
+
     return (
         <Box sx={boxSx} id="inputvid-box-01">
             <TextField
@@ -64,7 +79,15 @@ export function InputVid (props: InputVidProps) {
                 sx={textFieldVidSx}
                 // InputLabelProps={{shrink: true}}
                 inputRef={vidRef}
+                placeholder="xxxxx"
             />
+            <IconButton
+                sx={iconButtonClearSx}
+                onClick={onClickHandlerClearVid}
+                size='small'
+            >
+                <Clear fontSize='medium' />
+            </IconButton>
             { sampleVideoList &&
                 <TextField
                     select
