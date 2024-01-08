@@ -18,5 +18,7 @@ do
     # python -m yts --summary --vid $vid
 
     cd $cur_dir
-    read -p "Press enter to continue" input
+    if [ "x${1}" = "x" ]; then
+        read -p "Press enter to continue" input
+    fi
 done

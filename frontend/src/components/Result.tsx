@@ -17,6 +17,7 @@ interface TabPanelProps {
 
 interface ResultProps {
     summary: SummaryResponseBody;
+    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     vid: string;
     ytplayer: YouTubePlayer
 }
@@ -52,7 +53,7 @@ function TabPanel (props: TabPanelProps) {
 
 
 export function Result (props: ResultProps) {
-    const { summary, vid, ytplayer } = props;
+    const { summary, setSummary, vid, ytplayer } = props;
 
     const [ value, setValue ] = useState<number>(0)
     const [ transcripts, setTranscripts] = useState<TranscriptType[]|null>(null);
@@ -87,7 +88,8 @@ export function Result (props: ResultProps) {
             </TabPanel>
             <TabPanel value={value} index={1}>
                 <Summary
-                    summary={summary.summary}
+                    summary={summary}
+                    setSummary={setSummary}
                     alignment={summaryAlignment}
                     setAlignment={setSummaryAlignment}
                     ytplayer={ytplayer}

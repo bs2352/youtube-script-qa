@@ -83,7 +83,7 @@ export function InputVid (props: InputVidProps) {
                         )
                     })}
                 </TextField>
-}
+            }
         </Box>
     )
 }

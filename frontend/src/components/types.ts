@@ -26,6 +26,7 @@ export type SummaryResponseBody = {
 export type AgendaType = {
     title: string;
     subtitle: string[];
+    time: (string[])[];
 }
 
 export type SampleVideoInfo = {

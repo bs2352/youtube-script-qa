@@ -31,6 +31,7 @@ function App() {
             { !loading && summary && ytplayer &&
                 <Result
                     summary={summary}
+                    setSummary={setSummary}
                     vid={vid}
                     ytplayer={ytplayer}
                 /> }

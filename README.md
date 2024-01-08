@@ -93,6 +93,7 @@ options:
   --debug          デバッグ情報を出力する
   -s, --summary        要約する
   -r, --retrieve     検索する
+  -a, --agenda       アジェンダのタイムテーブルを作成する
 ```
 
 

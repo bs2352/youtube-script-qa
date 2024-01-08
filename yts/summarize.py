@@ -475,7 +475,7 @@ class YoutubeSummarize:
                 if line[0].isdigit():
                     if one_agenda is not None:
                         agenda.append(one_agenda)
-                    one_agenda = AgendaModel(title=line, subtitle=[])
+                    one_agenda = AgendaModel(title=line, subtitle=[], time=[])
                     continue
                 if one_agenda is not None:
                     one_agenda.subtitle.append(line if line[0] == "-" else f"- {line}")

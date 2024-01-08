@@ -10,7 +10,8 @@ export default defineConfig({
       '/qa': 'http://localhost:8080',
       '/retrieve': 'http://localhost:8080',
       '/transcript': 'http://localhost:8080',
-      "/sample": 'http://localhost:8080'
+      "/sample": 'http://localhost:8080',
+      "/agenda": 'http://localhost:8080'
     }
   }
 })

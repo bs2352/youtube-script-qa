@@ -4,14 +4,17 @@ import {
     List, ListItem, Divider,
     Link
 } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
-import { SummaryType } from "./types"
-import { s2hms } from './utils'
+import { Loading } from './Loading'
+import { SummaryType, SummaryResponseBody, SummaryRequestBody } from "./types"
+import { s2hms, hms2s } from './utils'
 
 
 interface SummaryProps {
-    summary: SummaryType;
+    summary: SummaryResponseBody;
+    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     alignment: string;
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
     ytplayer: YouTubePlayer;
@@ -168,28 +171,118 @@ function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
 }
 
 
-function Agenda (props: {summary: SummaryType}) {
-    const { summary } = props;
+function Agenda (
+    props: {
+        summaryRes: SummaryResponseBody,
+        setSummaryRes: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>,
+        ytplayer: YouTubePlayer,
+    }
+) {
+    const { summaryRes, setSummaryRes, ytplayer } = props;
+
+    const [ loading, setLoading] = useState<boolean>(false);
+
+    const summary: SummaryType = summaryRes.summary
+
+    useEffect(() => {
+        if (summary.agenda.length > 0 && summary.agenda[0].time.length > 0) {
+            return; // 既にタイムテーブルを持っている場合は何もしない。
+        }
+        setLoading(true);
+        const requestBody: SummaryRequestBody = {
+            vid: summaryRes.vid
+        }
+        fetch(
+            '/agenda',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setSummaryRes(res);
+            setLoading(false);
+        }))
+        .catch((err) => {
+            const errmessage: string = `目次のタイムテーブル作成中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+            setLoading(false);
+        })
+    }, []);
+
+    const onClickHandlerTimeLink = (start_str: string) => {
+        if (start_str.slice(-1) === "*") {
+            start_str = start_str.slice(0, -1);
+        }
+        const start: number = hms2s(start_str);
+        ytplayer.seekTo(start, true);
+    }
+
+    const TimeLink = (props: {time: string[]}) => {
+        const { time } = props;
+        return (
+            <span style={{marginLeft: 10}}>
+                {`(`}
+                {time.map((t, tidx) => {
+                    return (
+                        <span key={`time-${tidx}`}>
+                            <Link
+                                href="#"
+                                underline="hover"
+                                onClick={()=>onClickHandlerTimeLink(t)}
+                            >
+                                {t}
+                            </Link>
+                            {tidx < time.length - 1 && ", "}
+                        </span>
+                    )
+                })}
+                {`)`}
+            </span>
+        )
+    }
 
     return (
         <Box >
             <Box sx={detailBoxSx} id="agenda-box">
+                {loading && <Loading size={30} margin={'5px'} />}
                 <List id="agenda-list-01" sx={listSx} disablePadding >
-                    {summary.agenda.map((agenda, idx) =>
-                    {
+                    {summary.agenda.map((agenda, aidx) => {
                         return (
-                            <Box key={`agenda-${idx}`}>
-                                <ListItem sx={listItemTitleSx}>{agenda.title}</ListItem>
+                            <Box key={`agenda-${aidx}`}>
+                                <ListItem sx={listItemTitleSx}>
+                                    {agenda.title}
+                                    {
+                                        agenda.time.length > 0 && agenda.time[0].length > 0 &&
+                                        <TimeLink time={agenda.time[0]} />
+                                    }
+                                </ListItem>
                                 <List disablePadding >
-                                    {agenda.subtitle.map((subtitle, idx) =>
+                                    {agenda.subtitle.map((subtitle, sidx) =>
                                         <ListItem
-                                            key={`agenda-subtitle-${idx}`}
+                                            key={`agenda-subtitle-${sidx}`}
                                             sx={listItemAbstractSx}
                                             disablePadding
-                                        >{subtitle}</ListItem>
+                                        >
+                                            {subtitle}
+                                            {
+                                                agenda.time.length > sidx + 1 && agenda.time[sidx+1].length > 0 &&
+                                                <TimeLink time={agenda.time[sidx+1]} />
+                                            }
+                                        </ListItem>
                                     )}
                                 </List>
-                                { idx < summary.agenda.length -1 && <Divider sx={agendaDividerSx} /> }
+                                { aidx < summary.agenda.length -1 && <Divider sx={agendaDividerSx} /> }
                             </Box>
                         )
                     })}
@@ -202,7 +295,7 @@ function Agenda (props: {summary: SummaryType}) {
 
 
 export function Summary (props: SummaryProps) {
-    const { summary, alignment, setAlignment, ytplayer } = props;
+    const { summary, setSummary, alignment, setAlignment, ytplayer } = props;
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,
@@ -228,10 +321,12 @@ export function Summary (props: SummaryProps) {
                 </Box>
                 <Box sx={boxContentSx} >
                     {alignment === null || alignment === 'summary' &&
-                        <Concise summary={summary} />
+                        <Concise summary={summary.summary} />
                     }
-                    {alignment === 'detail' && <Detail summary={summary} ytplayer={ytplayer} />}
-                    {alignment === 'agenda' && <Agenda summary={summary} />}
+                    {alignment === 'detail' && <Detail summary={summary.summary} ytplayer={ytplayer} />}
+                    {alignment === 'agenda' &&
+                        <Agenda summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer} />
+                    }
                 </Box>
             </Box>
         </Box>
