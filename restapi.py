@@ -98,7 +98,6 @@ async def summary (request_body: SummaryRequestModel):
     vid: str = request_body.vid
     try:
         summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid)
-        summary = await YoutubeAgendaTimeTable.amake(vid=vid, summary=summary, store=True)
         if summary is None:
             raise Exception("summary not found")
     except Exception as e:
@@ -207,6 +206,24 @@ async def sample ():
 
     return SampleVidModel(info=video_infos)
 
+
+@app.post (
+    "/agenda",
+    summary="Make agenda time table for Youtube video content",
+    description="Please specify video ID (such as cEynsEWpXdA, nYx5UaKI8mE) for vid parameter.",
+    tags=["Agenda Time Table"]
+)
+async def agenda (request_body: SummaryRequestModel):
+    vid: str = request_body.vid
+    try:
+        summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid)
+        summary = await YoutubeAgendaTimeTable.amake(vid=vid, summary=summary, store=True)
+        if summary is None:
+            raise Exception("summary not found")
+    except Exception as e:
+        logging.error(f"[{vid}] {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    return SummaruResponseModel(vid=vid, summary=summary)
 
 
 # if __name__ == "__main__":

@@ -25,15 +25,32 @@ import { CircularProgress, Box } from '@mui/material';
 //     }
 // });
 
-const circularProgressSx = {
+interface LoadingProps {
+    size?: number | string;
+    margin?: number | string;
+}
+
+interface circularProgressSxType {
+    margin: number | string;
+}
+
+const circularProgressSx: circularProgressSxType = {
     margin: "30px",
 };
 
-export function Loading() {
+export function Loading(props: LoadingProps) {
+    const { size, margin } = props;
+
+    if (margin !== undefined) {
+        circularProgressSx.margin = margin;
+    } else {
+        circularProgressSx.margin = "30px"; // デフォルト
+    }
+
     return (
         // <SpinCircle />
         <Box sx={{ color: 'grey.500' }} >
-            <CircularProgress sx={circularProgressSx} color="inherit" />
+            <CircularProgress sx={circularProgressSx} color="inherit" size={size} />
         </Box>
     )
 }
