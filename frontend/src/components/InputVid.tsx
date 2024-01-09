@@ -136,6 +136,7 @@ export function InputVid (props: InputVidProps) {
                 sx={iconButtonClearSx}
                 onClick={onClickHandlerClearVid}
                 size='small'
+                disabled={loading}
             >
                 <Clear fontSize='medium' />
             </IconButton>
