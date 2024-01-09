@@ -12,16 +12,22 @@ import './App.css'
 
 
 function App() {
-    const [vid, setVid] = useState<string>('cEynsEWpXdA')
+    const [vid, setVid] = useState<string>('cEynsEWpXdA');
     // @ts-ignore
-    const [ytplayer, setYtPlayer] = useState<YouTubePlayer>()
-    const [summary, setSummary] = useState<SummaryResponseBody|null>(null)
-    const [loading, setLoading] = useState<boolean>(false)
+    const [ytplayer, setYtPlayer] = useState<YouTubePlayer>();
+    const [summary, setSummary] = useState<SummaryResponseBody|null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
 
     return (
         <Box sx={{width: "70%", margin: "0 auto"}} id="app-box-01">
             <Header />
-            <InputVid vid={vid} setVid={setVid} />
+            <InputVid
+                vid={vid}
+                setVid={setVid}
+                setSummary={setSummary}
+                loading={loading}
+                setLoading={setLoading}
+            />
             <VideoArea
                 vid={vid}
                 setYtPlayer={setYtPlayer}

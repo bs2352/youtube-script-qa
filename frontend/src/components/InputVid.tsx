@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Box, TextField, MenuItem, IconButton } from '@mui/material'
-import { Clear } from '@mui/icons-material'
+import { Clear, Refresh } from '@mui/icons-material'
 
-import { SampleVideoInfo } from './types';
+import { SampleVideoInfo, SummaryRequestBody, SummaryResponseBody } from './types';
 
 
 interface InputVidProps {
     vid: string;
     setVid: React.Dispatch<React.SetStateAction<string>>;
+    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
+    loading: boolean;
+    setLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -32,12 +35,19 @@ const textFieldSampleSx = {
 const iconButtonClearSx = {
     verticalAlign: "bottom",
     margin: "20px",
+    marginLeft: "5px",
+    marginRight: "0px",
+}
+
+const iconButtonRefreshSx = {
+    verticalAlign: "bottom",
+    margin: "20px",
     marginLeft: "0px",
     marginRight: "10px",
 }
 
 export function InputVid (props: InputVidProps) {
-    const { vid, setVid } = props;
+    const { vid, setVid, setSummary, loading, setLoading } = props;
     const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
     const vidRef = useRef<HTMLInputElement>(null);
 
@@ -69,6 +79,47 @@ export function InputVid (props: InputVidProps) {
         }
     }
 
+    const onClickHandlerRefreshSummary = () => {
+        setSummary(null);
+        setLoading(true);
+
+        if (vid === "") {
+            setLoading(false);
+            return;
+        }
+
+        const requestBody: SummaryRequestBody = {
+            vid: vid,
+            refresh: true,
+        }
+        fetch(
+            '/summary',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setSummary(res);
+            setLoading(false);
+        }))
+        .catch((err) => {
+            const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+            setLoading(false);
+        })
+    }
+
     return (
         <Box sx={boxSx} id="inputvid-box-01">
             <TextField
@@ -87,6 +138,14 @@ export function InputVid (props: InputVidProps) {
                 size='small'
             >
                 <Clear fontSize='medium' />
+            </IconButton>
+            <IconButton
+                sx={iconButtonRefreshSx}
+                onClick={onClickHandlerRefreshSummary}
+                size='small'
+                disabled={loading}
+            >
+                <Refresh fontSize='medium' />
             </IconButton>
             { sampleVideoList &&
                 <TextField

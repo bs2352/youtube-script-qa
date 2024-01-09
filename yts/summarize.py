@@ -176,12 +176,12 @@ class YoutubeSummarize:
 
 
     @classmethod
-    def summary (cls, vid: Optional[str]) -> Optional[SummaryResultModel]:
+    def summary (cls, vid: Optional[str], refresh: bool = False) -> Optional[SummaryResultModel]:
         if vid is None:
             return None
         summary: Optional[SummaryResultModel] = None
         summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
-        if os.path.exists(summary_file):
+        if refresh is False and os.path.exists(summary_file):
             with open(summary_file, 'r') as f:
                 summary = SummaryResultModel(**(json.load(f)))
         else:
@@ -191,12 +191,12 @@ class YoutubeSummarize:
 
 
     @classmethod
-    async def asummary (cls, vid: Optional[str]) -> Optional[SummaryResultModel]:
+    async def asummary (cls, vid: Optional[str], refresh: bool = False) -> Optional[SummaryResultModel]:
         if vid is None:
             return None
         summary: Optional[SummaryResultModel] = None
         summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
-        if os.path.exists(summary_file):
+        if refresh is False and os.path.exists(summary_file):
             with open(summary_file, 'r') as f:
                 summary = SummaryResultModel(**(json.load(f)))
         else:

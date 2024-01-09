@@ -1,5 +1,6 @@
 export type SummaryRequestBody = {
     vid: string;
+    refresh?: boolean;
 }
 
 export type DetailSummaryType = {

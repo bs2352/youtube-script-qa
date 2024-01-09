@@ -40,6 +40,7 @@ app = FastAPI(lifespan=lifespan)
 
 class SummaryRequestModel (BaseModel):
     vid: str = DEFAULT_VIDEO_ID
+    refresh: bool = False
 
 class SummaruResponseModel (BaseModel):
     vid: str
@@ -96,8 +97,9 @@ class SampleVidModel (BaseModel):
 )
 async def summary (request_body: SummaryRequestModel):
     vid: str = request_body.vid
+    refresh: bool = request_body.refresh
     try:
-        summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid)
+        summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid, refresh=refresh)
         if summary is None:
             raise Exception("summary not found")
     except Exception as e:
@@ -215,8 +217,9 @@ async def sample ():
 )
 async def agenda (request_body: SummaryRequestModel):
     vid: str = request_body.vid
+    refresh: bool = request_body.refresh
     try:
-        summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid)
+        summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid, refresh=refresh)
         summary = await YoutubeAgendaTimeTable.amake(vid=vid, summary=summary, store=True)
         if summary is None:
             raise Exception("summary not found")

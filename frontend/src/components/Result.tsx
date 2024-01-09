@@ -19,7 +19,7 @@ interface ResultProps {
     summary: SummaryResponseBody;
     setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     vid: string;
-    ytplayer: YouTubePlayer
+    ytplayer: YouTubePlayer;
 }
 
 const boxSx = {
