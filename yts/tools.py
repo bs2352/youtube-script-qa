@@ -10,6 +10,7 @@ from .summarize import YoutubeSummarize
 from .qa import YoutubeQA
 from .utils import setup_embedding_from_environment
 
+AGENDA_TIME_TABLE_RETRIEVE_NUM = int(os.getenv("AGENDA_TIME_TABLE_RETRIEVE_NUM", "3"))
 
 class YoutubeAgendaTimeTable:
     @classmethod
@@ -269,7 +270,7 @@ class YoutubeAgendaTimeTable:
         likely_summary = _fix_likely_summary(likely_summary, similarities_list)
 
         idx = 0
-        yqa = YoutubeQA(vid=vid, detail=True, ref_sources=5)
+        yqa = YoutubeQA(vid=vid, detail=True, ref_sources=AGENDA_TIME_TABLE_RETRIEVE_NUM)
         for agenda in summary.agenda:
             title = re.sub(r"^\d+\.?", "", agenda.title).strip()
             if len(agenda.subtitle) == 0:

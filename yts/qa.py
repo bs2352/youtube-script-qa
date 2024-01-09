@@ -47,11 +47,11 @@ WHICH_RUN_MODE_FUNCTIONS = [
             "properties": {
                 "title": {
                     "type": "string",
-                    "description": "動画のタイトル"
+                    "description": "the title of video"
                 },
                 "question": {
                     "type": "string",
-                    "description": "質問",
+                    "description": "question",
                 }
             },
             "required": ["title", "question"]
@@ -65,11 +65,11 @@ WHICH_RUN_MODE_FUNCTIONS = [
             "properties": {
                 "title": {
                     "type": "string",
-                    "description": "動画のタイトル",
+                    "description": "the title of video",
                 },
                 "question": {
                     "type": "string",
-                    "description": "質問",
+                    "description": "question",
                 }
             },
             "required": ["title", "question"]
