@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
 import { Loading } from './Loading'
-import { SummaryType, SummaryResponseBody, SummaryRequestBody } from "./types"
+import { SummaryType, SummaryResponseBody, SummaryRequestBody, TopicType } from "./types"
 import { s2hms, hms2s } from './utils'
 
 
@@ -294,6 +294,32 @@ function Agenda (
 }
 
 
+function Topic (
+    props: {
+        summaryRes: SummaryResponseBody,
+        setSummaryRes: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>,
+        ytplayer: YouTubePlayer,
+    }
+) {
+    const { summaryRes, setSummaryRes, ytplayer } = props;
+    const summaryTopic: TopicType[] = summaryRes.summary.topic;
+    return (
+        <Box >
+            <Box sx={detailBoxSx} id="topic-box">
+                <ul id="topic-ul" style={listSx}>
+                    {summaryTopic.map((topic, tidx) =>{
+                        return (
+                            <li key={`topic-${tidx}`} style={listItemSx} >
+                                {topic.topic}
+                            </li>
+                        )
+                    })}
+                </ul>
+            </Box>
+        </Box>
+    )
+}
+
 export function Summary (props: SummaryProps) {
     const { summary, setSummary, alignment, setAlignment, ytplayer } = props;
 
@@ -317,6 +343,7 @@ export function Summary (props: SummaryProps) {
                             <ToggleButton value="summary">要約</ToggleButton>
                             <ToggleButton value="detail">あらすじ</ToggleButton>
                             <ToggleButton value="agenda">目次</ToggleButton>
+                            <ToggleButton value="topic">トピック</ToggleButton>
                         </ToggleButtonGroup>
                 </Box>
                 <Box sx={boxContentSx} >
@@ -326,6 +353,9 @@ export function Summary (props: SummaryProps) {
                     {alignment === 'detail' && <Detail summary={summary.summary} ytplayer={ytplayer} />}
                     {alignment === 'agenda' &&
                         <Agenda summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer} />
+                    }
+                    {alignment === 'topic' &&
+                        <Topic summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer} />
                     }
                 </Box>
             </Box>

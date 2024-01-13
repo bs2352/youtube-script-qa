@@ -17,6 +17,7 @@ export type SummaryType = {
     detail: DetailSummaryType[];
     agenda: AgendaType[];
     keyword: string[];
+    topic: TopicType[];
 }
 
 export type SummaryResponseBody = {
@@ -28,6 +29,11 @@ export type AgendaType = {
     title: string;
     subtitle: string[];
     time: (string[])[];
+}
+
+export type TopicType = {
+    topic: string;
+    time: string[];
 }
 
 export type SampleVideoInfo = {

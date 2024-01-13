@@ -111,21 +111,18 @@ Keywords:
 """
 KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
-TOPIC_PROMPT_TEMPLATE = """Please bullet list topics from the titles and content listed below.
-Please follow the notes carefully when listing topics.
+TOPIC_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
 
-Notes:
-- Please generate detailed topics covering the content of the video.
-- Please assign each topic a sequential number such as 1, 2, 3.
-- Do not translate topic into English.
-
-Title:
+タイトル：
 {title}
 
-Content:
+内容：
 {content}
 
-Topics:
+質問：
+トピックを箇条書きで列挙してください。
+
+回答：
 """
 TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
 
@@ -559,7 +556,7 @@ class YoutubeSummarize:
         enable: bool = True
     ) -> List[TopicModel]:
         def _trim_topic (topic: str) -> str:
-            return  re.sub(r"^\d+\.?", "", topic.strip()).strip()
+            return  re.sub(r"^[\d\-]+\.?", "", topic.strip()).strip()
 
         @retry(
             stop=stop_after_attempt(MAX_RETRY_COUNT),
