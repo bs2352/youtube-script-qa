@@ -301,12 +301,13 @@ function Topic (
         ytplayer: YouTubePlayer,
     }
 ) {
-    const { summaryRes, setSummaryRes, ytplayer } = props;
+    // const { summaryRes, setSummaryRes, ytplayer } = props;
+    const { summaryRes } = props;
     const summaryTopic: TopicType[] = summaryRes.summary.topic;
     return (
         <Box >
             <Box sx={detailBoxSx} id="topic-box">
-                <ul id="topic-ul" style={listSx}>
+                <ul id="topic-ul" style={{...listSx, marginBottom: 0}} >
                     {summaryTopic.map((topic, tidx) =>{
                         return (
                             <li key={`topic-${tidx}`} style={listItemSx} >

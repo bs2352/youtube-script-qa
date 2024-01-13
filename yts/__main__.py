@@ -74,6 +74,7 @@ def agenda (args):
     sm = YoutubeAgendaTimeTable.make(vid=args.vid, summary=sm, store=True)
     YoutubeAgendaTimeTable.print(sm)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Youtube動画の視聴を支援するスクリプト')
     parser.add_argument('-v', '--vid', default=DEFAULT_VIDEO_ID, help=f'Youtube動画のID（default:{DEFAULT_VIDEO_ID}）')
