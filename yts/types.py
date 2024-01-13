@@ -31,6 +31,10 @@ class AgendaModel (BaseModel):
     subtitle: List[str] = Field([])
     time: List[List[str]] = Field([])
 
+class TopicModel (BaseModel):
+    topic: str = Field("")
+    time: List[str] = Field([])
+
 class SummaryResultModel (BaseModel):
     title: str = Field("")
     author: str = Field("")
@@ -40,6 +44,7 @@ class SummaryResultModel (BaseModel):
     detail: List[DetailSummary] = Field([])
     agenda: List[AgendaModel] = Field([])
     keyword: List[str] = Field([])
+    topic: List[TopicModel] = Field([])
 
 class SourceModel (BaseModel):
     id: str = Field("")

@@ -14,7 +14,8 @@ class MyUvicornWorker(UvicornWorker):
 worker_class = 'gunicorn_config.MyUvicornWorker'
 
 # IPアドレスとポート
-bind = '127.0.0.1:8080'
+# bind = '127.0.0.1:8080'
+bind = '0.0.0.0:8080'
 
 # プロセスIDを保存するファイル名
 pidfile = 'app.pid'
