@@ -49,6 +49,8 @@ MAX_KEYWORD_MARGIN=1.3
 MAX_TOPIC_ITEM=15
 MAX_TOPIC_ITEM_MARGIN=1.3
 MAX_RETRY_COUNT=3
+AGENDA_TIME_TABLE_RETRIEVE_NUM=3
+TOPIC_TIME_TABLE_RETRIEVE_NUM=3
 ```
 
 ## コマンド実行
@@ -94,6 +96,7 @@ options:
   -s, --summary        要約する
   -r, --retrieve     検索する
   -a, --agenda       アジェンダのタイムテーブルを作成する
+  -t, --topic        トピックのタイムテーブルを作成する
 ```
 
 

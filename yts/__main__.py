@@ -7,7 +7,7 @@ import sys
 from yts.qa import YoutubeQA
 from yts.summarize import YoutubeSummarize, MODE_ALL, MODE_DETAIL
 from yts.types import SummaryResultModel, SourceModel
-from yts.tools import YoutubeAgendaTimeTable
+from yts.tools import YoutubeAgendaTimeTable, YoutubeTopicTimeTable
 
 
 DEFAULT_VIDEO_ID = "cEynsEWpXdA" #"Tia4YJkNlQ0" # 西園寺
@@ -75,6 +75,13 @@ def agenda (args):
     YoutubeAgendaTimeTable.print(sm)
 
 
+def topic (args):
+    ys = YoutubeSummarize(args.vid, not args.debug, args.debug)
+    sm: Optional[SummaryResultModel] = ys.run()
+    sm = YoutubeTopicTimeTable.make(vid=args.vid, summary=sm, store=True)
+    YoutubeTopicTimeTable.print(sm)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Youtube動画の視聴を支援するスクリプト')
     parser.add_argument('-v', '--vid', default=DEFAULT_VIDEO_ID, help=f'Youtube動画のID（default:{DEFAULT_VIDEO_ID}）')
@@ -84,6 +91,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--summary', action='store_true', help='要約する')
     parser.add_argument('-r', '--retrieve', action='store_true', help='検索する')
     parser.add_argument('-a', '--agenda', action='store_true', help='アジェンダのタイムテーブルを作成する')
+    parser.add_argument('-t', '--topic', action='store_true', help='トピックのタイムテーブルを作成する')
     args = parser.parse_args()
 
     if args.summary is True:
@@ -96,6 +104,10 @@ if __name__ == "__main__":
 
     if args.agenda is True:
         agenda(args)
+        sys.exit(0)
+
+    if args.topic is True:
+        topic(args)
         sys.exit(0)
 
     qa(args)
