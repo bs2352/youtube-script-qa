@@ -65,7 +65,7 @@ export function VideoInfo (props: VideInfoProps) {
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>URL</TableCell>
                         <TableCell sx={tableCellSx}>
-                            <Link href={summary.url}>{summary.url}</Link>
+                            <Link href={summary.url} target={`_blank`} >{summary.url}</Link>
                         </TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>

@@ -18,14 +18,15 @@ from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
 from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
-from .types import SummaryResultModel, AgendaModel, DetailSummary
+from .types import SummaryResultModel, AgendaModel, DetailSummary, TopicModel
 
 
 MODE_CONCISE  = 0x01
 MODE_DETAIL   = 0x02
 MODE_AGENDA   = 0x04
 MODE_KEYWORD  = 0x08
-MODE_ALL = MODE_CONCISE | MODE_DETAIL | MODE_AGENDA | MODE_KEYWORD
+MODE_TOPIC    = 0x10
+MODE_ALL = MODE_CONCISE | MODE_DETAIL | MODE_AGENDA | MODE_KEYWORD | MODE_TOPIC
 
 MAX_CONCISE_SUMMARY_LENGTH = int(os.getenv("MAX_SUMMARY_LENGTH", "300"))
 MAX_LENGTH_MARGIN_MULTIPLIER = float(os.getenv("MAX_SUMMARY_LENGTH_MARGIN", "2.0"))
@@ -110,6 +111,21 @@ Keywords:
 """
 KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
+TOPIC_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
+
+タイトル：
+{title}
+
+内容：
+{content}
+
+質問：
+トピックを箇条書きで列挙してください。
+
+回答：
+"""
+TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
+
 
 class YoutubeSummarize:
     def __init__(
@@ -140,6 +156,7 @@ class YoutubeSummarize:
         self.tmp_concise_summary: str = ""
         self.tmp_agenda: List[AgendaModel] = []
         self.tmp_keyword: List[str] = []
+        self.tmp_topic: List[TopicModel] = []
 
 
     def _debug (self, message: str, end: str = "\n", flush: bool = False) -> None:
@@ -168,6 +185,11 @@ class YoutubeSummarize:
                 print(f'{agenda.title}')
                 if len(agenda.subtitle) > 0:
                     print("  ", "\n  ".join(agenda.subtitle), sep="")
+            print("")
+        if mode & MODE_TOPIC > 0:
+            print("[Topic]")
+            for topic in summary.topic:
+                print(f'- {topic.topic}')
             print("")
         if mode & MODE_DETAIL > 0:
             detail_summary: List[str] = [ s.text for s in summary.detail]
@@ -218,7 +240,7 @@ class YoutubeSummarize:
         return await self._arun(mode)
 
 
-    async def _arun_with_loading (self, mode:int = MODE_CONCISE|MODE_DETAIL) -> Optional[SummaryResultModel]:
+    async def _arun_with_loading (self, mode:int = MODE_ALL) -> Optional[SummaryResultModel]:
         summary: Optional[SummaryResultModel] = None
         with ThreadPoolExecutor(max_workers=1) as executor:
             future_loading = executor.submit(self._loading)
@@ -241,8 +263,8 @@ class YoutubeSummarize:
         # 詳細な要約
         detail_summary: List[DetailSummary] = await self._summarize_in_detail()
 
-        # 簡潔な要約、トピック抽出、キーワード抽出（非同期で並行処理）
-        (concise_summary, agenda, keyword) = await self._arun_with_detail_summary(mode, detail_summary)
+        # 簡潔な要約、トピック抽出、キーワード抽出、トピック抽出（非同期で並行処理）
+        (concise_summary, agenda, keyword, topic) = await self._arun_with_detail_summary(mode, detail_summary)
 
         summary: SummaryResultModel = SummaryResultModel(
             title=self.title,
@@ -252,7 +274,8 @@ class YoutubeSummarize:
             concise=concise_summary,
             detail=detail_summary,
             agenda=agenda,
-            keyword=keyword
+            keyword=keyword,
+            topic=topic,
         )
 
         # 全モードの場合のみ保存する
@@ -307,23 +330,25 @@ class YoutubeSummarize:
         self,
         mode: int,
         detail_summary: List[DetailSummary]
-    ) -> Tuple[str, List[AgendaModel], List[str]]:
-        if mode & (MODE_CONCISE | MODE_AGENDA | MODE_KEYWORD) == 0:
-            return ("", [], [])
+    ) -> Tuple[str, List[AgendaModel], List[str], List[TopicModel]]:
+        if mode & (MODE_CONCISE | MODE_AGENDA | MODE_KEYWORD | MODE_TOPIC) == 0:
+            return ("", [], [], [])
 
         summaries: List[str] = [ s.text for s in detail_summary]
         tasks = []
         tasks.append(self._summarize_concisely(summaries, mode & MODE_CONCISE > 0))
         tasks.append(self._extract_keyword(summaries, mode & MODE_KEYWORD > 0))
         tasks.append(self._extract_agenda(summaries, mode & MODE_AGENDA > 0))
+        tasks.append(self._extract_topic(summaries, mode & MODE_TOPIC > 0))
 
         results: List[Any] = await asyncio.gather(*tasks)
 
         concise_summary: str      = results[0]
         keyword: List[str]        = results[1]
         agenda: List[AgendaModel] = results[2]
+        topic: List[str]          = results[3]
 
-        return (concise_summary, agenda, keyword)
+        return (concise_summary, agenda, keyword, topic)
 
 
     async def _summarize_concisely (
@@ -523,6 +548,54 @@ class YoutubeSummarize:
             raise e
 
         return agenda
+
+
+    async def _extract_topic (
+        self,
+        detail_summary: List[str],
+        enable: bool = True
+    ) -> List[TopicModel]:
+        def _trim_topic (topic: str) -> str:
+            return  re.sub(r"^[\d\-]+\.?", "", topic.strip()).strip()
+
+        @retry(
+            stop=stop_after_attempt(MAX_RETRY_COUNT),
+            wait=wait_fixed(RETRY_INTERVAL),
+        )
+        async def _topic () -> List[TopicModel]:
+            result: str  = await chain.arun(**args)
+            topic: List[TopicModel] = [
+                TopicModel(topic=_trim_topic(topic), time=[]) for topic in result.split("\n")
+            ]
+            return topic
+
+
+        if enable is False:
+            return []
+
+        # 準備
+        prompt = PromptTemplate(
+            template=TOPIC_PROMPT_TEMPLATE,
+            input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=self.llm,
+            prompt=prompt,
+            verbose=self.debug,
+        )
+        args: Dict[str, str|int] = {
+            "title":  self.title,
+            "content": "\n".join(detail_summary),
+        }
+        self.tmp_topic = []
+        topic: List[TopicModel] = []
+
+        try:
+            topic = await _topic()
+        except Exception as e:
+            raise e
+
+        return topic
 
 
     def _divide_chunks_into_N_groups_evenly (

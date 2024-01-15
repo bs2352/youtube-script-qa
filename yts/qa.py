@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
 import asyncio
+import shutil
 
 from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
 from llama_index.embeddings import LangchainEmbedding
@@ -150,7 +151,11 @@ class YoutubeQA:
         if self.index is not None:
             return self.index
         if os.path.isdir(self.index_dir):
-            return self._load_index()
+            try:
+                return self._load_index()
+            except:
+                shutil.rmtree(self.index_dir)
+                return self._create_index()
         return self._create_index()
 
 

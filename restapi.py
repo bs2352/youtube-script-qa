@@ -13,7 +13,7 @@ from yts.summarize import YoutubeSummarize
 from yts.qa import YoutubeQA
 from yts.types import SummaryResultModel, YoutubeTranscriptType, TranscriptChunkModel, SourceModel
 from yts.utils import divide_transcriptions_into_chunks
-from yts.tools import YoutubeAgendaTimeTable
+from yts.tools import YoutubeAgendaTimeTable, YoutubeTopicTimeTable
 
 
 STATIC_FILES_DIR = "frontend/dist"
@@ -221,6 +221,26 @@ async def agenda (request_body: SummaryRequestModel):
     try:
         summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid, refresh=refresh)
         summary = await YoutubeAgendaTimeTable.amake(vid=vid, summary=summary, store=True)
+        if summary is None:
+            raise Exception("summary not found")
+    except Exception as e:
+        logging.error(f"[{vid}] {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    return SummaruResponseModel(vid=vid, summary=summary)
+
+
+@app.post (
+    "/topic",
+    summary="Make topic time table for Youtube video content",
+    description="Please specify video ID (such as cEynsEWpXdA, nYx5UaKI8mE) for vid parameter.",
+    tags=["Topic Time Table"]
+)
+async def topic (request_body: SummaryRequestModel):
+    vid: str = request_body.vid
+    refresh: bool = request_body.refresh
+    try:
+        summary: Optional[SummaryResultModel] = await YoutubeSummarize.asummary(vid=vid, refresh=refresh)
+        summary = await YoutubeTopicTimeTable.amake(vid=vid, summary=summary, store=True)
         if summary is None:
             raise Exception("summary not found")
     except Exception as e:
