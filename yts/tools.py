@@ -11,7 +11,7 @@ from .qa import YoutubeQA
 from .utils import setup_embedding_from_environment
 
 AGENDA_TIME_TABLE_RETRIEVE_NUM = int(os.getenv("AGENDA_TIME_TABLE_RETRIEVE_NUM", "3"))
-TOPIC_TIME_TABLE_RETRIEVE_NUM = int(os.getenv("TOPIC_TIME_TABLE_RETRIEVE_NUM", "3"))
+TOPIC_TIME_TABLE_RETRIEVE_NUM = int(os.getenv("TOPIC_TIME_TABLE_RETRIEVE_NUM", "5"))
 
 class YoutubeAgendaTimeTable:
     @classmethod
@@ -35,8 +35,7 @@ class YoutubeAgendaTimeTable:
             return int(h) * 3600 + int(m) * 60 + int(s)
 
         async def _aget_likely_summary (summary: SummaryResultModel) -> Tuple[List[int], List[numpy.ndarray]]:
-
-            def _get_agenda_items (summary: SummaryResultModel) -> List[str]:
+            def __get_agenda_items (summary: SummaryResultModel) -> List[str]:
                 items: List[str] = []
                 for agenda in summary.agenda:
                     title: str = re.sub(r"^\d+\.?", "", agenda.title).strip()
@@ -50,7 +49,7 @@ class YoutubeAgendaTimeTable:
             llm_embedding = setup_embedding_from_environment()
             tasks = [
                 llm_embedding.aembed_documents([ d.text for d in summary.detail]),
-                llm_embedding.aembed_documents(_get_agenda_items(summary))
+                llm_embedding.aembed_documents(__get_agenda_items(summary))
             ]
             results: List[Any] = await asyncio.gather(*tasks)
             summary_embs: numpy.ndarray = numpy.array(results[0])
@@ -83,7 +82,6 @@ class YoutubeAgendaTimeTable:
         def _fix_likely_summary(
             likely_summary: List[int], similarities_list: List[numpy.ndarray]
         ) -> List[int]:
-
             def __which_is_most_similar (
                 candidates_idx: List[int], similarities: numpy.ndarray
             ) -> int:
@@ -110,12 +108,11 @@ class YoutubeAgendaTimeTable:
             def __compare_with_neiborhood (
                 likely_summary: List[int], similarities_list: List[numpy.ndarray],
             ) -> List[int]:
-
-                def __get_next_summary (base_index: int, likely_summary: List[int]) -> int:
+                def ___get_next_summary (base_index: int, likely_summary: List[int]) -> int:
                     for idx in range(base_index+1, len(likely_summary)):
                         if likely_summary[idx] != likely_summary[base_index]:
                             return likely_summary[idx]
-                    return base_index
+                    return likely_summary[base_index]
 
                 fixed: List[int] = []
                 for idx, cur_summary in enumerate(likely_summary):
@@ -124,7 +121,7 @@ class YoutubeAgendaTimeTable:
                         continue
                     similarities: numpy.ndarray = similarities_list[idx]
                     prev_summary = fixed[idx-1] if idx > 0 else 0
-                    next_summary = __get_next_summary(idx, likely_summary)
+                    next_summary = ___get_next_summary(idx, likely_summary)
                     if prev_summary > cur_summary:
                         if prev_summary >= next_summary:
                             fixed.append(prev_summary)
@@ -204,7 +201,6 @@ class YoutubeAgendaTimeTable:
             summary_priority: List[int],
             summary: SummaryResultModel,
         ) -> List[str]:
-
             def __select (
                 tmp_starts: List[str],
                 s_index: int,
@@ -351,7 +347,6 @@ class YoutubeTopicTimeTable:
         summary: Optional[SummaryResultModel] = None,
         store: bool = False,
     ) -> SummaryResultModel:
-
         def _cosine_similarity(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
             return numpy.dot(a, b) / (numpy.linalg.norm(a) * numpy.linalg.norm(b))
 
@@ -365,8 +360,7 @@ class YoutubeTopicTimeTable:
             return int(h) * 3600 + int(m) * 60 + int(s)
 
         async def _aget_likely_summary (summary: SummaryResultModel) -> Tuple[List[int], List[numpy.ndarray]]:
-
-            def _get_agenda_items (summary: SummaryResultModel) -> List[str]:
+            def __get_topic_items (summary: SummaryResultModel) -> List[str]:
                 items: List[str] = []
                 for topic in summary.topic:
                     content: str = topic.topic.strip()
@@ -376,7 +370,7 @@ class YoutubeTopicTimeTable:
             llm_embedding = setup_embedding_from_environment()
             tasks = [
                 llm_embedding.aembed_documents([ d.text for d in summary.detail]),
-                llm_embedding.aembed_documents(_get_agenda_items(summary))
+                llm_embedding.aembed_documents(__get_topic_items(summary))
             ]
             results: List[Any] = await asyncio.gather(*tasks)
             summary_embs: numpy.ndarray = numpy.array(results[0])
@@ -397,7 +391,6 @@ class YoutubeTopicTimeTable:
         def _fix_likely_summary(
             likely_summary: List[int], similarities_list: List[numpy.ndarray]
         ) -> List[int]:
-
             def __which_is_most_similar (
                 candidates_idx: List[int], similarities: numpy.ndarray
             ) -> int:
@@ -424,12 +417,11 @@ class YoutubeTopicTimeTable:
             def __compare_with_neiborhood (
                 likely_summary: List[int], similarities_list: List[numpy.ndarray],
             ) -> List[int]:
-
-                def __get_next_summary (base_index: int, likely_summary: List[int]) -> int:
+                def ___get_next_summary (base_index: int, likely_summary: List[int]) -> int:
                     for idx in range(base_index+1, len(likely_summary)):
                         if likely_summary[idx] != likely_summary[base_index]:
                             return likely_summary[idx]
-                    return base_index
+                    return likely_summary[base_index]
 
                 fixed: List[int] = []
                 for idx, cur_summary in enumerate(likely_summary):
@@ -438,7 +430,7 @@ class YoutubeTopicTimeTable:
                         continue
                     similarities: numpy.ndarray = similarities_list[idx]
                     prev_summary = fixed[idx-1] if idx > 0 else 0
-                    next_summary = __get_next_summary(idx, likely_summary)
+                    next_summary = ___get_next_summary(idx, likely_summary)
                     if prev_summary > cur_summary:
                         if prev_summary >= next_summary:
                             fixed.append(prev_summary)
@@ -518,7 +510,6 @@ class YoutubeTopicTimeTable:
             summary_priority: List[int],
             summary: SummaryResultModel,
         ) -> List[str]:
-
             def __select (
                 tmp_starts: List[str],
                 s_index: int,

@@ -3,6 +3,7 @@ from collections import deque
 import sys
 import os
 import asyncio
+import re
 
 from langchain.llms import OpenAI, AzureOpenAI
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
@@ -11,6 +12,10 @@ import tiktoken
 
 from .types import LLMType, EmbeddingType, TranscriptChunkModel, YoutubeTranscriptType
 
+
+RE_TRANACRIPT_FILTER = re.compile('|'.join([
+    '\\[音楽\\]', '\\[拍手\\]'
+]))
 
 
 def setup_llm_from_environment () -> LLMType:
@@ -89,6 +94,11 @@ def divide_transcriptions_into_chunks (
     overlap_length: int = 3,
     id_prefix: str = "youtube"
 ) -> List[TranscriptChunkModel]:
+    def _filter_transcript (transcriptions: List[YoutubeTranscriptType]) -> List[YoutubeTranscriptType]:
+        def __replace (transcript: YoutubeTranscriptType) -> YoutubeTranscriptType:
+            transcript['text'] = RE_TRANACRIPT_FILTER.sub('', transcript['text'])
+            return transcript
+        return [__replace(t)  for t in transcriptions]
 
     def _overlap_chunk (overlaps: deque[YoutubeTranscriptType]) -> TranscriptChunkModel|None:
         if len(overlaps) == 0:
@@ -101,6 +111,7 @@ def divide_transcriptions_into_chunks (
                 new_chunk.start = s['start']
         return new_chunk
 
+    transcriptions = _filter_transcript(transcriptions)
     chunks: List[TranscriptChunkModel] = []
     chunk: TranscriptChunkModel | None = None
     overlaps: deque[YoutubeTranscriptType] = deque([])
