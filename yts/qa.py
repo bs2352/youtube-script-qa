@@ -15,6 +15,7 @@ from llama_index.schema import NodeWithScore
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.prompts import ChatPromptTemplate
 from llama_index.retrievers import BaseRetriever
+from llama_index.llms.langchain import LangChainLLM
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 from langchain.chains import LLMChain
@@ -131,11 +132,10 @@ class YoutubeQA:
     def _setup_llm (self) -> ServiceContext:
         llm = setup_llm_from_environment()
         embedding = setup_embedding_from_environment()
-        llm_predictor: LLMPredictor = LLMPredictor(llm=llm)
         embedding_llm: LangchainEmbedding = LangchainEmbedding(embedding)
         service_context: ServiceContext = ServiceContext.from_defaults(
-            llm_predictor = llm_predictor,
             embed_model = embedding_llm,
+            llm=LangChainLLM(llm=llm),
         )
         return service_context
 
@@ -200,8 +200,8 @@ class YoutubeQA:
         index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(
             documents,
             service_context=self.service_context,
-            # show_progress=self.debug, # なぜか結果が変わるからやめる
-            use_async=True,
+            show_progress=self.debug,
+            # use_async=True, # バグ？なぜか最後までいかない
         )
 
         # ディスクに保存しておく
