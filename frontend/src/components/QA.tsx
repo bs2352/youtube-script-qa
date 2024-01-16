@@ -26,13 +26,13 @@ const boxSx = {
 }
 
 const boxQuestionSx = {
-    width: "85%",
+    width: "90%",
     margin: "0 auto",
     marginBottom: "1em",
 }
 
 const boxAnswerSx = {
-    width: "80%",
+    width: "85%",
     margin: "0 auto",
     marginBottom: "1em",
     // height: "300px",

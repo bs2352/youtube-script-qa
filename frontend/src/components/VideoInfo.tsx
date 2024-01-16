@@ -22,7 +22,7 @@ const boxSx = {
 }
 
 const tableSx = {
-    width: "80%",
+    width: "85%",
     margin: "0 auto"
 }
 

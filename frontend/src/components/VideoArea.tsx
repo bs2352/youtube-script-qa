@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Box } from '@mui/material'
 import YouTube, { YouTubeEvent, YouTubePlayer, YouTubeProps } from 'react-youtube'
 
@@ -19,16 +20,13 @@ const boxSx = {
 export function VideoArea (props: VideoAreaProps) {
     const { vid, setYtPlayer, setSummary, setLoading } = props;
 
-    const onReadyHanler: YouTubeProps['onReady'] = (event: YouTubeEvent) => {
-        setYtPlayer(event.target);
+    useEffect(() => {
         setSummary(null);
         setLoading(true);
-
         if (vid === "") {
             setLoading(false);
             return;
         }
-
         const requestBody: SummaryRequestBody = {
             vid: vid
         }
@@ -58,6 +56,10 @@ export function VideoArea (props: VideoAreaProps) {
             alert(errmessage);
             setLoading(false);
         })
+    }, [vid]);
+
+    const onReadyHanler: YouTubeProps['onReady'] = (event: YouTubeEvent) => {
+        setYtPlayer(event.target);
     }
 
     return (
@@ -65,6 +67,15 @@ export function VideoArea (props: VideoAreaProps) {
             <YouTube
                 videoId={vid}
                 onReady={onReadyHanler}
+                opts={{
+                    width: "100%",
+                    height: "100%",
+                }}
+                style={{
+                    width: "80%",
+                    aspectRatio: "16/9",
+                    margin: "0 auto"
+                }}
             />
         </Box>
     )

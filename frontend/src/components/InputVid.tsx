@@ -15,7 +15,7 @@ interface InputVidProps {
 
 const boxSx = {
     width: "100%",
-    margin: "0 auto",
+    margin: "10px auto",
 }
 
 const textFieldVidSx = {
@@ -82,12 +82,10 @@ export function InputVid (props: InputVidProps) {
     const onClickHandlerRefreshSummary = () => {
         setSummary(null);
         setLoading(true);
-
         if (vid === "") {
             setLoading(false);
             return;
         }
-
         const requestBody: SummaryRequestBody = {
             vid: vid,
             refresh: true,
