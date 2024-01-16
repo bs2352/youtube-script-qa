@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, TextField, MenuItem, IconButton } from '@mui/material'
+import { Box, TextField, MenuItem, IconButton, Avatar, Stack } from '@mui/material'
+import { deepOrange } from '@mui/material/colors';
 import { Clear, Refresh } from '@mui/icons-material'
 
 import { SampleVideoInfo, SummaryRequestBody, SummaryResponseBody } from './types';
@@ -14,8 +15,16 @@ interface InputVidProps {
 }
 
 const boxSx = {
-    width: "100%",
-    margin: "10px auto",
+    width: "80%",
+    margin: "0 auto 10px auto",
+}
+
+const avatarSx = {
+    bgcolor: deepOrange[500],
+    margin: "10px 20px 10px 0px",
+    width: "70px",
+    height: "50px",
+    borderRadius: "10px",
 }
 
 const textFieldVidSx = {
@@ -120,51 +129,56 @@ export function InputVid (props: InputVidProps) {
 
     return (
         <Box sx={boxSx} id="inputvid-box-01">
-            <TextField
-                label="Video ID"
-                defaultValue={vid}
-                onKeyDown={onKeyDownHandlerVid}
-                size="small"
-                sx={textFieldVidSx}
-                // InputLabelProps={{shrink: true}}
-                inputRef={vidRef}
-                placeholder="xxxxx"
-            />
-            <IconButton
-                sx={iconButtonClearSx}
-                onClick={onClickHandlerClearVid}
-                size='small'
-                disabled={loading}
-            >
-                <Clear fontSize='medium' />
-            </IconButton>
-            <IconButton
-                sx={iconButtonRefreshSx}
-                onClick={onClickHandlerRefreshSummary}
-                size='small'
-                disabled={loading}
-            >
-                <Refresh fontSize='medium' />
-            </IconButton>
-            { sampleVideoList &&
-                <TextField
-                    select
-                    label="Sample Video"
-                    defaultValue={vid}
-                    onChange={onChangeHandlerSelect}
-                    size="small"
-                    sx={textFieldSampleSx}
-                    // InputLabelProps={{shrink: true}}
-                >
-                    {sampleVideoList.map((video, index) => {
-                        return (
-                            <MenuItem key={`sample-vid-${index}`} value={video.vid} >
-                                ({video.title})
-                            </MenuItem>
-                        )
-                    })}
-                </TextField>
-            }
+            <Stack direction="row" >
+                <Box>
+                    <Avatar sx={avatarSx} variant="square" >YTS</Avatar>
+                </Box>
+                <Box>
+                    <TextField
+                        label="Video ID"
+                        defaultValue={vid}
+                        onKeyDown={onKeyDownHandlerVid}
+                        size="small"
+                        sx={textFieldVidSx}
+                        inputRef={vidRef}
+                        placeholder="xxxxx"
+                    />
+                    <IconButton
+                        sx={iconButtonClearSx}
+                        onClick={onClickHandlerClearVid}
+                        size='small'
+                        disabled={loading}
+                    >
+                        <Clear fontSize='medium' />
+                    </IconButton>
+                    <IconButton
+                        sx={iconButtonRefreshSx}
+                        onClick={onClickHandlerRefreshSummary}
+                        size='small'
+                        disabled={loading}
+                    >
+                        <Refresh fontSize='medium' />
+                    </IconButton>
+                    { sampleVideoList &&
+                        <TextField
+                            select
+                            label="Sample Video"
+                            defaultValue={vid}
+                            onChange={onChangeHandlerSelect}
+                            size="small"
+                            sx={textFieldSampleSx}
+                        >
+                            {sampleVideoList.map((video, index) => {
+                                return (
+                                    <MenuItem key={`sample-vid-${index}`} value={video.vid} >
+                                        ({video.title})
+                                    </MenuItem>
+                                )
+                            })}
+                        </TextField>
+                    }
+                </Box>
+            </Stack>
         </Box>
     )
 }

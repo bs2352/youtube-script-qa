@@ -20,7 +20,7 @@ function App() {
 
     return (
         <Box sx={{width: "70%", margin: "0 auto"}} id="app-box-01">
-            <Header />
+            {/* <Header /> */}
             <InputVid
                 vid={vid}
                 setVid={setVid}
