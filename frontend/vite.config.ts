@@ -13,6 +13,7 @@ export default defineConfig({
       "/sample": 'http://localhost:8080',
       "/agenda": 'http://localhost:8080',
       "/topic": 'http://localhost:8080',
+      "/info": 'http://localhost:8080',
     }
   }
 })

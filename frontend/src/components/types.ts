@@ -41,7 +41,10 @@ export type SampleVideoInfo = {
     title: string;
     author: string;
     lengthSeconds: number;
+    url: string;
 }
+
+export type VideoInfoType = SampleVideoInfo;
 
 export type QaRequestBody = {
     vid: string;

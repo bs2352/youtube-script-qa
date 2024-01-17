@@ -13,11 +13,12 @@ import { s2hms, hms2s } from './utils'
 
 
 interface SummaryProps {
-    summary: SummaryResponseBody;
+    summary: SummaryResponseBody | null;
     setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     alignment: string;
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
     ytplayer: YouTubePlayer;
+    summaryLoading: boolean;
 }
 
 interface AgendaProps {
@@ -396,13 +397,21 @@ function Topic (props: TopicProps) {
 
 
 export function Summary (props: SummaryProps) {
-    const { summary, setSummary, alignment, setAlignment, ytplayer } = props;
+    const { summary, setSummary, alignment, setAlignment, ytplayer, summaryLoading } = props;
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,
         newAlignment: string|null
     ) => {
         setAlignment(newAlignment === null? 'summary' : newAlignment);
+    }
+
+    if (summaryLoading) {
+        return <Loading />
+    }
+
+    if (!summary) {
+        return <></>
     }
 
     return (

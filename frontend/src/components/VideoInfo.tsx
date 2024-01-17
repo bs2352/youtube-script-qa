@@ -1,6 +1,7 @@
 import { Box, Table, TableBody, TableRow, TableCell, Link } from '@mui/material';
 
-import { SummaryType } from "./types"
+import { Loading } from './Loading';
+import { VideoInfoType } from "./types"
 
 
 function s2hms (seconds: number) {
@@ -12,8 +13,8 @@ function s2hms (seconds: number) {
 
 
 interface VideInfoProps {
-    summary: SummaryType;
-    vid: string;
+    videoInfo: VideoInfoType | null;
+    videoInfoLoading: boolean
 }
 
 const boxSx = {
@@ -45,32 +46,38 @@ const tableCellTitleSx = {
 
 
 export function VideoInfo (props: VideInfoProps) {
-    const { summary, vid } = props;
+    const { videoInfo, videoInfoLoading } = props;
+    if (videoInfoLoading) {
+        return <Loading />
+    }
+    if (!videoInfo) {
+        return <></>
+    }
     return (
         <Box sx={boxSx} id="videoinfo-box-01">
             <Table sx={tableSx} id="videoinfo-table-01">
                 <TableBody>
                     <TableRow sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>タイトル</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.title}</TableCell>
+                        <TableCell sx={tableCellSx}>{videoInfo.title}</TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>チャンネル名</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.author}</TableCell>
+                        <TableCell sx={tableCellSx}>{videoInfo.author}</TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>時間</TableCell>
-                        <TableCell sx={tableCellSx}>{s2hms(summary.lengthSeconds)}</TableCell>
+                        <TableCell sx={tableCellSx}>{s2hms(videoInfo.lengthSeconds)}</TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>URL</TableCell>
                         <TableCell sx={tableCellSx}>
-                            <Link href={summary.url} target={`_blank`} >{summary.url}</Link>
+                            <Link href={videoInfo.url} target={`_blank`} >{videoInfo.url}</Link>
                         </TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>Video ID</TableCell>
-                        <TableCell sx={tableCellSx}>{vid}</TableCell>
+                        <TableCell sx={tableCellSx}>{videoInfo.vid}</TableCell>
                     </TableRow>
                </TableBody>
             </Table>

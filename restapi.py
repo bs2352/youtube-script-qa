@@ -84,9 +84,13 @@ class VideInfo (BaseModel):
     title: str
     author: str
     lengthSeconds: int
+    url: str
 
 class SampleVidModel (BaseModel):
     info: List[VideInfo]
+
+class VideoInfoRequest (BaseModel):
+    vid: str = DEFAULT_VIDEO_ID
 
 
 @app.post (
@@ -201,7 +205,8 @@ async def sample ():
                 vid=vid,
                 title=vinfo["title"],
                 author=vinfo["author"],
-                lengthSeconds=int(vinfo["lengthSeconds"])
+                lengthSeconds=int(vinfo["lengthSeconds"]),
+                url=url,
             ))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -247,6 +252,28 @@ async def topic (request_body: SummaryRequestModel):
         logging.error(f"[{vid}] {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     return SummaruResponseModel(vid=vid, summary=summary)
+
+
+@app.post (
+    "/info",
+    summary="get video information",
+    description="get video information",
+    tags=["Information"]
+)
+async def info (request_body: VideoInfoRequest):
+    vid: str = request_body.vid
+    try:
+        url: str = f'https://www.youtube.com/watch?v={vid}'
+        vinfo = YouTube(url).vid_info["videoDetails"]
+        return VideInfo(
+            vid=vid,
+            title=vinfo["title"],
+            author=vinfo["author"],
+            lengthSeconds=int(vinfo["lengthSeconds"]),
+            url=url,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # if __name__ == "__main__":

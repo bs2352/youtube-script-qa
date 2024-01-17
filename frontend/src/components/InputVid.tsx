@@ -9,8 +9,8 @@ interface InputVidProps {
     vid: string;
     setVid: React.Dispatch<React.SetStateAction<string>>;
     setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
-    loading: boolean;
-    setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    summaryLoading: boolean;
+    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -61,7 +61,7 @@ const iconButtonRefreshSx = {
 }
 
 export function InputVid (props: InputVidProps) {
-    const { vid, setVid, setSummary, loading, setLoading } = props;
+    const { vid, setVid, setSummary, summaryLoading, setSummaryLoading } = props;
     const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
     const vidRef = useRef<HTMLInputElement>(null);
 
@@ -94,12 +94,11 @@ export function InputVid (props: InputVidProps) {
     }
 
     const onClickHandlerRefreshSummary = () => {
-        setSummary(null);
-        setLoading(true);
         if (vid === "") {
-            setLoading(false);
             return;
         }
+        setSummary(null);
+        setSummaryLoading(true);
         const requestBody: SummaryRequestBody = {
             vid: vid,
             refresh: true,
@@ -122,13 +121,13 @@ export function InputVid (props: InputVidProps) {
         }))
         .then((res => {
             setSummary(res);
-            setLoading(false);
+            setSummaryLoading(false);
         }))
         .catch((err) => {
             const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
             console.error(errmessage);
             alert(errmessage);
-            setLoading(false);
+            setSummaryLoading(false);
         })
     }
 
@@ -159,7 +158,7 @@ export function InputVid (props: InputVidProps) {
                         sx={iconButtonClearSx}
                         onClick={onClickHandlerClearVid}
                         size='small'
-                        disabled={loading}
+                        disabled={summaryLoading}
                     >
                         <Clear fontSize='medium' />
                     </IconButton>
@@ -169,7 +168,7 @@ export function InputVid (props: InputVidProps) {
                         sx={iconButtonRefreshSx}
                         onClick={onClickHandlerRefreshSummary}
                         size='small'
-                        disabled={loading}
+                        disabled={summaryLoading}
                     >
                         <Refresh fontSize='medium' />
                     </IconButton>
