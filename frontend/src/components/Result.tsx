@@ -30,7 +30,7 @@ const boxSx = {
 const boxTabsSx = {
     width: '100%',
     bgcolor: 'background.paper',
-    marginBottom: 0.5,
+    marginBottom: 0,
     marginTop: 1
 }
 

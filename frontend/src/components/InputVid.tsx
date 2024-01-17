@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, TextField, MenuItem, IconButton, Stack } from '@mui/material'
+import { Box, TextField, MenuItem, IconButton, Stack, Tooltip } from '@mui/material'
 import { Clear, Refresh } from '@mui/icons-material'
 
 import { SampleVideoInfo, SummaryRequestBody, SummaryResponseBody } from './types';
@@ -154,22 +154,26 @@ export function InputVid (props: InputVidProps) {
                     inputRef={vidRef}
                     placeholder="xxxxx"
                 />
-                <IconButton
-                    sx={iconButtonClearSx}
-                    onClick={onClickHandlerClearVid}
-                    size='small'
-                    disabled={loading}
-                >
-                    <Clear fontSize='medium' />
-                </IconButton>
-                <IconButton
-                    sx={iconButtonRefreshSx}
-                    onClick={onClickHandlerRefreshSummary}
-                    size='small'
-                    disabled={loading}
-                >
-                    <Refresh fontSize='medium' />
-                </IconButton>
+                <Tooltip title="入力のクリア" placement="top-end" arrow={true} >
+                    <IconButton
+                        sx={iconButtonClearSx}
+                        onClick={onClickHandlerClearVid}
+                        size='small'
+                        disabled={loading}
+                    >
+                        <Clear fontSize='medium' />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="要約を再生成します" placement="top-end" arrow={true} >
+                    <IconButton
+                        sx={iconButtonRefreshSx}
+                        onClick={onClickHandlerRefreshSummary}
+                        size='small'
+                        disabled={loading}
+                    >
+                        <Refresh fontSize='medium' />
+                    </IconButton>
+                </Tooltip>
             </div>
         )
     }

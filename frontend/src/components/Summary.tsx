@@ -45,7 +45,7 @@ const boxSummarySx = {
 }
 
 const boxToggleButtonSx = {
-    marginBottom: "20px",
+    marginBottom: "10px",
     // marginLeft: '4%',
     textAlign: 'left',
 }
@@ -92,6 +92,7 @@ const detailBoxSx = {
 
 const listSx = {
     marginTop: "0",
+    // paddingTop: "5px"
 }
 
 const listItemSx = {
@@ -375,7 +376,7 @@ function Topic (props: TopicProps) {
         <Box >
             <Box sx={detailBoxSx} id="topic-box">
                 {loading && <Loading size={30} margin={'5px'} />}
-                <ul id="topic-ul" style={{...listSx, marginBottom: 0}} >
+                <ul id="topic-ul" style={{...listSx, marginBottom: 0, paddingTop: "5px"}} >
                     {summaryTopic.map((topic, tidx) =>{
                         return (
                             <li key={`topic-${tidx}`} style={listItemSx} >
