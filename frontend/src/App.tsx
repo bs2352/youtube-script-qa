@@ -3,7 +3,7 @@ import { YouTubePlayer } from 'react-youtube'
 import { Box } from '@mui/material'
 
 import { SummaryResponseBody } from './components/types'
-import { Header } from './components/Header'
+// import { Header } from './components/Header'
 import { InputVid } from './components/InputVid'
 import { VideoArea } from './components/VideoArea'
 import { Result } from './components/Result'

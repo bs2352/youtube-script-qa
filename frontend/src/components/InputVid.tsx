@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, TextField, MenuItem, IconButton, Avatar, Stack } from '@mui/material'
-import { deepOrange } from '@mui/material/colors';
+import { Box, TextField, MenuItem, IconButton, Stack } from '@mui/material'
 import { Clear, Refresh } from '@mui/icons-material'
 
 import { SampleVideoInfo, SummaryRequestBody, SummaryResponseBody } from './types';
@@ -19,12 +18,18 @@ const boxSx = {
     margin: "0 auto 10px auto",
 }
 
-const avatarSx = {
-    bgcolor: deepOrange[500],
-    margin: "10px 20px 10px 0px",
+const titleDivStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     width: "70px",
     height: "50px",
-    borderRadius: "10px",
+    margin: "10px 20px 10px 0px",
+    borderRadius: "5px",
+    backgroundColor: "#FF5252", // material ui colors Red[A200]
+    color: "white",
+    fontWeight: "bold",
+    fontSize: "1.5em",
 }
 
 const textFieldVidSx = {
@@ -44,7 +49,7 @@ const textFieldSampleSx = {
 const iconButtonClearSx = {
     verticalAlign: "bottom",
     margin: "20px",
-    marginLeft: "5px",
+    marginLeft: "10px",
     marginRight: "0px",
 }
 
@@ -127,57 +132,88 @@ export function InputVid (props: InputVidProps) {
         })
     }
 
+    const TitleBox = () => {
+        return (
+            <div>
+                <div style={titleDivStyle} >
+                    <div>YTS</div>
+                </div>
+            </div>
+        )
+    }
+
+    const VidInputBox = () => {
+        return (
+            <div style={{display: "flex", flexWrap: "nowrap"}}>
+                <TextField
+                    label="Video ID"
+                    defaultValue={vid}
+                    onKeyDown={onKeyDownHandlerVid}
+                    size="small"
+                    sx={textFieldVidSx}
+                    inputRef={vidRef}
+                    placeholder="xxxxx"
+                />
+                <IconButton
+                    sx={iconButtonClearSx}
+                    onClick={onClickHandlerClearVid}
+                    size='small'
+                    disabled={loading}
+                >
+                    <Clear fontSize='medium' />
+                </IconButton>
+                <IconButton
+                    sx={iconButtonRefreshSx}
+                    onClick={onClickHandlerRefreshSummary}
+                    size='small'
+                    disabled={loading}
+                >
+                    <Refresh fontSize='medium' />
+                </IconButton>
+            </div>
+        )
+    }
+
+    const SampleVidSelectBox = () => {
+        if (sampleVideoList === null) {
+            return <></>
+        }
+        return (
+            <div>
+                <TextField
+                    select
+                    label="Sample Video"
+                    defaultValue={vid}
+                    onChange={onChangeHandlerSelect}
+                    size="small"
+                    sx={textFieldSampleSx}
+                >
+                    {sampleVideoList.map((video, index) => {
+                        return (
+                            <MenuItem key={`sample-vid-${index}`} value={video.vid} >
+                                ({video.title})
+                            </MenuItem>
+                        )
+                    })}
+                </TextField>
+            </div>
+        )
+    }
+
+    const InputBox = () => {
+        return (
+            <Stack direction="row" sx={{flexWrap: "wrap"}} >
+                <VidInputBox />
+                { sampleVideoList && <SampleVidSelectBox /> }
+            </Stack>
+        )
+    }
+
     return (
         <Box sx={boxSx} id="inputvid-box-01">
             <Stack direction="row" >
-                <Box>
-                    <Avatar sx={avatarSx} variant="square" >YTS</Avatar>
-                </Box>
-                <Box>
-                    <TextField
-                        label="Video ID"
-                        defaultValue={vid}
-                        onKeyDown={onKeyDownHandlerVid}
-                        size="small"
-                        sx={textFieldVidSx}
-                        inputRef={vidRef}
-                        placeholder="xxxxx"
-                    />
-                    <IconButton
-                        sx={iconButtonClearSx}
-                        onClick={onClickHandlerClearVid}
-                        size='small'
-                        disabled={loading}
-                    >
-                        <Clear fontSize='medium' />
-                    </IconButton>
-                    <IconButton
-                        sx={iconButtonRefreshSx}
-                        onClick={onClickHandlerRefreshSummary}
-                        size='small'
-                        disabled={loading}
-                    >
-                        <Refresh fontSize='medium' />
-                    </IconButton>
-                    { sampleVideoList &&
-                        <TextField
-                            select
-                            label="Sample Video"
-                            defaultValue={vid}
-                            onChange={onChangeHandlerSelect}
-                            size="small"
-                            sx={textFieldSampleSx}
-                        >
-                            {sampleVideoList.map((video, index) => {
-                                return (
-                                    <MenuItem key={`sample-vid-${index}`} value={video.vid} >
-                                        ({video.title})
-                                    </MenuItem>
-                                )
-                            })}
-                        </TextField>
-                    }
-                </Box>
+                <TitleBox />
+                <InputBox />
             </Stack>
         </Box>
     )
