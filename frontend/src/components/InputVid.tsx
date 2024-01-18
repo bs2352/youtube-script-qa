@@ -142,6 +142,32 @@ export function InputVid (props: InputVidProps) {
     }
 
     const VidInputBox = () => {
+        const ClearButton = (props: {children: JSX.Element}) => {
+            return (
+                <>
+                    {
+                        summaryLoading ? props.children
+                        :
+                        <Tooltip title="入力のクリア" placement="top-end" arrow={true} >
+                            {props.children}
+                        </Tooltip>
+                    }
+                </>
+            )
+        }
+        const RefreshButton = (props: {children: JSX.Element}) => {
+            return (
+                <>
+                    {
+                        summaryLoading ? props.children
+                        :
+                        <Tooltip title="要約を再生成します" placement="top-end" arrow={true} >
+                            {props.children}
+                        </Tooltip>
+                    }
+                </>
+            )
+        }
         return (
             <div style={{display: "flex", flexWrap: "nowrap"}}>
                 <TextField
@@ -153,7 +179,7 @@ export function InputVid (props: InputVidProps) {
                     inputRef={vidRef}
                     placeholder="xxxxx"
                 />
-                <Tooltip title="入力のクリア" placement="top-end" arrow={true} >
+                <ClearButton>
                     <IconButton
                         sx={iconButtonClearSx}
                         onClick={onClickHandlerClearVid}
@@ -162,8 +188,8 @@ export function InputVid (props: InputVidProps) {
                     >
                         <Clear fontSize='medium' />
                     </IconButton>
-                </Tooltip>
-                <Tooltip title="要約を再生成します" placement="top-end" arrow={true} >
+                </ClearButton>
+                <RefreshButton>
                     <IconButton
                         sx={iconButtonRefreshSx}
                         onClick={onClickHandlerRefreshSummary}
@@ -172,7 +198,7 @@ export function InputVid (props: InputVidProps) {
                     >
                         <Refresh fontSize='medium' />
                     </IconButton>
-                </Tooltip>
+                </RefreshButton>
             </div>
         )
     }
