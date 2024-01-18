@@ -178,6 +178,7 @@ export function InputVid (props: InputVidProps) {
                     sx={textFieldVidSx}
                     inputRef={vidRef}
                     placeholder="xxxxx"
+                    disabled={summaryLoading}
                 />
                 <ClearButton>
                     <IconButton
@@ -216,6 +217,7 @@ export function InputVid (props: InputVidProps) {
                     onChange={onChangeHandlerSelect}
                     size="small"
                     sx={textFieldSampleSx}
+                    disabled={summaryLoading}
                 >
                     {sampleVideoList.map((video, index) => {
                         return (
