@@ -205,6 +205,9 @@ function Agenda (props: AgendaProps) {
         if (summary.agenda.length > 0 && summary.agenda[0].time.length > 0) {
             return; // 既にタイムテーブルを持っている場合は何もしない。
         }
+        if (agendaLoading) {
+            return;
+        }
         setAgendaLoading(true);
         const requestBody: SummaryRequestBody = {
             vid: summaryRes.vid
@@ -319,6 +322,9 @@ function Topic (props: TopicProps) {
         if (summaryTopic.length > 0 && summaryTopic[0].time.length > 0) {
             return; // 既にタイムテーブルを持っている場合は何もしない。
         }
+        if (topicLoading) {
+            return;
+        }
         setTopicLoading(true);
         const requestBody: SummaryRequestBody = {
             vid: summaryRes.vid
@@ -419,7 +425,10 @@ export function Summary (props: SummaryProps) {
     const [ curVid, setCurVid ] = useState<string>(vid);
 
     useEffect(() => {
-        if (curVid === vid && updateSummary === false && summary) {
+        if (summary !== null && curVid === vid && updateSummary === false) {
+            return;
+        }
+        if (summaryLoading) {
             return;
         }
         setCurVid(vid);
