@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Box, Table, TableBody, TableRow, TableCell, Link } from '@mui/material';
 
 import { Loading } from './Loading';
-import { VideoInfoType } from "./types"
+import { VideoInfoType, SummaryRequestBody } from "./types"
 
 
 function s2hms (seconds: number) {
@@ -13,8 +14,11 @@ function s2hms (seconds: number) {
 
 
 interface VideInfoProps {
+    vid: string;
     videoInfo: VideoInfoType | null;
-    videoInfoLoading: boolean
+    setVideoInfo: React.Dispatch<React.SetStateAction<VideoInfoType | null>>;
+    videoInfoLoading: boolean;
+    setVideoInfoLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -46,7 +50,47 @@ const tableCellTitleSx = {
 
 
 export function VideoInfo (props: VideInfoProps) {
-    const { videoInfo, videoInfoLoading } = props;
+    const { vid, videoInfo, setVideoInfo, videoInfoLoading, setVideoInfoLoading } = props;
+    const [ curVid, setCurVid ] = useState<string>(vid);
+
+    useEffect(() => {
+        if (vid === "" || vid === curVid) {
+            return;
+        }
+        setCurVid(vid);
+        setVideoInfo(null);
+        setVideoInfoLoading(true);
+        const requestBody: SummaryRequestBody = {
+            vid: vid
+        }
+        fetch(
+            '/info',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setVideoInfo(res);
+            setVideoInfoLoading(false);
+        }))
+        .catch((err) => {
+            const errmessage: string = `動画情報の取得中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+            setVideoInfoLoading(false);
+        })
+    }, [vid]);
+
     if (videoInfoLoading) {
         return <Loading />
     }

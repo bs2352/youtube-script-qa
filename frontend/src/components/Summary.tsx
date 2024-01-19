@@ -13,12 +13,16 @@ import { s2hms, hms2s } from './utils'
 
 
 interface SummaryProps {
+    vid: string;
+    ytplayer: YouTubePlayer;
     summary: SummaryResponseBody | null;
     setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     alignment: string;
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
-    ytplayer: YouTubePlayer;
     summaryLoading: boolean;
+    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    updateSummary: boolean;
+    setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface AgendaProps {
@@ -397,7 +401,49 @@ function Topic (props: TopicProps) {
 
 
 export function Summary (props: SummaryProps) {
-    const { summary, setSummary, alignment, setAlignment, ytplayer, summaryLoading } = props;
+    const { vid, ytplayer, summary, setSummary, alignment, setAlignment, summaryLoading, setSummaryLoading, updateSummary, setUpdateSummary } = props;
+    const [ curVid, setCurVid ] = useState<string>(vid);
+
+    useEffect(() => {
+        if (curVid === vid && updateSummary === false) {
+            return;
+        }
+        setCurVid(vid);
+        setSummaryLoading(true);
+        setSummary(null);
+        const requestBody: SummaryRequestBody = {
+            vid: vid,
+            refresh: updateSummary,
+        }
+        fetch(
+            '/summary',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setSummary(res);
+            setSummaryLoading(false);
+            setUpdateSummary(false);
+        }))
+        .catch((err) => {
+            const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+            setSummaryLoading(false);
+            setUpdateSummary(false);
+        })
+    }, [vid, updateSummary]);
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,

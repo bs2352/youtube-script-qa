@@ -16,13 +16,14 @@ interface TabPanelProps {
 }
 
 interface ResultProps {
-    summary: SummaryResponseBody | null;
-    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
-    summaryLoading: boolean;
-    videoInfo: VideoInfoType | null;
-    videoInfoLoading: boolean;
     vid: string;
     ytplayer: YouTubePlayer;
+    summaryLoading: boolean;
+    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    videoInfoLoading: boolean;
+    setVideoInfoLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    updateSummary: boolean;
+    setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -56,28 +57,34 @@ function TabPanel (props: TabPanelProps) {
 
 
 export function Result (props: ResultProps) {
-    const { summary, setSummary, summaryLoading, videoInfo, videoInfoLoading, vid, ytplayer } = props;
+    const {
+        vid, ytplayer,
+        summaryLoading, setSummaryLoading,
+        videoInfoLoading, setVideoInfoLoading,
+        updateSummary, setUpdateSummary
+    } = props;
 
-    const [ value, setValue ] = useState<number>(0)
+    const [ value, setValue ] = useState<number>(0);
+    const [ videoInfo, setVideoInfo ] = useState<VideoInfoType|null>(null);
+    const [ summary, setSummary ] = useState<SummaryResponseBody|null>(null);
     const [ transcripts, setTranscripts ] = useState<TranscriptType[]|null>(null);
     const [ qaQuestion, setQaQuestion ] = useState<string|null>(null);
     const [ qaAnswer, setQaAnswer ] = useState<QaResponseBody|null>(null);
     const [ qaAlignment, setQaAlignment ] = useState<string>('qa');
     const [ summaryAlignment, setSummaryAlignment ] = useState<string>('summary');
-    const [ curVid, setCurVid ] = useState<string>('');
 
     useEffect(() => {
-        if (curVid === vid) {
-            return;
-        }
         setValue(0);
         setTranscripts(null);
         setQaQuestion(null);
         setQaAnswer(null);
         setQaAlignment('qa');
         setSummaryAlignment('summary');
-        setCurVid(vid);
     }, [vid])
+
+    useEffect(() => {
+        setValue(1);
+    }, [updateSummary])
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
@@ -101,16 +108,26 @@ export function Result (props: ResultProps) {
                 </Tabs>
             </Box>
             <TabPanel value={value} index={0}>
-                <VideoInfo videoInfo={videoInfo} videoInfoLoading={videoInfoLoading} />
+                <VideoInfo
+                    vid={vid}
+                    videoInfo={videoInfo}
+                    setVideoInfo={setVideoInfo}
+                    videoInfoLoading={videoInfoLoading}
+                    setVideoInfoLoading={setVideoInfoLoading}
+                />
             </TabPanel>
             <TabPanel value={value} index={1}>
                 <Summary
+                    vid={vid}
+                    ytplayer={ytplayer}
                     summary={summary}
                     setSummary={setSummary}
                     alignment={summaryAlignment}
                     setAlignment={setSummaryAlignment}
-                    ytplayer={ytplayer}
                     summaryLoading={summaryLoading}
+                    setSummaryLoading={setSummaryLoading}
+                    updateSummary={updateSummary}
+                    setUpdateSummary={setUpdateSummary}
                 />
             </TabPanel>
             <TabPanel value={value} index={2}>

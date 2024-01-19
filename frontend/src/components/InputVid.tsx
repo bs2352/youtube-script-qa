@@ -2,15 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Box, TextField, MenuItem, IconButton, Stack, Tooltip } from '@mui/material'
 import { Clear, Refresh } from '@mui/icons-material'
 
-import { SampleVideoInfo, SummaryRequestBody, SummaryResponseBody } from './types';
+import { SampleVideoInfo } from './types';
 
 
 interface InputVidProps {
     vid: string;
     setVid: React.Dispatch<React.SetStateAction<string>>;
-    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     summaryLoading: boolean;
-    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -61,7 +60,7 @@ const iconButtonRefreshSx = {
 }
 
 export function InputVid (props: InputVidProps) {
-    const { vid, setVid, setSummary, summaryLoading, setSummaryLoading } = props;
+    const { vid, setVid, summaryLoading, setUpdateSummary } = props;
     const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
     const vidRef = useRef<HTMLInputElement>(null);
 
@@ -87,7 +86,6 @@ export function InputVid (props: InputVidProps) {
     }
 
     const onClickHandlerClearVid = () => {
-        // setVid("");
         if (vidRef && vidRef.current) {
             vidRef.current.value = "";
         }
@@ -97,38 +95,7 @@ export function InputVid (props: InputVidProps) {
         if (vid === "") {
             return;
         }
-        setSummary(null);
-        setSummaryLoading(true);
-        const requestBody: SummaryRequestBody = {
-            vid: vid,
-            refresh: true,
-        }
-        fetch(
-            '/summary',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            }
-        )
-        .then((res => {
-            if (!res.ok) {
-                throw new Error(res.statusText);
-            }
-            return res.json();
-        }))
-        .then((res => {
-            setSummary(res);
-            setSummaryLoading(false);
-        }))
-        .catch((err) => {
-            const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
-            console.error(errmessage);
-            alert(errmessage);
-            setSummaryLoading(false);
-        })
+        setUpdateSummary(true);
     }
 
     const TitleBox = () => {

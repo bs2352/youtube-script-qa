@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 import { Box } from '@mui/material'
 
-import { SummaryResponseBody, VideoInfoType } from './components/types'
 // import { Header } from './components/Header'
 import { InputVid } from './components/InputVid'
 import { VideoArea } from './components/VideoArea'
@@ -14,10 +13,9 @@ function App() {
     const [ vid, setVid ] = useState<string>('cEynsEWpXdA');
     // @ts-ignore
     const [ ytplayer, setYtPlayer ] = useState<YouTubePlayer>();
-    const [ summary, setSummary ] = useState<SummaryResponseBody|null>(null);
     const [ summaryLoading, setSummaryLoading ] = useState<boolean>(false);
-    const [ videoInfo, setVideInfo ] = useState<VideoInfoType|null>(null);
     const [ videoInfoLoading, setVideoInfoLoading ] = useState<boolean>(false);
+    const [ updateSummary, setUpdateSummary ] = useState<boolean>(false);
 
     return (
         <Box sx={{width: "70%", margin: "0 auto"}} id="app-box-01">
@@ -25,27 +23,23 @@ function App() {
             <InputVid
                 vid={vid}
                 setVid={setVid}
-                setSummary={setSummary}
                 summaryLoading={summaryLoading}
-                setSummaryLoading={setSummaryLoading}
+                setUpdateSummary={setUpdateSummary}
             />
             <VideoArea
                 vid={vid}
                 setYtPlayer={setYtPlayer}
-                setSummary={setSummary}
-                setSummaryLoading={setSummaryLoading}
-                setVideoInfo={setVideInfo}
-                setVideoInfoLoading={setVideoInfoLoading}
             />
             { ytplayer &&
                 <Result
-                    summary={summary}
-                    setSummary={setSummary}
-                    summaryLoading={summaryLoading}
-                    videoInfo={videoInfo}
-                    videoInfoLoading={videoInfoLoading}
                     vid={vid}
                     ytplayer={ytplayer}
+                    summaryLoading={summaryLoading}
+                    setSummaryLoading={setSummaryLoading}
+                    videoInfoLoading={videoInfoLoading}
+                    setVideoInfoLoading={setVideoInfoLoading}
+                    updateSummary={updateSummary}
+                    setUpdateSummary={setUpdateSummary}
                 />
             }
         </Box>
