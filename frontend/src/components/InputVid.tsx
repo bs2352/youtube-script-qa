@@ -8,7 +8,7 @@ import { SampleVideoInfo } from './types';
 interface InputVidProps {
     vid: string;
     setVid: React.Dispatch<React.SetStateAction<string>>;
-    summaryLoading: boolean;
+    loading: boolean;
     setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
@@ -60,7 +60,7 @@ const iconButtonRefreshSx = {
 }
 
 export function InputVid (props: InputVidProps) {
-    const { vid, setVid, summaryLoading, setUpdateSummary } = props;
+    const { vid, setVid, loading, setUpdateSummary } = props;
     const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
     const vidRef = useRef<HTMLInputElement>(null);
 
@@ -113,7 +113,7 @@ export function InputVid (props: InputVidProps) {
             return (
                 <>
                     {
-                        summaryLoading ? props.children
+                        loading ? props.children
                         :
                         <Tooltip title="入力のクリア" placement="top-end" arrow={true} >
                             {props.children}
@@ -126,7 +126,7 @@ export function InputVid (props: InputVidProps) {
             return (
                 <>
                     {
-                        summaryLoading ? props.children
+                        loading ? props.children
                         :
                         <Tooltip title="要約を再生成します" placement="top-end" arrow={true} >
                             {props.children}
@@ -145,14 +145,14 @@ export function InputVid (props: InputVidProps) {
                     sx={textFieldVidSx}
                     inputRef={vidRef}
                     placeholder="xxxxx"
-                    disabled={summaryLoading}
+                    disabled={loading}
                 />
                 <ClearButton>
                     <IconButton
                         sx={iconButtonClearSx}
                         onClick={onClickHandlerClearVid}
                         size='small'
-                        disabled={summaryLoading}
+                        disabled={loading}
                     >
                         <Clear fontSize='medium' />
                     </IconButton>
@@ -162,7 +162,7 @@ export function InputVid (props: InputVidProps) {
                         sx={iconButtonRefreshSx}
                         onClick={onClickHandlerRefreshSummary}
                         size='small'
-                        disabled={summaryLoading}
+                        disabled={loading}
                     >
                         <Refresh fontSize='medium' />
                     </IconButton>
@@ -184,7 +184,7 @@ export function InputVid (props: InputVidProps) {
                     onChange={onChangeHandlerSelect}
                     size="small"
                     sx={textFieldSampleSx}
-                    disabled={summaryLoading}
+                    disabled={loading}
                 >
                     {sampleVideoList.map((video, index) => {
                         return (

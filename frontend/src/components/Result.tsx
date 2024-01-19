@@ -18,10 +18,16 @@ interface TabPanelProps {
 interface ResultProps {
     vid: string;
     ytplayer: YouTubePlayer;
-    summaryLoading: boolean;
-    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
     videoInfoLoading: boolean;
     setVideoInfoLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    summaryLoading: boolean;
+    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    agendaLoading: boolean;
+    setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    topicLoading: boolean;
+    setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    qaLoading: boolean;
+    setQaLoading: React.Dispatch<React.SetStateAction<boolean>>;
     updateSummary: boolean;
     setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -59,8 +65,11 @@ function TabPanel (props: TabPanelProps) {
 export function Result (props: ResultProps) {
     const {
         vid, ytplayer,
-        summaryLoading, setSummaryLoading,
         videoInfoLoading, setVideoInfoLoading,
+        summaryLoading, setSummaryLoading,
+        agendaLoading, setAgendaLoading,
+        topicLoading, setTopicLoading,
+        qaLoading, setQaLoading,
         updateSummary, setUpdateSummary
     } = props;
 
@@ -83,7 +92,9 @@ export function Result (props: ResultProps) {
     }, [vid])
 
     useEffect(() => {
-        setValue(1);
+        if (updateSummary) {
+            setValue(1);
+        }
     }, [updateSummary])
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
@@ -126,6 +137,10 @@ export function Result (props: ResultProps) {
                     setAlignment={setSummaryAlignment}
                     summaryLoading={summaryLoading}
                     setSummaryLoading={setSummaryLoading}
+                    agendaLoading={agendaLoading}
+                    setAgendaLoading={setAgendaLoading}
+                    topicLoading={topicLoading}
+                    setTopicLoading={setTopicLoading}
                     updateSummary={updateSummary}
                     setUpdateSummary={setUpdateSummary}
                 />
@@ -140,6 +155,8 @@ export function Result (props: ResultProps) {
                     setAnswer={setQaAnswer}
                     alignment={qaAlignment}
                     setAlignment={setQaAlignment}
+                    qaLoading={qaLoading}
+                    setQaLoading={setQaLoading}
                 />
             </TabPanel>
             <TabPanel value={value} index={3}>

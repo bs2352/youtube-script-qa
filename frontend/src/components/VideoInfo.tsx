@@ -54,7 +54,7 @@ export function VideoInfo (props: VideInfoProps) {
     const [ curVid, setCurVid ] = useState<string>(vid);
 
     useEffect(() => {
-        if (vid === "" || vid === curVid) {
+        if ((vid === "" || vid === curVid) && videoInfo) {
             return;
         }
         setCurVid(vid);

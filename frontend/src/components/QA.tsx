@@ -18,6 +18,8 @@ interface QAProps {
     setAnswer: React.Dispatch<React.SetStateAction<QaResponseBody | null>>;
     alignment: string;
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
+    qaLoading: boolean;
+    setQaLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -64,10 +66,15 @@ const boxToggleButton = {
 
 
 export function QA (props: QAProps) {
-    const { vid, ytplayer, question, setQuestion, answer, setAnswer, alignment, setAlignment  } = props;
+    const {
+        vid, ytplayer,
+        question, setQuestion,
+        answer, setAnswer,
+        alignment, setAlignment,
+        qaLoading, setQaLoading
+    } = props;
 
     const [ disabledSendButton, setDisabledSendButton] = useState<boolean>(true);
-    const [ loading, setLoading ] = useState<boolean>(false);
 
     const questionRef = useRef<HTMLInputElement>(null);
 
@@ -104,7 +111,7 @@ export function QA (props: QAProps) {
         if (questionRef.current === undefined) {
             return;
         }
-        setLoading(true);
+        setQaLoading(true);
         setDisabledSendButton(true);
         setQuestion(null);
         setAnswer(null);
@@ -138,14 +145,14 @@ export function QA (props: QAProps) {
         .then((res => {
             setQuestion(questionInput.value);
             setAnswer(res);
-            setLoading(false);
+            setQaLoading(false);
             setDisabledSendButton(false);
         }))
         .catch((err) => {
             const errmessage: string = `回答作成中にエラーが発生しました。${err}`;
             console.error(errmessage);
             alert(errmessage);
-            setLoading(false);
+            setQaLoading(false);
             setDisabledSendButton(false);
         })
     }
@@ -294,7 +301,7 @@ export function QA (props: QAProps) {
                 </Box>
             </Box>
             <Box sx={boxAnswerSx} id="qa-box-03" >
-                {loading && <Loading />}
+                {qaLoading && <Loading />}
                 {answer?.answer && <Answer />}
                 {answer && <Sources />}
             </Box>

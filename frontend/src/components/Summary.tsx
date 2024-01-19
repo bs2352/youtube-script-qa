@@ -21,6 +21,10 @@ interface SummaryProps {
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
     summaryLoading: boolean;
     setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    agendaLoading: boolean;
+    setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    topicLoading: boolean;
+    setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
     updateSummary: boolean;
     setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -29,12 +33,16 @@ interface AgendaProps {
     summaryRes: SummaryResponseBody;
     setSummaryRes: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     ytplayer: YouTubePlayer;
+    agendaLoading: boolean;
+    setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface TopicProps {
     summaryRes: SummaryResponseBody;
     setSummaryRes: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     ytplayer: YouTubePlayer;
+    topicLoading: boolean;
+    setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 
@@ -190,15 +198,14 @@ function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
 
 
 function Agenda (props: AgendaProps) {
-    const { summaryRes, setSummaryRes, ytplayer } = props;
-    const [ loading, setLoading] = useState<boolean>(false);
+    const { summaryRes, setSummaryRes, ytplayer, agendaLoading, setAgendaLoading } = props;
     const summary: SummaryType = summaryRes.summary
 
     useEffect(() => {
         if (summary.agenda.length > 0 && summary.agenda[0].time.length > 0) {
             return; // 既にタイムテーブルを持っている場合は何もしない。
         }
-        setLoading(true);
+        setAgendaLoading(true);
         const requestBody: SummaryRequestBody = {
             vid: summaryRes.vid
         }
@@ -220,13 +227,13 @@ function Agenda (props: AgendaProps) {
         }))
         .then((res => {
             setSummaryRes(res);
-            setLoading(false);
+            setAgendaLoading(false);
         }))
         .catch((err) => {
             const errmessage: string = `目次のタイムテーブル作成中にエラーが発生しました。${err}`;
             console.error(errmessage);
             alert(errmessage);
-            setLoading(false);
+            setAgendaLoading(false);
         })
     }, []);
 
@@ -265,7 +272,7 @@ function Agenda (props: AgendaProps) {
     return (
         <Box >
             <Box sx={detailBoxSx} id="agenda-box">
-                {loading && <Loading size={30} margin={'5px'} />}
+                {agendaLoading && <Loading size={30} margin={'5px'} />}
                 <List id="agenda-list-01" sx={listSx} disablePadding >
                     {summary.agenda.map((agenda, aidx) => {
                         return (
@@ -305,15 +312,14 @@ function Agenda (props: AgendaProps) {
 
 
 function Topic (props: TopicProps) {
-    const { summaryRes, setSummaryRes, ytplayer } = props;
-    const [ loading, setLoading] = useState<boolean>(false);
+    const { summaryRes, setSummaryRes, ytplayer, topicLoading, setTopicLoading } = props;
     const summaryTopic: TopicType[] = summaryRes.summary.topic;
 
     useEffect(() => {
         if (summaryTopic.length > 0 && summaryTopic[0].time.length > 0) {
             return; // 既にタイムテーブルを持っている場合は何もしない。
         }
-        setLoading(true);
+        setTopicLoading(true);
         const requestBody: SummaryRequestBody = {
             vid: summaryRes.vid
         }
@@ -335,13 +341,13 @@ function Topic (props: TopicProps) {
         }))
         .then((res => {
             setSummaryRes(res);
-            setLoading(false);
+            setTopicLoading(false);
         }))
         .catch((err) => {
             const errmessage: string = `トピックのタイムテーブル作成中にエラーが発生しました。${err}`;
             console.error(errmessage);
             alert(errmessage);
-            setLoading(false);
+            setTopicLoading(false);
         })
     }, []);
 
@@ -380,7 +386,7 @@ function Topic (props: TopicProps) {
     return (
         <Box >
             <Box sx={detailBoxSx} id="topic-box">
-                {loading && <Loading size={30} margin={'5px'} />}
+                {topicLoading && <Loading size={30} margin={'5px'} />}
                 <ul id="topic-ul" style={{...listSx, marginBottom: 0, paddingTop: "5px"}} >
                     {summaryTopic.map((topic, tidx) =>{
                         return (
@@ -401,11 +407,19 @@ function Topic (props: TopicProps) {
 
 
 export function Summary (props: SummaryProps) {
-    const { vid, ytplayer, summary, setSummary, alignment, setAlignment, summaryLoading, setSummaryLoading, updateSummary, setUpdateSummary } = props;
+    const {
+        vid, ytplayer,
+        summary, setSummary,
+        alignment, setAlignment,
+        summaryLoading, setSummaryLoading,
+        agendaLoading, setAgendaLoading,
+        topicLoading, setTopicLoading,
+        updateSummary, setUpdateSummary,
+    } = props;
     const [ curVid, setCurVid ] = useState<string>(vid);
 
     useEffect(() => {
-        if (curVid === vid && updateSummary === false) {
+        if (curVid === vid && updateSummary === false && summary) {
             return;
         }
         setCurVid(vid);
@@ -482,10 +496,16 @@ export function Summary (props: SummaryProps) {
                     }
                     {alignment === 'detail' && <Detail summary={summary.summary} ytplayer={ytplayer} />}
                     {alignment === 'agenda' &&
-                        <Agenda summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer} />
+                        <Agenda
+                            summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer}
+                            agendaLoading={agendaLoading} setAgendaLoading={setAgendaLoading}
+                        />
                     }
                     {alignment === 'topic' &&
-                        <Topic summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer} />
+                        <Topic
+                            summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer}
+                            topicLoading={topicLoading} setTopicLoading={setTopicLoading}
+                        />
                     }
                 </Box>
             </Box>
