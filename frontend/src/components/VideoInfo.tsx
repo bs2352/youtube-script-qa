@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Box, Table, TableBody, TableRow, TableCell, Link } from '@mui/material';
 
 import { Loading } from './Loading';
@@ -51,14 +51,11 @@ const tableCellTitleSx = {
 
 export function VideoInfo (props: VideInfoProps) {
     const { vid, videoInfo, setVideoInfo, videoInfoLoading, setVideoInfoLoading } = props;
-    const [ curVid, setCurVid ] = useState<string>(vid);
 
     useEffect(() => {
-        if ((vid === "" || vid === curVid) && videoInfo) {
+        if (videoInfo || videoInfoLoading) {
             return;
         }
-        setCurVid(vid);
-        setVideoInfo(null);
         setVideoInfoLoading(true);
         const requestBody: SummaryRequestBody = {
             vid: vid

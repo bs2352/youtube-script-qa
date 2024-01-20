@@ -73,7 +73,7 @@ export function Result (props: ResultProps) {
         refreshSummary, setRefreshSummary,
     } = props;
 
-    const [ value, setValue ] = useState<number>(0);
+    const [ value, setValue ] = useState<number>(1); // 要約タブをデフォにする
     const [ videoInfo, setVideoInfo ] = useState<VideoInfoType|null>(null);
     const [ summary, setSummary ] = useState<SummaryResponseBody|null>(null);
     const [ transcripts, setTranscripts ] = useState<TranscriptType[]|null>(null);
@@ -82,24 +82,27 @@ export function Result (props: ResultProps) {
     const [ qaAlignment, setQaAlignment ] = useState<string>('qa');
     const [ summaryAlignment, setSummaryAlignment ] = useState<string>('summary');
 
-    const clearResult = () => {
-        setValue(0);
+    const clearResult = (refresh: boolean = false) => {
+        setValue(1);
         setSummary(null);
+        setSummaryAlignment('summary');
+        if (refresh === true) {
+            return;
+        }
+        setVideoInfo(null);
         setQaQuestion(null);
         setQaAnswer(null);
         setTranscripts(null);
-        setSummaryAlignment('summary');
         setQaAlignment('qa');
     }
 
     useEffect(() => {
-        console.log("Result: ", vid);
         clearResult();
     }, [vid])
 
     useEffect(() => {
         if (refreshSummary) {
-            setValue(1);
+            clearResult(true);
         }
     }, [refreshSummary])
 

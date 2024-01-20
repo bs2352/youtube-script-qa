@@ -4,7 +4,7 @@ import {
     List, ListItem, Divider,
     Link
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
 import { Loading } from './Loading'
@@ -238,7 +238,7 @@ function Agenda (props: AgendaProps) {
             alert(errmessage);
             setAgendaLoading(false);
         })
-    }, []);
+    });
 
     const onClickHandlerTimeLink = (start_str: string) => {
         if (start_str.slice(-1) === "*") {
@@ -355,7 +355,7 @@ function Topic (props: TopicProps) {
             alert(errmessage);
             setTopicLoading(false);
         })
-    }, []);
+    });
 
     const onClickHandlerTimeLink = (start_str: string) => {
         if (start_str.slice(-1) === "*") {
@@ -422,18 +422,12 @@ export function Summary (props: SummaryProps) {
         topicLoading, setTopicLoading,
         refreshSummary, setRefreshSummary,
     } = props;
-    const [ curVid, setCurVid ] = useState<string>(vid);
 
     useEffect(() => {
-        if (summary !== null && curVid === vid && refreshSummary === false) {
+        if (summary || summaryLoading) {
             return;
         }
-        if (summaryLoading) {
-            return;
-        }
-        setCurVid(vid);
         setSummaryLoading(true);
-        setSummary(null);
         const requestBody: SummaryRequestBody = {
             vid: vid,
             refresh: refreshSummary,
@@ -466,7 +460,7 @@ export function Summary (props: SummaryProps) {
             setSummaryLoading(false);
             setRefreshSummary(false);
         })
-    }, [vid, refreshSummary]);
+    });
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,

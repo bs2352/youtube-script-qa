@@ -42,7 +42,6 @@ export function Transcript (props: TranscriptProps) {
             return; // 字幕がある場合は何もしない。
         }
         setLoading(true);
-        setTranscripts(null);
         fetch(
             '/transcript',
             {
