@@ -9,7 +9,7 @@ interface InputVidProps {
     vid: string;
     setVid: React.Dispatch<React.SetStateAction<string>>;
     loading: boolean;
-    setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
+    setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -60,7 +60,7 @@ const iconButtonRefreshSx = {
 }
 
 export function InputVid (props: InputVidProps) {
-    const { vid, setVid, loading, setUpdateSummary } = props;
+    const { vid, setVid, loading, setRefreshSummary } = props;
     const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
     const vidRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +95,7 @@ export function InputVid (props: InputVidProps) {
         if (vid === "") {
             return;
         }
-        setUpdateSummary(true);
+        setRefreshSummary(true);
     }
 
     const TitleBox = () => {

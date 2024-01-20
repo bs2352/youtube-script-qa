@@ -28,8 +28,8 @@ interface ResultProps {
     setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
     qaLoading: boolean;
     setQaLoading: React.Dispatch<React.SetStateAction<boolean>>;
-    updateSummary: boolean;
-    setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
+    refreshSummary: boolean;
+    setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -70,7 +70,7 @@ export function Result (props: ResultProps) {
         agendaLoading, setAgendaLoading,
         topicLoading, setTopicLoading,
         qaLoading, setQaLoading,
-        updateSummary, setUpdateSummary
+        refreshSummary, setRefreshSummary,
     } = props;
 
     const [ value, setValue ] = useState<number>(0);
@@ -82,20 +82,26 @@ export function Result (props: ResultProps) {
     const [ qaAlignment, setQaAlignment ] = useState<string>('qa');
     const [ summaryAlignment, setSummaryAlignment ] = useState<string>('summary');
 
-    useEffect(() => {
+    const clearResult = () => {
         setValue(0);
-        setTranscripts(null);
+        setSummary(null);
         setQaQuestion(null);
         setQaAnswer(null);
-        setQaAlignment('qa');
+        setTranscripts(null);
         setSummaryAlignment('summary');
+        setQaAlignment('qa');
+    }
+
+    useEffect(() => {
+        console.log("Result: ", vid);
+        clearResult();
     }, [vid])
 
     useEffect(() => {
-        if (updateSummary) {
+        if (refreshSummary) {
             setValue(1);
         }
-    }, [updateSummary])
+    }, [refreshSummary])
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
@@ -141,8 +147,8 @@ export function Result (props: ResultProps) {
                     setAgendaLoading={setAgendaLoading}
                     topicLoading={topicLoading}
                     setTopicLoading={setTopicLoading}
-                    updateSummary={updateSummary}
-                    setUpdateSummary={setUpdateSummary}
+                    refreshSummary={refreshSummary}
+                    setRefreshSummary={setRefreshSummary}
                 />
             </TabPanel>
             <TabPanel value={value} index={2}>

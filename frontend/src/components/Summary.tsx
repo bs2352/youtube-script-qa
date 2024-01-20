@@ -25,8 +25,8 @@ interface SummaryProps {
     setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
     topicLoading: boolean;
     setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
-    updateSummary: boolean;
-    setUpdateSummary: React.Dispatch<React.SetStateAction<boolean>>;
+    refreshSummary: boolean;
+    setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface AgendaProps {
@@ -420,12 +420,12 @@ export function Summary (props: SummaryProps) {
         summaryLoading, setSummaryLoading,
         agendaLoading, setAgendaLoading,
         topicLoading, setTopicLoading,
-        updateSummary, setUpdateSummary,
+        refreshSummary, setRefreshSummary,
     } = props;
     const [ curVid, setCurVid ] = useState<string>(vid);
 
     useEffect(() => {
-        if (summary !== null && curVid === vid && updateSummary === false) {
+        if (summary !== null && curVid === vid && refreshSummary === false) {
             return;
         }
         if (summaryLoading) {
@@ -436,7 +436,7 @@ export function Summary (props: SummaryProps) {
         setSummary(null);
         const requestBody: SummaryRequestBody = {
             vid: vid,
-            refresh: updateSummary,
+            refresh: refreshSummary,
         }
         fetch(
             '/summary',
@@ -457,16 +457,16 @@ export function Summary (props: SummaryProps) {
         .then((res => {
             setSummary(res);
             setSummaryLoading(false);
-            setUpdateSummary(false);
+            setRefreshSummary(false);
         }))
         .catch((err) => {
             const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
             console.error(errmessage);
             alert(errmessage);
             setSummaryLoading(false);
-            setUpdateSummary(false);
+            setRefreshSummary(false);
         })
-    }, [vid, updateSummary]);
+    }, [vid, refreshSummary]);
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,

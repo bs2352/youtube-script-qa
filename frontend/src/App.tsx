@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
-import { Box } from '@mui/material'
+import { Box, setRef } from '@mui/material'
 
 // import { Header } from './components/Header'
 import { InputVid } from './components/InputVid'
@@ -18,7 +18,7 @@ function App() {
     const [ agendaLoading, setAgendaLoading ] = useState<boolean>(false);
     const [ topicLoading, setTopicLoading ] = useState<boolean>(false);
     const [ qaLoading, setQaLoading ] = useState<boolean>(false);
-    const [ updateSummary, setUpdateSummary ] = useState<boolean>(false);
+    const [ refreshSummary, setRefreshSummary ] = useState<boolean>(false);
 
     return (
         <Box sx={{width: "70%", margin: "0 auto"}} id="app-box-01">
@@ -27,7 +27,7 @@ function App() {
                 vid={vid}
                 setVid={setVid}
                 loading={ videoInfoLoading || summaryLoading || agendaLoading || topicLoading || qaLoading }
-                setUpdateSummary={setUpdateSummary}
+                setRefreshSummary={setRefreshSummary}
             />
             <VideoArea
                 vid={vid}
@@ -47,8 +47,8 @@ function App() {
                     setTopicLoading={setTopicLoading}
                     qaLoading={qaLoading}
                     setQaLoading={setQaLoading}
-                    updateSummary={updateSummary}
-                    setUpdateSummary={setUpdateSummary}
+                    refreshSummary={refreshSummary}
+                    setRefreshSummary={setRefreshSummary}
                 />
             }
         </Box>
