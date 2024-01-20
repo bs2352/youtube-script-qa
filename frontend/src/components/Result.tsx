@@ -1,8 +1,8 @@
 import { Box, Tabs, Tab } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
-import { SummaryResponseBody, TranscriptType, QaResponseBody } from "./types"
+import { SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType } from "./types"
 import { VideoInfo } from './VideoInfo'
 import { Summary } from './Summary'
 import { QA } from './QA'
@@ -16,10 +16,20 @@ interface TabPanelProps {
 }
 
 interface ResultProps {
-    summary: SummaryResponseBody;
-    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     vid: string;
     ytplayer: YouTubePlayer;
+    videoInfoLoading: boolean;
+    setVideoInfoLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    summaryLoading: boolean;
+    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    agendaLoading: boolean;
+    setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    topicLoading: boolean;
+    setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    qaLoading: boolean;
+    setQaLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    refreshSummary: boolean;
+    setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -30,7 +40,7 @@ const boxSx = {
 const boxTabsSx = {
     width: '100%',
     bgcolor: 'background.paper',
-    marginBottom: 0.5,
+    marginBottom: 0,
     marginTop: 1
 }
 
@@ -53,14 +63,48 @@ function TabPanel (props: TabPanelProps) {
 
 
 export function Result (props: ResultProps) {
-    const { summary, setSummary, vid, ytplayer } = props;
+    const {
+        vid, ytplayer,
+        videoInfoLoading, setVideoInfoLoading,
+        summaryLoading, setSummaryLoading,
+        agendaLoading, setAgendaLoading,
+        topicLoading, setTopicLoading,
+        qaLoading, setQaLoading,
+        refreshSummary, setRefreshSummary,
+    } = props;
 
-    const [ value, setValue ] = useState<number>(0)
-    const [ transcripts, setTranscripts] = useState<TranscriptType[]|null>(null);
-    const [ qaQuestion, setQaQuestion] = useState<string|null>(null);
+    const [ value, setValue ] = useState<number>(1); // 要約タブをデフォにする
+    const [ videoInfo, setVideoInfo ] = useState<VideoInfoType|null>(null);
+    const [ summary, setSummary ] = useState<SummaryResponseBody|null>(null);
+    const [ transcripts, setTranscripts ] = useState<TranscriptType[]|null>(null);
+    const [ qaQuestion, setQaQuestion ] = useState<string|null>(null);
     const [ qaAnswer, setQaAnswer ] = useState<QaResponseBody|null>(null);
     const [ qaAlignment, setQaAlignment ] = useState<string>('qa');
     const [ summaryAlignment, setSummaryAlignment ] = useState<string>('summary');
+
+    const clearResult = (refresh: boolean = false) => {
+        setValue(1);
+        setSummary(null);
+        setSummaryAlignment('summary');
+        if (refresh === true) {
+            return;
+        }
+        setVideoInfo(null);
+        setQaQuestion(null);
+        setQaAnswer(null);
+        setTranscripts(null);
+        setQaAlignment('qa');
+    }
+
+    useEffect(() => {
+        clearResult();
+    }, [vid])
+
+    useEffect(() => {
+        if (refreshSummary) {
+            clearResult(true);
+        }
+    }, [refreshSummary])
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
@@ -84,15 +128,30 @@ export function Result (props: ResultProps) {
                 </Tabs>
             </Box>
             <TabPanel value={value} index={0}>
-                <VideoInfo vid={vid} summary={summary.summary} />
+                <VideoInfo
+                    vid={vid}
+                    videoInfo={videoInfo}
+                    setVideoInfo={setVideoInfo}
+                    videoInfoLoading={videoInfoLoading}
+                    setVideoInfoLoading={setVideoInfoLoading}
+                />
             </TabPanel>
             <TabPanel value={value} index={1}>
                 <Summary
+                    vid={vid}
+                    ytplayer={ytplayer}
                     summary={summary}
                     setSummary={setSummary}
                     alignment={summaryAlignment}
                     setAlignment={setSummaryAlignment}
-                    ytplayer={ytplayer}
+                    summaryLoading={summaryLoading}
+                    setSummaryLoading={setSummaryLoading}
+                    agendaLoading={agendaLoading}
+                    setAgendaLoading={setAgendaLoading}
+                    topicLoading={topicLoading}
+                    setTopicLoading={setTopicLoading}
+                    refreshSummary={refreshSummary}
+                    setRefreshSummary={setRefreshSummary}
                 />
             </TabPanel>
             <TabPanel value={value} index={2}>
@@ -105,6 +164,8 @@ export function Result (props: ResultProps) {
                     setAnswer={setQaAnswer}
                     alignment={qaAlignment}
                     setAlignment={setQaAlignment}
+                    qaLoading={qaLoading}
+                    setQaLoading={setQaLoading}
                 />
             </TabPanel>
             <TabPanel value={value} index={3}>

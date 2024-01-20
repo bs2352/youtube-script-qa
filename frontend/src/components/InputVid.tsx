@@ -1,21 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, TextField, MenuItem, IconButton } from '@mui/material'
+import { Box, TextField, MenuItem, IconButton, Stack, Tooltip } from '@mui/material'
 import { Clear, Refresh } from '@mui/icons-material'
 
-import { SampleVideoInfo, SummaryRequestBody, SummaryResponseBody } from './types';
+import { SampleVideoInfo } from './types';
 
 
 interface InputVidProps {
     vid: string;
     setVid: React.Dispatch<React.SetStateAction<string>>;
-    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     loading: boolean;
-    setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
-    width: "100%",
-    margin: "10px auto",
+    width: "80%",
+    margin: "0 auto 10px auto",
+}
+
+const titleDivStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "70px",
+    height: "50px",
+    margin: "10px 20px 10px 0px",
+    borderRadius: "5px",
+    backgroundColor: "#FF5252", // material ui colors Red[A200]
+    color: "white",
+    fontWeight: "bold",
+    fontSize: "1.5em",
 }
 
 const textFieldVidSx = {
@@ -35,7 +48,7 @@ const textFieldSampleSx = {
 const iconButtonClearSx = {
     verticalAlign: "bottom",
     margin: "20px",
-    marginLeft: "5px",
+    marginLeft: "10px",
     marginRight: "0px",
 }
 
@@ -47,7 +60,7 @@ const iconButtonRefreshSx = {
 }
 
 export function InputVid (props: InputVidProps) {
-    const { vid, setVid, setSummary, loading, setLoading } = props;
+    const { vid, setVid, loading, setRefreshSummary } = props;
     const [ sampleVideoList, setSampleVideoList ] = useState<SampleVideoInfo[]|null>(null);
     const vidRef = useRef<HTMLInputElement>(null);
 
@@ -73,80 +86,97 @@ export function InputVid (props: InputVidProps) {
     }
 
     const onClickHandlerClearVid = () => {
-        // setVid("");
         if (vidRef && vidRef.current) {
             vidRef.current.value = "";
         }
     }
 
     const onClickHandlerRefreshSummary = () => {
-        setSummary(null);
-        setLoading(true);
         if (vid === "") {
-            setLoading(false);
             return;
         }
-        const requestBody: SummaryRequestBody = {
-            vid: vid,
-            refresh: true,
-        }
-        fetch(
-            '/summary',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            }
-        )
-        .then((res => {
-            if (!res.ok) {
-                throw new Error(res.statusText);
-            }
-            return res.json();
-        }))
-        .then((res => {
-            setSummary(res);
-            setLoading(false);
-        }))
-        .catch((err) => {
-            const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
-            console.error(errmessage);
-            alert(errmessage);
-            setLoading(false);
-        })
+        setRefreshSummary(true);
     }
 
-    return (
-        <Box sx={boxSx} id="inputvid-box-01">
-            <TextField
-                label="Video ID"
-                defaultValue={vid}
-                onKeyDown={onKeyDownHandlerVid}
-                size="small"
-                sx={textFieldVidSx}
-                // InputLabelProps={{shrink: true}}
-                inputRef={vidRef}
-                placeholder="xxxxx"
-            />
-            <IconButton
-                sx={iconButtonClearSx}
-                onClick={onClickHandlerClearVid}
-                size='small'
-                disabled={loading}
-            >
-                <Clear fontSize='medium' />
-            </IconButton>
-            <IconButton
-                sx={iconButtonRefreshSx}
-                onClick={onClickHandlerRefreshSummary}
-                size='small'
-                disabled={loading}
-            >
-                <Refresh fontSize='medium' />
-            </IconButton>
-            { sampleVideoList &&
+    const TitleBox = () => {
+        return (
+            <div>
+                <div style={titleDivStyle} >
+                    <div>YTS</div>
+                </div>
+            </div>
+        )
+    }
+
+    const VidInputBox = () => {
+        const ClearButton = (props: {children: JSX.Element}) => {
+            return (
+                <>
+                    {
+                        loading ? props.children
+                        :
+                        <Tooltip title="入力のクリア" placement="top-end" arrow={true} >
+                            {props.children}
+                        </Tooltip>
+                    }
+                </>
+            )
+        }
+        const RefreshButton = (props: {children: JSX.Element}) => {
+            return (
+                <>
+                    {
+                        loading ? props.children
+                        :
+                        <Tooltip title="要約を再生成します" placement="top-end" arrow={true} >
+                            {props.children}
+                        </Tooltip>
+                    }
+                </>
+            )
+        }
+        return (
+            <div style={{display: "flex", flexWrap: "nowrap"}}>
+                <TextField
+                    label="Video ID"
+                    defaultValue={vid}
+                    onKeyDown={onKeyDownHandlerVid}
+                    size="small"
+                    sx={textFieldVidSx}
+                    inputRef={vidRef}
+                    placeholder="xxxxx"
+                    disabled={loading}
+                />
+                <ClearButton>
+                    <IconButton
+                        sx={iconButtonClearSx}
+                        onClick={onClickHandlerClearVid}
+                        size='small'
+                        disabled={loading}
+                    >
+                        <Clear fontSize='medium' />
+                    </IconButton>
+                </ClearButton>
+                <RefreshButton>
+                    <IconButton
+                        sx={iconButtonRefreshSx}
+                        onClick={onClickHandlerRefreshSummary}
+                        size='small'
+                        disabled={loading}
+                    >
+                        <Refresh fontSize='medium' />
+                    </IconButton>
+                </RefreshButton>
+            </div>
+        )
+    }
+
+    const SampleVidSelectBox = () => {
+        if (sampleVideoList === null) {
+            return <></>
+        }
+        return (
+            <div>
                 <TextField
                     select
                     label="Sample Video"
@@ -154,7 +184,7 @@ export function InputVid (props: InputVidProps) {
                     onChange={onChangeHandlerSelect}
                     size="small"
                     sx={textFieldSampleSx}
-                    // InputLabelProps={{shrink: true}}
+                    disabled={loading}
                 >
                     {sampleVideoList.map((video, index) => {
                         return (
@@ -164,7 +194,25 @@ export function InputVid (props: InputVidProps) {
                         )
                     })}
                 </TextField>
-            }
+            </div>
+        )
+    }
+
+    const InputBox = () => {
+        return (
+            <Stack direction="row" sx={{flexWrap: "wrap"}} >
+                <VidInputBox />
+                { sampleVideoList && <SampleVidSelectBox /> }
+            </Stack>
+        )
+    }
+
+    return (
+        <Box sx={boxSx} id="inputvid-box-01">
+            <Stack direction="row" >
+                <TitleBox />
+                <InputBox />
+            </Stack>
         </Box>
     )
 }

@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Box, Table, TableBody, TableRow, TableCell, Link } from '@mui/material';
 
-import { SummaryType } from "./types"
+import { Loading } from './Loading';
+import { VideoInfoType, SummaryRequestBody } from "./types"
 
 
 function s2hms (seconds: number) {
@@ -12,8 +14,11 @@ function s2hms (seconds: number) {
 
 
 interface VideInfoProps {
-    summary: SummaryType;
     vid: string;
+    videoInfo: VideoInfoType | null;
+    setVideoInfo: React.Dispatch<React.SetStateAction<VideoInfoType | null>>;
+    videoInfoLoading: boolean;
+    setVideoInfoLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const boxSx = {
@@ -45,32 +50,75 @@ const tableCellTitleSx = {
 
 
 export function VideoInfo (props: VideInfoProps) {
-    const { summary, vid } = props;
+    const { vid, videoInfo, setVideoInfo, videoInfoLoading, setVideoInfoLoading } = props;
+
+    useEffect(() => {
+        if (videoInfo || videoInfoLoading) {
+            return;
+        }
+        setVideoInfoLoading(true);
+        const requestBody: SummaryRequestBody = {
+            vid: vid
+        }
+        fetch(
+            '/info',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setVideoInfo(res);
+            setVideoInfoLoading(false);
+        }))
+        .catch((err) => {
+            const errmessage: string = `動画情報の取得中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+            setVideoInfoLoading(false);
+        })
+    }, [vid]);
+
+    if (videoInfoLoading) {
+        return <Loading />
+    }
+    if (!videoInfo) {
+        return <></>
+    }
     return (
         <Box sx={boxSx} id="videoinfo-box-01">
             <Table sx={tableSx} id="videoinfo-table-01">
                 <TableBody>
                     <TableRow sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>タイトル</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.title}</TableCell>
+                        <TableCell sx={tableCellSx}>{videoInfo.title}</TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>チャンネル名</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.author}</TableCell>
+                        <TableCell sx={tableCellSx}>{videoInfo.author}</TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>時間</TableCell>
-                        <TableCell sx={tableCellSx}>{s2hms(summary.lengthSeconds)}</TableCell>
+                        <TableCell sx={tableCellSx}>{s2hms(videoInfo.lengthSeconds)}</TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>URL</TableCell>
                         <TableCell sx={tableCellSx}>
-                            <Link href={summary.url} target={`_blank`} >{summary.url}</Link>
+                            <Link href={videoInfo.url} target={`_blank`} >{videoInfo.url}</Link>
                         </TableCell>
                     </TableRow>
                     <TableRow  sx={tableRowSx}>
                         <TableCell sx={tableCellTitleSx}>Video ID</TableCell>
-                        <TableCell sx={tableCellSx}>{vid}</TableCell>
+                        <TableCell sx={tableCellSx}>{videoInfo.vid}</TableCell>
                     </TableRow>
                </TableBody>
             </Table>

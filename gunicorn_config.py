@@ -36,3 +36,4 @@ proc_name = 'yts_app'
 # accesslog = './logs/access_log.txt'
 
 reload = True
+# timeout = 5
