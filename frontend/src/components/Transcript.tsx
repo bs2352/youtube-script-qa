@@ -68,7 +68,7 @@ export function Transcript (props: TranscriptProps) {
             alert(errmessage);
             setLoading(false);
         })
-    });
+    }, [vid]);
 
     const onClickHandlerTranscript = (time: number) => {
         ytplayer.seekTo(Math.round(time), true);
