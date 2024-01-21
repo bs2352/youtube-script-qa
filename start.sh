@@ -1,13 +1,15 @@
 #!/bin/bash
 
+source .env
 VENV_BIN=".venv/bin/"
 
 
 main() {
     case $1 in
-        "-f" )        run_frontend;;
-        "-i" )        remove_data;;
-        * )           run_backend;;
+        "-f" )  run_frontend;;
+        "-i" )  remove_data;;
+        "-b" )  run_backend build;;
+        * )     run_backend;;
     esac
 }
 
@@ -18,6 +20,11 @@ run_frontend () {
 }
 
 run_backend () {
+    if [ "x${1}" = "xbuild" ];
+    then
+        remove_static_file
+        build_frontend
+    fi
     prepare_frontend
     build_frontend
     $VENV_BIN/gunicorn -c gunicorn_config.py restapi:app
@@ -41,8 +48,15 @@ build_frontend () {
     cd ..
 }
 
-remove_data () {
-    rm -rf data
+remove_static_file () {
+    cd frontend
+    rm -rf dist
+    cd ..
 }
 
-main $1
+remove_data () {
+    rm -rf $INDEX_STORE_DIR
+    rm -rf $SUMMARY_STORE_DIR
+}
+
+main $1 $2
