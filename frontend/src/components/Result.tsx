@@ -2,7 +2,10 @@ import { Box, Tabs, Tab } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
-import { SummaryRequestBody, SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType } from "./types"
+import {
+    SummaryRequestBody, SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType,
+    AgendaType, TopicType,
+} from "./types"
 import { VideoInfo } from './VideoInfo'
 import { Summary } from './Summary'
 import { QA } from './QA'
@@ -70,7 +73,7 @@ export function Result (props: ResultProps) {
         refreshSummary, setRefreshSummary,
     } = props;
 
-    const [ value, setValue ] = useState<number>(0);
+    const [ value, setValue ] = useState<number>(0); // 概要タブ
     const [ videoInfoLoading, setVideoInfoLoading ] = useState<boolean>(false);
     const [ transcriptLoading, setTranscriptLoading ] = useState<boolean>(false);
     const [ videoInfo, setVideoInfo ] = useState<VideoInfoType|null>(null);
@@ -82,7 +85,7 @@ export function Result (props: ResultProps) {
     const [ summaryAlignment, setSummaryAlignment ] = useState<string>('summary');
 
     const clearResult = () => {
-        setValue(refreshSummary === true ? 1 : 0);
+        setValue(refreshSummary === true ? 1 : 0); // 要約の再作成時は要約タブへ遷移する
         setSummaryAlignment('summary');
         if (refreshSummary === true) {
             return;
@@ -196,6 +199,75 @@ export function Result (props: ResultProps) {
         })
     }
 
+    const fetch_agenda = () => {
+        setAgendaLoading(true);
+        const requestBody: SummaryRequestBody = {
+            vid: vid,
+        }
+        fetch(
+            '/agenda',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setSummary(res);
+        }))
+        .catch((err) => {
+            const errmessage: string = `目次のタイムテーブル作成中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+        })
+        .finally(() => {
+            setAgendaLoading(false);
+        })
+    }
+
+    const fetch_topic = () => {
+        setTopicLoading(true);
+        const requestBody: SummaryRequestBody = {
+            vid: vid,
+        }
+        fetch(
+            '/topic',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setSummary(res);
+        }))
+        .catch((err) => {
+            const errmessage: string = `トピックのタイムテーブル作成中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+        })
+        .finally(() => {
+            setTopicLoading(false);
+        })
+    }
+
+    // vidが変化したら概要、要約、字幕を取得する
     useEffect(() => {
         clearResult();
         if (summaryLoading === false) {
@@ -209,6 +281,7 @@ export function Result (props: ResultProps) {
         }
     }, [vid])
 
+    // 要約の再作成ボタンが押されたら要約を取得する
     useEffect(() => {
         if (refreshSummary === false) {
             return;
@@ -217,6 +290,26 @@ export function Result (props: ResultProps) {
         clearResult();
         fetch_summary();
     }, [refreshSummary])
+
+    // 要約が生成されたらアジェンダ、トピックの順でタイムテーブルを取得する
+    useEffect(() => {
+        if (summary === null) {
+            return;
+        }
+        const summaryAgenda: AgendaType[] = summary.summary.agenda;
+        if (!(summaryAgenda.length > 0 && summaryAgenda[0].time.length > 0)) {
+            if (agendaLoading === false) {
+                fetch_agenda();
+                return;
+            }
+        }
+        const summaryTopic: TopicType[] = summary.summary.topic;
+        if (!(summaryTopic.length > 0 && summaryTopic[0].time.length > 0)) {
+            if (topicLoading === false) {
+                fetch_topic();
+            }
+        }
+    }, [summary])
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
         setValue(value);
@@ -249,14 +342,11 @@ export function Result (props: ResultProps) {
                 <Summary
                     ytplayer={ytplayer}
                     summary={summary}
-                    setSummary={setSummary}
                     alignment={summaryAlignment}
                     setAlignment={setSummaryAlignment}
                     summaryLoading={summaryLoading}
                     agendaLoading={agendaLoading}
-                    setAgendaLoading={setAgendaLoading}
                     topicLoading={topicLoading}
-                    setTopicLoading={setTopicLoading}
                 />
             </TabPanel>
             <TabPanel value={value} index={2}>

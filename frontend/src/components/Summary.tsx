@@ -4,41 +4,33 @@ import {
     List, ListItem, Divider,
     Link
 } from '@mui/material'
-import { useEffect } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
 import { Loading } from './Loading'
-import { SummaryType, SummaryResponseBody, SummaryRequestBody, TopicType } from "./types"
+import { SummaryType, SummaryResponseBody, AgendaType, TopicType } from "./types"
 import { s2hms, hms2s } from './utils'
 
 
 interface SummaryProps {
     ytplayer: YouTubePlayer;
     summary: SummaryResponseBody | null;
-    setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     alignment: string;
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
     summaryLoading: boolean;
     agendaLoading: boolean;
-    setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
     topicLoading: boolean;
-    setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface AgendaProps {
-    summaryRes: SummaryResponseBody;
-    setSummaryRes: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
+    summaryAgenda: AgendaType[];
     ytplayer: YouTubePlayer;
     agendaLoading: boolean;
-    setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface TopicProps {
-    summaryRes: SummaryResponseBody;
-    setSummaryRes: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
+    summaryTopic: TopicType[];
     ytplayer: YouTubePlayer;
     topicLoading: boolean;
-    setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 
@@ -194,47 +186,7 @@ function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
 
 
 function Agenda (props: AgendaProps) {
-    const { summaryRes, setSummaryRes, ytplayer, agendaLoading, setAgendaLoading } = props;
-    const summary: SummaryType = summaryRes.summary
-
-    useEffect(() => {
-        if (summary.agenda.length > 0 && summary.agenda[0].time.length > 0) {
-            return; // 既にタイムテーブルを持っている場合は何もしない。
-        }
-        if (agendaLoading) {
-            return;
-        }
-        setAgendaLoading(true);
-        const requestBody: SummaryRequestBody = {
-            vid: summaryRes.vid
-        }
-        fetch(
-            '/agenda',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            }
-        )
-        .then((res => {
-            if (!res.ok) {
-                throw new Error(res.statusText);
-            }
-            return res.json();
-        }))
-        .then((res => {
-            setSummaryRes(res);
-            setAgendaLoading(false);
-        }))
-        .catch((err) => {
-            const errmessage: string = `目次のタイムテーブル作成中にエラーが発生しました。${err}`;
-            console.error(errmessage);
-            alert(errmessage);
-            setAgendaLoading(false);
-        })
-    });
+    const { summaryAgenda, ytplayer, agendaLoading } = props;
 
     const onClickHandlerTimeLink = (start_str: string) => {
         if (start_str.slice(-1) === "*") {
@@ -273,7 +225,7 @@ function Agenda (props: AgendaProps) {
             <Box sx={detailBoxSx} id="agenda-box">
                 {agendaLoading && <Loading size={30} margin={'5px'} />}
                 <List id="agenda-list-01" sx={listSx} disablePadding >
-                    {summary.agenda.map((agenda, aidx) => {
+                    {summaryAgenda.map((agenda, aidx) => {
                         return (
                             <Box key={`agenda-${aidx}`}>
                                 <ListItem sx={listItemTitleSx}>
@@ -298,7 +250,7 @@ function Agenda (props: AgendaProps) {
                                         </ListItem>
                                     )}
                                 </List>
-                                { aidx < summary.agenda.length -1 && <Divider sx={agendaDividerSx} /> }
+                                { aidx < summaryAgenda.length -1 && <Divider sx={agendaDividerSx} /> }
                             </Box>
                         )
                     })}
@@ -311,47 +263,7 @@ function Agenda (props: AgendaProps) {
 
 
 function Topic (props: TopicProps) {
-    const { summaryRes, setSummaryRes, ytplayer, topicLoading, setTopicLoading } = props;
-    const summaryTopic: TopicType[] = summaryRes.summary.topic;
-
-    useEffect(() => {
-        if (summaryTopic.length > 0 && summaryTopic[0].time.length > 0) {
-            return; // 既にタイムテーブルを持っている場合は何もしない。
-        }
-        if (topicLoading) {
-            return;
-        }
-        setTopicLoading(true);
-        const requestBody: SummaryRequestBody = {
-            vid: summaryRes.vid
-        }
-        fetch(
-            '/topic',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            }
-        )
-        .then((res => {
-            if (!res.ok) {
-                throw new Error(res.statusText);
-            }
-            return res.json();
-        }))
-        .then((res => {
-            setSummaryRes(res);
-            setTopicLoading(false);
-        }))
-        .catch((err) => {
-            const errmessage: string = `トピックのタイムテーブル作成中にエラーが発生しました。${err}`;
-            console.error(errmessage);
-            alert(errmessage);
-            setTopicLoading(false);
-        })
-    });
+    const { summaryTopic, ytplayer, topicLoading } = props;
 
     const onClickHandlerTimeLink = (start_str: string) => {
         if (start_str.slice(-1) === "*") {
@@ -411,14 +323,14 @@ function Topic (props: TopicProps) {
 export function Summary (props: SummaryProps) {
     const {
         ytplayer,
-        summary, setSummary,
+        summary,
         alignment, setAlignment,
         summaryLoading,
-        agendaLoading, setAgendaLoading,
-        topicLoading, setTopicLoading,
+        agendaLoading,
+        topicLoading,
     } = props;
 
-    const onChangeHandlerMode = (
+    const onChangeHandlerToggleMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,
         newAlignment: string|null
     ) => {
@@ -441,7 +353,7 @@ export function Summary (props: SummaryProps) {
                             value={alignment}
                             exclusive
                             size='small'
-                            onChange={onChangeHandlerMode}
+                            onChange={onChangeHandlerToggleMode}
                         >
                             <ToggleButton value="summary">要約</ToggleButton>
                             <ToggleButton value="detail">あらすじ</ToggleButton>
@@ -453,17 +365,17 @@ export function Summary (props: SummaryProps) {
                     {alignment === null || alignment === 'summary' &&
                         <Concise summary={summary.summary} />
                     }
-                    {alignment === 'detail' && <Detail summary={summary.summary} ytplayer={ytplayer} />}
+                    {alignment === 'detail' &&
+                        <Detail summary={summary.summary} ytplayer={ytplayer} />
+                    }
                     {alignment === 'agenda' &&
                         <Agenda
-                            summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer}
-                            agendaLoading={agendaLoading} setAgendaLoading={setAgendaLoading}
+                            summaryAgenda={summary.summary.agenda} ytplayer={ytplayer} agendaLoading={agendaLoading}
                         />
                     }
                     {alignment === 'topic' &&
                         <Topic
-                            summaryRes={summary} setSummaryRes={setSummary} ytplayer={ytplayer}
-                            topicLoading={topicLoading} setTopicLoading={setTopicLoading}
+                            summaryTopic={summary.summary.topic} ytplayer={ytplayer} topicLoading={topicLoading}
                         />
                     }
                 </Box>
