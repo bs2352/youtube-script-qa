@@ -13,20 +13,16 @@ import { s2hms, hms2s } from './utils'
 
 
 interface SummaryProps {
-    vid: string;
     ytplayer: YouTubePlayer;
     summary: SummaryResponseBody | null;
     setSummary: React.Dispatch<React.SetStateAction<SummaryResponseBody | null>>;
     alignment: string;
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
     summaryLoading: boolean;
-    setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
     agendaLoading: boolean;
     setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
     topicLoading: boolean;
     setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
-    refreshSummary: boolean;
-    setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface AgendaProps {
@@ -414,53 +410,13 @@ function Topic (props: TopicProps) {
 
 export function Summary (props: SummaryProps) {
     const {
-        vid, ytplayer,
+        ytplayer,
         summary, setSummary,
         alignment, setAlignment,
-        summaryLoading, setSummaryLoading,
+        summaryLoading,
         agendaLoading, setAgendaLoading,
         topicLoading, setTopicLoading,
-        refreshSummary, setRefreshSummary,
     } = props;
-
-    useEffect(() => {
-        if (summary || summaryLoading) {
-            return;
-        }
-        setSummaryLoading(true);
-        const requestBody: SummaryRequestBody = {
-            vid: vid,
-            refresh: refreshSummary,
-        }
-        fetch(
-            '/summary',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            }
-        )
-        .then((res => {
-            if (!res.ok) {
-                throw new Error(res.statusText);
-            }
-            return res.json();
-        }))
-        .then((res => {
-            setSummary(res);
-            setSummaryLoading(false);
-            setRefreshSummary(false);
-        }))
-        .catch((err) => {
-            const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
-            console.error(errmessage);
-            alert(errmessage);
-            setSummaryLoading(false);
-            setRefreshSummary(false);
-        })
-    });
 
     const onChangeHandlerMode = (
         _: React.MouseEvent<HTMLElement, MouseEvent>,

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { Box, TextField, Link } from '@mui/material'
 import { YouTubePlayer } from 'react-youtube'
 
@@ -8,10 +7,9 @@ import { s2hms } from './utils'
 
 
 interface TranscriptProps {
-    vid: string;
     ytplayer: YouTubePlayer;
     transcripts: TranscriptType[] | null;
-    setTranscripts: React.Dispatch<React.SetStateAction<TranscriptType[] | null>>;
+    transcriptLoading: boolean;
 }
 
 const boxSx = {
@@ -33,42 +31,7 @@ const textFieldTranscriptSx = {
 }
 
 export function Transcript (props: TranscriptProps) {
-    const { vid, ytplayer, transcripts, setTranscripts } = props;
-
-    const [ loading, setLoading ] = useState<boolean>(false);
-
-    useEffect(() => {
-        if (transcripts !== null) {
-            return; // 字幕がある場合は何もしない。
-        }
-        setLoading(true);
-        fetch(
-            '/transcript',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({vid: vid})
-            }
-        )
-        .then((res => {
-            if (!res.ok) {
-                throw new Error(res.statusText);
-            }
-            return res.json();
-        }))
-        .then((res => {
-            setTranscripts(res.transcripts);
-            setLoading(false);
-        }))
-        .catch((err) => {
-            const errmessage: string = `字幕取得中にエラーが発生しました。${err}`;
-            console.error(errmessage);
-            alert(errmessage);
-            setLoading(false);
-        })
-    }, [vid]);
+    const { ytplayer, transcripts, transcriptLoading } = props;
 
     const onClickHandlerTranscript = (time: number) => {
         ytplayer.seekTo(Math.round(time), true);
@@ -104,8 +67,8 @@ export function Transcript (props: TranscriptProps) {
                         />
                     )
                 })}
-                { loading && <Loading /> }
-                { !loading && !transcripts && <p>字幕がありません。</p> }
+                { transcriptLoading && <Loading /> }
+                { !transcriptLoading && !transcripts && <p>字幕がありません。</p> }
             </Box>
         </Box>
     )

@@ -2,7 +2,7 @@ import { Box, Tabs, Tab } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
-import { SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType } from "./types"
+import { SummaryRequestBody, SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType } from "./types"
 import { VideoInfo } from './VideoInfo'
 import { Summary } from './Summary'
 import { QA } from './QA'
@@ -18,8 +18,6 @@ interface TabPanelProps {
 interface ResultProps {
     vid: string;
     ytplayer: YouTubePlayer;
-    videoInfoLoading: boolean;
-    setVideoInfoLoading: React.Dispatch<React.SetStateAction<boolean>>;
     summaryLoading: boolean;
     setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
     agendaLoading: boolean;
@@ -65,7 +63,6 @@ function TabPanel (props: TabPanelProps) {
 export function Result (props: ResultProps) {
     const {
         vid, ytplayer,
-        videoInfoLoading, setVideoInfoLoading,
         summaryLoading, setSummaryLoading,
         agendaLoading, setAgendaLoading,
         topicLoading, setTopicLoading,
@@ -73,37 +70,152 @@ export function Result (props: ResultProps) {
         refreshSummary, setRefreshSummary,
     } = props;
 
-    const [ value, setValue ] = useState<number>(1); // 要約タブをデフォにする
+    const [ value, setValue ] = useState<number>(0);
+    const [ videoInfoLoading, setVideoInfoLoading ] = useState<boolean>(false);
+    const [ transcriptLoading, setTranscriptLoading ] = useState<boolean>(false);
     const [ videoInfo, setVideoInfo ] = useState<VideoInfoType|null>(null);
     const [ summary, setSummary ] = useState<SummaryResponseBody|null>(null);
-    const [ transcripts, setTranscripts ] = useState<TranscriptType[]|null>(null);
     const [ qaQuestion, setQaQuestion ] = useState<string|null>(null);
     const [ qaAnswer, setQaAnswer ] = useState<QaResponseBody|null>(null);
+    const [ transcripts, setTranscripts ] = useState<TranscriptType[]|null>(null);
     const [ qaAlignment, setQaAlignment ] = useState<string>('qa');
     const [ summaryAlignment, setSummaryAlignment ] = useState<string>('summary');
 
-    const clearResult = (refresh: boolean = false) => {
-        setValue(1);
-        setSummary(null);
+    const clearResult = () => {
+        setValue(refreshSummary === true ? 1 : 0);
         setSummaryAlignment('summary');
-        if (refresh === true) {
+        if (refreshSummary === true) {
             return;
         }
-        setVideoInfo(null);
-        setQaQuestion(null);
-        setQaAnswer(null);
-        setTranscripts(null);
+        if (qaQuestion !== null) {
+            setQaQuestion(null);
+        }
+        if (qaAnswer !== null) {
+            setQaAnswer(null);
+        }
         setQaAlignment('qa');
+    }
+
+    const fetch_info = () => {
+        setVideoInfoLoading(true);
+        const requestBody: SummaryRequestBody = {
+            vid: vid
+        }
+        fetch(
+            '/info',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setVideoInfo(res);
+        }))
+        .catch((err) => {
+            const errmessage: string = `動画情報の取得中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+        })
+        .finally(() => {
+            setVideoInfoLoading(false);
+        })
+    }
+
+    const fetch_summary = () => {
+        setSummaryLoading(true);
+        const requestBody: SummaryRequestBody = {
+            vid: vid,
+            refresh: refreshSummary,
+        }
+        fetch(
+            '/summary',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setSummary(res);
+        }))
+        .catch((err) => {
+            const errmessage: string = `要約作成中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+        })
+        .finally(() => {
+            setSummaryLoading(false);
+        })
+    }
+
+    const fetch_transcript = () => {
+        setTranscriptLoading(true);
+        fetch(
+            '/transcript',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({vid: vid})
+            }
+        )
+        .then((res => {
+            if (!res.ok) {
+                throw new Error(res.statusText);
+            }
+            return res.json();
+        }))
+        .then((res => {
+            setTranscripts(res.transcripts);
+        }))
+        .catch((err) => {
+            const errmessage: string = `字幕取得中にエラーが発生しました。${err}`;
+            console.error(errmessage);
+            alert(errmessage);
+        })
+        .finally(() => {
+            setTranscriptLoading(false);
+        })
     }
 
     useEffect(() => {
         clearResult();
+        if (summaryLoading === false) {
+            fetch_summary();
+        }
+        if (videoInfoLoading === false) {
+            fetch_info();
+        }
+        if (transcriptLoading === false) {
+            fetch_transcript();
+        }
     }, [vid])
 
     useEffect(() => {
-        if (refreshSummary) {
-            clearResult(true);
+        if (refreshSummary === false) {
+            return;
         }
+        setRefreshSummary(false);
+        clearResult();
+        fetch_summary();
     }, [refreshSummary])
 
     const onTabChangeHandler = (_: React.SyntheticEvent, value: number) => {
@@ -129,29 +241,22 @@ export function Result (props: ResultProps) {
             </Box>
             <TabPanel value={value} index={0}>
                 <VideoInfo
-                    vid={vid}
                     videoInfo={videoInfo}
-                    setVideoInfo={setVideoInfo}
                     videoInfoLoading={videoInfoLoading}
-                    setVideoInfoLoading={setVideoInfoLoading}
                 />
             </TabPanel>
             <TabPanel value={value} index={1}>
                 <Summary
-                    vid={vid}
                     ytplayer={ytplayer}
                     summary={summary}
                     setSummary={setSummary}
                     alignment={summaryAlignment}
                     setAlignment={setSummaryAlignment}
                     summaryLoading={summaryLoading}
-                    setSummaryLoading={setSummaryLoading}
                     agendaLoading={agendaLoading}
                     setAgendaLoading={setAgendaLoading}
                     topicLoading={topicLoading}
                     setTopicLoading={setTopicLoading}
-                    refreshSummary={refreshSummary}
-                    setRefreshSummary={setRefreshSummary}
                 />
             </TabPanel>
             <TabPanel value={value} index={2}>
@@ -170,10 +275,9 @@ export function Result (props: ResultProps) {
             </TabPanel>
             <TabPanel value={value} index={3}>
                 <Transcript
-                    vid={vid}
                     ytplayer={ytplayer}
                     transcripts={transcripts}
-                    setTranscripts={setTranscripts}
+                    transcriptLoading={transcriptLoading}
                 />
             </TabPanel>
         </Box>
