@@ -1854,6 +1854,16 @@ def test_agenda_similarity ():
     print("")
 
 
+def test_get_info ():
+    from pytube import YouTube
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    url: str = f'https://www.youtube.com/watch?v={vid}'
+    vinfo = YouTube(url).vid_info["videoDetails"]
+    print(vinfo)
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -1872,4 +1882,5 @@ if __name__ == "__main__":
     # test_extract_keyword()
     # get_topic_from_summary_kwd()
     # test_function()
-    test_agenda_similarity()
+    # test_agenda_similarity()
+    test_get_info()
