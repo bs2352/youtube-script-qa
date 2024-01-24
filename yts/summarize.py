@@ -298,18 +298,30 @@ class YoutubeSummarize:
                 verbose=self.debug
             )
 
-        def _prepare_transcriptions () -> List[TranscriptChunkModel]:
-            MAXLENGTH = 3000
-            OVERLAP_LENGTH = 10
+        def _prepare_transcriptions (
+                maxlength: int = 3000, minlength: int = 500, step_length: int = 500,
+                overlap_length: int = 10, step_overlap: int = 2,
+                min_chunks: int = 5,
+        ) -> List[TranscriptChunkModel]:
             transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(
                 video_id=self.vid, languages=["ja", "en", "en-US"]
             )
-            return divide_transcriptions_into_chunks(
-                transcriptions,
-                maxlength = MAXLENGTH,
-                overlap_length = OVERLAP_LENGTH,
-                id_prefix = self.vid
-            )
+            chunks: List[TranscriptChunkModel] | None = None
+            while True:
+                chunks = divide_transcriptions_into_chunks(
+                    transcriptions,
+                    maxlength = maxlength,
+                    overlap_length = overlap_length,
+                    id_prefix = self.vid
+                )
+                if chunks is not None and len(chunks) >= min_chunks:
+                    break
+                maxlength -= step_length
+                overlap_length -= step_overlap
+                if maxlength < minlength or overlap_length < 1:
+                    break
+            return chunks
+
 
         chain: BaseCombineDocumentsChain = _prepare_summarize_chain()
         chunks: List[TranscriptChunkModel] = _prepare_transcriptions()

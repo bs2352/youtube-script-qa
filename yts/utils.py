@@ -141,7 +141,7 @@ def divide_transcriptions_into_chunks (
                 overlap=0
             )
         else:
-            chunk.text += transcription["text"]
+            chunk.text += " " + transcription["text"]
             chunk.duration += transcription["duration"]
 
         if overlap_length > 0:
