@@ -17,6 +17,12 @@ RE_TRANACRIPT_FILTER = re.compile('|'.join([
     '\\[音楽\\]', '\\[拍手\\]'
 ]))
 
+END_SENTENCE_TOKENS = tuple(set([
+    'です', 'ます', 'ください', 'する',
+    'でした', 'ました', 'した', 'よね', 'ですね', 'けどね', 'くださいね', 'ましょうね',
+    'ですよ', 'ますよ', 'ましょう', 'でしたね', 'ですね'
+]))
+
 
 def setup_llm_from_environment () -> LLMType:
     llm_class: Type[LLMType] = OpenAI
@@ -116,6 +122,9 @@ def divide_transcriptions_into_chunks (
     chunk: TranscriptChunkModel | None = None
     overlaps: deque[YoutubeTranscriptType] = deque([])
     for transcription in transcriptions:
+        # 字幕の切れ目に対して簡易的だが文末を特定して句点を追加する
+        if transcription["text"].endswith(END_SENTENCE_TOKENS):
+            transcription["text"] = transcription["text"] + "。"
         if chunk is None:
             chunk = TranscriptChunkModel(
                 id=f"{id_prefix}-{transcription['start']}",
@@ -141,7 +150,7 @@ def divide_transcriptions_into_chunks (
                 overlap=0
             )
         else:
-            chunk.text += " " + transcription["text"]
+            chunk.text += transcription["text"]
             chunk.duration += transcription["duration"]
 
         if overlap_length > 0:
