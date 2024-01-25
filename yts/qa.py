@@ -184,8 +184,8 @@ class YoutubeQA:
 
         self._debug("creating index ...", end="", flush=True)
 
-        MAXLENGTH = 300
-        OVERLAP_LENGTH = 3
+        MAXLENGTH = 500
+        OVERLAP_LENGTH = 5
         transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(video_id=self.vid, languages=["ja", "en", "en-US"])
         chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
             transcriptions,
