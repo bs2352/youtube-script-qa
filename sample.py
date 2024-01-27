@@ -1865,7 +1865,7 @@ def test_get_info ():
 
 
 if __name__ == "__main__":
-    # get_transcription()
+    get_transcription()
     # divide_topic()
     # get_topic()
     # get_topic_from_summary()
@@ -1883,4 +1883,4 @@ if __name__ == "__main__":
     # get_topic_from_summary_kwd()
     # test_function()
     # test_agenda_similarity()
-    test_get_info()
+    # test_get_info()

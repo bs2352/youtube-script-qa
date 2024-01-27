@@ -5,9 +5,9 @@ import os
 import asyncio
 import re
 
-from langchain.llms import OpenAI, AzureOpenAI
-from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
+from langchain_openai import (
+    OpenAI, ChatOpenAI, OpenAIEmbeddings, AzureOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
+)
 import tiktoken
 
 from .types import LLMType, EmbeddingType, TranscriptChunkModel, YoutubeTranscriptType
@@ -15,6 +15,12 @@ from .types import LLMType, EmbeddingType, TranscriptChunkModel, YoutubeTranscri
 
 RE_TRANACRIPT_FILTER = re.compile('|'.join([
     '\\[音楽\\]', '\\[拍手\\]'
+]))
+
+END_SENTENCE_TOKENS = tuple(set([
+    'です', 'ます', 'ください', 'する',
+    'でした', 'ました', 'した', 'よね', 'ですね', 'けどね', 'くださいね', 'ましょうね',
+    'ですよ', 'ますよ', 'ましょう', 'でしたね', 'ですね'
 ]))
 
 
@@ -116,6 +122,9 @@ def divide_transcriptions_into_chunks (
     chunk: TranscriptChunkModel | None = None
     overlaps: deque[YoutubeTranscriptType] = deque([])
     for transcription in transcriptions:
+        # 字幕の切れ目に対して簡易的だが文末を特定して句点を追加する
+        if transcription["text"].endswith(END_SENTENCE_TOKENS):
+            transcription["text"] = transcription["text"] + "。"
         if chunk is None:
             chunk = TranscriptChunkModel(
                 id=f"{id_prefix}-{transcription['start']}",
