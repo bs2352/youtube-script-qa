@@ -1,5 +1,16 @@
 #!/bin/bash
 
+ENV_SRC="${HOME}/study/yts/.env"
+VID_SRC="${HOME}/study/yts/vid.txt"
+if [ ! -e ".env" -a -e $ENV_SRC ];
+then
+    ln $ENV_SRC
+fi
+if [ ! -e "vid.txt" -a -e $VID_SRC ];
+then
+    ln $VID_SRC
+fi
+
 source .env
 VENV_BIN=".venv/bin/"
 
