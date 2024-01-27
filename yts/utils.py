@@ -5,9 +5,9 @@ import os
 import asyncio
 import re
 
-from langchain.llms import OpenAI, AzureOpenAI
-from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
+from langchain_openai import (
+    OpenAI, ChatOpenAI, OpenAIEmbeddings, AzureOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
+)
 import tiktoken
 
 from .types import LLMType, EmbeddingType, TranscriptChunkModel, YoutubeTranscriptType

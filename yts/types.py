@@ -1,10 +1,9 @@
 from typing import TypedDict, TypeAlias, List
 from pydantic import BaseModel, Field
 
-from langchain.llms import OpenAI, AzureOpenAI
-from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
-
+from langchain_openai import (
+    OpenAI, ChatOpenAI, OpenAIEmbeddings, AzureOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
+)
 
 LLMType: TypeAlias = OpenAI | ChatOpenAI | AzureOpenAI | AzureChatOpenAI
 EmbeddingType: TypeAlias = OpenAIEmbeddings | AzureOpenAIEmbeddings

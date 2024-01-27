@@ -336,7 +336,7 @@ class YoutubeQA:
             similarity_top_k=self.ref_source,
             text_qa_template=CHAT_TEXT_QA_PROMPT,
         )
-        response: RESPONSE_TYPE = await query_engine.aquery(query)
+        response: RESPONSE_TYPE = await query_engine.aquery(query) # predict_messagesのwarningあり
         self.query_response = response
 
         return str(self.query_response).strip()

@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Tuple, Any
+from typing import List, Optional, Dict, Tuple, Any, TypedDict
 import os
 import sys
 import json
@@ -322,17 +322,23 @@ class YoutubeSummarize:
                     break
             return chunks
 
+        class SummaryChainResultType (TypedDict):
+            input_documents: List[Document]
+            output_text: str
+
 
         chain: BaseCombineDocumentsChain = _prepare_summarize_chain()
         chunks: List[TranscriptChunkModel] = _prepare_transcriptions()
 
         chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups_evenly(chunks, 5)
         tasks = [
-            chain.arun([Document(page_content=chunk.text) for chunk in chunks]) for chunks in chunk_groups
+            chain.ainvoke(
+                input={"input_documents": [Document(page_content=chunk.text) for chunk in chunks]}
+            ) for chunks in chunk_groups
         ]
-        summaries: List[str] = await asyncio.gather(*tasks)
+        summaries: List[SummaryChainResultType] = await asyncio.gather(*tasks)
         results: List[DetailSummary] = [
-            DetailSummary(text=s, start=c[0].start) for c, s in zip(chunk_groups, summaries)
+            DetailSummary(text=s["output_text"], start=c[0].start) for c, s in zip(chunk_groups, summaries)
         ]
 
         return results
@@ -384,7 +390,7 @@ class YoutubeSummarize:
             retry=retry_if_not_result(_check)
         )
         async def _summarize () -> str:
-            summary: str  = await chain.arun(**args)
+            summary: str = (await chain.ainvoke(input=args))["text"]
             return summary
 
 
@@ -447,7 +453,7 @@ class YoutubeSummarize:
             retry=retry_if_not_result(_check)
         )
         async def _extract () -> List[str]:
-            result: str = await chain.arun(**args)
+            result: str = (await chain.ainvoke(input=args))["text"]
             keyword: List[str] = [ _trim_kwd(kwd) for kwd in result.split("\n")]
             keyword = [kwd for kwd in keyword if kwd not in EXCLUDE_KEYWORDS ]
             return keyword
@@ -526,7 +532,7 @@ class YoutubeSummarize:
             retry=retry_if_not_result(_check)
         )
         async def _extract () -> List[AgendaModel]:
-            result: str = await chain.arun(**args)
+            result: str = (await chain.ainvoke(input=args))["text"]
             agenda: List[AgendaModel] = _parse_agenda(result)
             return agenda
 
@@ -575,7 +581,7 @@ class YoutubeSummarize:
             wait=wait_fixed(RETRY_INTERVAL),
         )
         async def _topic () -> List[TopicModel]:
-            result: str  = await chain.arun(**args)
+            result: str = (await chain.ainvoke(input=args))["text"]
             topic: List[TopicModel] = [
                 TopicModel(topic=_trim_topic(topic), time=[]) for topic in result.split("\n")
             ]
