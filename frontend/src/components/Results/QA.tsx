@@ -4,9 +4,9 @@ import { Box, TextField, IconButton, Link, Typography, ToggleButtonGroup, Toggle
 import { Send, Clear } from '@mui/icons-material'
 import { YouTubePlayer } from 'react-youtube'
 
-import { QaRequestBody, QaAnswerSource, QaResponseBody } from './types'
-import { Loading } from './Loading'
-import { hms2s } from './utils'
+import { QaRequestBody, QaAnswerSource, QaResponseBody } from '../../common/types'
+import { hms2s } from '../../common/utils'
+import { Loading } from '../Loading'
 
 
 interface QAProps {

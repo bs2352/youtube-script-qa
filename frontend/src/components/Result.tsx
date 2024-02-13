@@ -5,11 +5,11 @@ import { YouTubePlayer } from 'react-youtube'
 import {
     SummaryRequestBody, SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType,
     AgendaType, TopicType,
-} from "./types"
-import { VideoInfo } from './VideoInfo'
-import { Summary } from './Summary'
-import { QA } from './QA'
-import { Transcript } from './Transcript'
+} from "../common/types"
+import { VideoInfo } from './Results/VideoInfo'
+import { Summary } from './Results/Summary'
+import { QA } from './Results/QA'
+import { Transcript } from './Results/Transcript'
 
 
 interface TabPanelProps {

@@ -6,9 +6,9 @@ import {
 } from '@mui/material'
 import { YouTubePlayer } from 'react-youtube'
 
-import { Loading } from './Loading'
-import { SummaryType, SummaryResponseBody, AgendaType, TopicType } from "./types"
-import { s2hms, hms2s } from './utils'
+import { Loading } from '../Loading'
+import { SummaryType, SummaryResponseBody, AgendaType, TopicType } from "../../common/types"
+import { s2hms, hms2s } from '../../common/utils'
 
 
 interface SummaryProps {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Box, TextField, MenuItem, IconButton, Stack, Tooltip } from '@mui/material'
 import { Clear, Refresh } from '@mui/icons-material'
 
-import { SampleVideoInfo } from './types';
+import { SampleVideoInfo } from '../common/types';
 
 
 interface InputVidProps {

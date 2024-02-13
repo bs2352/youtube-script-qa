@@ -1,9 +1,9 @@
 import { Box, TextField, Link } from '@mui/material'
 import { YouTubePlayer } from 'react-youtube'
 
-import { TranscriptType } from './types'
-import { Loading } from './Loading'
-import { s2hms } from './utils'
+import { TranscriptType } from '../../common/types'
+import { s2hms } from '../../common/utils'
+import { Loading } from '../Loading'
 
 
 interface TranscriptProps {

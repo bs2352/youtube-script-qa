@@ -1,7 +1,7 @@
 import { Box, Table, TableBody, TableRow, TableCell, Link } from '@mui/material';
 
-import { Loading } from './Loading';
-import { VideoInfoType } from "./types"
+import { Loading } from '../Loading';
+import { VideoInfoType } from "../../common/types"
 
 
 function s2hms (seconds: number) {
