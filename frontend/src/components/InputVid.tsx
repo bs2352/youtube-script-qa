@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, TextField, MenuItem, IconButton, Stack, Tooltip } from '@mui/material'
+import { Box, TextField, MenuItem, IconButton, Stack, Tooltip, styled } from '@mui/material'
 import { Clear, Refresh } from '@mui/icons-material'
 
-import { SampleVideoInfo } from './types';
+import { SampleVideoInfo } from '../common/types';
 
 
 interface InputVidProps {
@@ -12,12 +12,12 @@ interface InputVidProps {
     setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const boxSx = {
+const InputVidContainer = styled(Box)({
     width: "80%",
     margin: "0 auto 10px auto",
-}
+});
 
-const titleDivStyle = {
+const TitleDivIcon = styled('div')({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -29,35 +29,35 @@ const titleDivStyle = {
     color: "white",
     fontWeight: "bold",
     fontSize: "1.5em",
-}
+});
 
-const textFieldVidSx = {
+const VidTextField = styled(TextField)({
     margin: "20px",
     marginLeft: "15px",
     marginRight: "0px",
     maxWidth: "150px"
-}
+});
 
-const textFieldSampleSx = {
+const SampleVideoTextField = styled(TextField)({
     margin: "20px",
     marginLeft: "15px",
     marginRight: "15px",
     maxWidth: "300px",
-}
+});
 
-const iconButtonClearSx = {
+const ClearIconButton = styled(IconButton)({
     verticalAlign: "bottom",
     margin: "20px",
     marginLeft: "10px",
     marginRight: "0px",
-}
+});
 
-const iconButtonRefreshSx = {
+const RefreshIconButton = styled(IconButton)({
     verticalAlign: "bottom",
     margin: "20px",
     marginLeft: "0px",
     marginRight: "10px",
-}
+});
 
 export function InputVid (props: InputVidProps) {
     const { vid, setVid, loading, setRefreshSummary } = props;
@@ -101,9 +101,9 @@ export function InputVid (props: InputVidProps) {
     const TitleBox = () => {
         return (
             <div>
-                <div style={titleDivStyle} >
+                <TitleDivIcon>
                     <div>YTS</div>
-                </div>
+                </TitleDivIcon>
             </div>
         )
     }
@@ -137,35 +137,32 @@ export function InputVid (props: InputVidProps) {
         }
         return (
             <div style={{display: "flex", flexWrap: "nowrap"}}>
-                <TextField
+                <VidTextField
                     label="Video ID"
                     defaultValue={vid}
                     onKeyDown={onKeyDownHandlerVid}
                     size="small"
-                    sx={textFieldVidSx}
                     inputRef={vidRef}
                     placeholder="xxxxx"
                     disabled={loading}
                 />
                 <ClearButton>
-                    <IconButton
-                        sx={iconButtonClearSx}
+                    <ClearIconButton
                         onClick={onClickHandlerClearVid}
                         size='small'
                         disabled={loading}
                     >
                         <Clear fontSize='medium' />
-                    </IconButton>
+                    </ClearIconButton>
                 </ClearButton>
                 <RefreshButton>
-                    <IconButton
-                        sx={iconButtonRefreshSx}
+                    <RefreshIconButton
                         onClick={onClickHandlerRefreshSummary}
                         size='small'
                         disabled={loading}
                     >
                         <Refresh fontSize='medium' />
-                    </IconButton>
+                    </RefreshIconButton>
                 </RefreshButton>
             </div>
         )
@@ -177,13 +174,12 @@ export function InputVid (props: InputVidProps) {
         }
         return (
             <div>
-                <TextField
+                <SampleVideoTextField
                     select
                     label="Sample Video"
                     defaultValue={vid}
                     onChange={onChangeHandlerSelect}
                     size="small"
-                    sx={textFieldSampleSx}
                     disabled={loading}
                 >
                     {sampleVideoList.map((video, index) => {
@@ -193,7 +189,7 @@ export function InputVid (props: InputVidProps) {
                             </MenuItem>
                         )
                     })}
-                </TextField>
+                </SampleVideoTextField>
             </div>
         )
     }
@@ -208,11 +204,11 @@ export function InputVid (props: InputVidProps) {
     }
 
     return (
-        <Box sx={boxSx} id="inputvid-box-01">
+        <InputVidContainer id="inputvid-box-01">
             <Stack direction="row" >
                 <TitleBox />
                 <InputBox />
             </Stack>
-        </Box>
+        </InputVidContainer>
     )
 }

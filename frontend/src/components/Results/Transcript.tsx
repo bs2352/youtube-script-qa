@@ -1,9 +1,9 @@
-import { Box, TextField, Link } from '@mui/material'
+import { Box, TextField, Link, styled } from '@mui/material'
 import { YouTubePlayer } from 'react-youtube'
 
-import { TranscriptType } from './types'
-import { Loading } from './Loading'
-import { s2hms } from './utils'
+import { TranscriptType } from '../../common/types'
+import { s2hms } from '../../common/utils'
+import { Loading } from '../Loading'
 
 
 interface TranscriptProps {
@@ -12,23 +12,24 @@ interface TranscriptProps {
     transcriptLoading: boolean;
 }
 
-const boxSx = {
+const TranscriptContainer = styled(Box)({
     width: "100%",
     margin: "0 auto",
-}
+});
 
-const boxQaSx = {
+const TranscriptInternalContainer = styled(Box)({
     width: "90%",
     height: "400px",
     overflow: "scroll",
     margin: "0 auto",
     marginBottom: "1em",
-}
+});
 
-const textFieldTranscriptSx = {
+const TranscriptTextField = styled(TextField)({
     width: "95%",
     marginTop: "1em",
-}
+});
+
 
 export function Transcript (props: TranscriptProps) {
     const { ytplayer, transcripts, transcriptLoading } = props;
@@ -52,13 +53,12 @@ export function Transcript (props: TranscriptProps) {
     }
 
     return (
-        <Box sx={boxSx} id="transcript-box-01" >
-            <Box sx={boxQaSx} id="transcript-box-02" >
+        <TranscriptContainer id="transcript-box-01" >
+            <TranscriptInternalContainer id="transcript-box-02" >
                 { transcripts && transcripts.map((transcript, idx) => {
                     return (
-                        <TextField
+                        <TranscriptTextField
                             key={`transcript-${idx}`}
-                            sx={textFieldTranscriptSx}
                             variant='outlined'
                             label={<LabelLink transcript={transcript} />}
                             defaultValue={transcript.text.replace(/\n/g, ' ')}
@@ -69,7 +69,7 @@ export function Transcript (props: TranscriptProps) {
                 })}
                 { transcriptLoading && <Loading /> }
                 { !transcriptLoading && !transcripts && <p>字幕がありません。</p> }
-            </Box>
-        </Box>
+            </TranscriptInternalContainer>
+        </TranscriptContainer>
     )
 }

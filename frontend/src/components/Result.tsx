@@ -1,15 +1,15 @@
-import { Box, Tabs, Tab } from '@mui/material'
+import { Box, Tabs, Tab, styled } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { YouTubePlayer } from 'react-youtube'
 
 import {
     SummaryRequestBody, SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType,
     AgendaType, TopicType,
-} from "./types"
-import { VideoInfo } from './VideoInfo'
-import { Summary } from './Summary'
-import { QA } from './QA'
-import { Transcript } from './Transcript'
+} from "../common/types"
+import { VideoInfo } from './Results/VideoInfo'
+import { Summary } from './Results/Summary'
+import { QA } from './Results/QA'
+import { Transcript } from './Results/Transcript'
 
 
 interface TabPanelProps {
@@ -33,17 +33,17 @@ interface ResultProps {
     setRefreshSummary: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const boxSx = {
+const ResultContainer = styled(Box)({
     width: "100%",
     margin: "0 auto",
-}
+});
 
-const boxTabsSx = {
+const TabsContainer = styled(Box)({
     width: '100%',
     bgcolor: 'background.paper',
     marginBottom: 0,
     marginTop: 1
-}
+});
 
 function TabPanel (props: TabPanelProps) {
     const { children, value, index, ...other } = props;
@@ -320,8 +320,8 @@ export function Result (props: ResultProps) {
     ]
 
     return (
-        <Box sx={boxSx} id="result-box-01" >
-            <Box sx={boxTabsSx} id="result-box-02" >
+        <ResultContainer id="result-box-01" >
+            <TabsContainer id="result-box-02" >
                 <Tabs
                     value={value}
                     onChange={onTabChangeHandler}
@@ -331,7 +331,7 @@ export function Result (props: ResultProps) {
                         <Tab key={idx} label={item} />
                     )}
                 </Tabs>
-            </Box>
+            </TabsContainer>
             <TabPanel value={value} index={0}>
                 <VideoInfo
                     videoInfo={videoInfo}
@@ -370,6 +370,6 @@ export function Result (props: ResultProps) {
                     transcriptLoading={transcriptLoading}
                 />
             </TabPanel>
-        </Box>
+        </ResultContainer>
     ) 
 }

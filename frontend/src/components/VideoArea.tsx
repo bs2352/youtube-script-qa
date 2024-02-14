@@ -1,4 +1,4 @@
-import { Box } from '@mui/material'
+import { Box, styled } from '@mui/material'
 import YouTube, { YouTubeEvent, YouTubePlayer, YouTubeProps } from 'react-youtube'
 
 
@@ -7,10 +7,10 @@ interface VideoAreaProps {
     setYtPlayer: React.Dispatch<React.SetStateAction<YouTubePlayer | undefined>>;
 }
 
-const boxSx = {
+const VideoAreaContainer = styled(Box)({
     width: "100%",
     margin: "0 auto",
-}
+});
 
 export function VideoArea (props: VideoAreaProps) {
     const { vid, setYtPlayer } = props;
@@ -20,7 +20,7 @@ export function VideoArea (props: VideoAreaProps) {
     }
 
     return (
-        <Box sx={boxSx} id="videoarea-box-01">
+        <VideoAreaContainer id="videoarea-box-01">
             <YouTube
                 videoId={vid}
                 onReady={onReadyHanler}
@@ -34,6 +34,6 @@ export function VideoArea (props: VideoAreaProps) {
                     margin: "0 auto"
                 }}
             />
-        </Box>
+        </VideoAreaContainer>
     )
 }

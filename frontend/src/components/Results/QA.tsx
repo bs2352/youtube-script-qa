@@ -1,12 +1,16 @@
 import { useRef, useState } from 'react'
 
-import { Box, TextField, IconButton, Link, Typography, ToggleButtonGroup, ToggleButton, ButtonGroup } from '@mui/material'
+import {
+    Box, TextField, IconButton, Link, Typography,
+    ToggleButtonGroup, ToggleButton, ButtonGroup,
+    styled
+} from '@mui/material'
 import { Send, Clear } from '@mui/icons-material'
 import { YouTubePlayer } from 'react-youtube'
 
-import { QaRequestBody, QaAnswerSource, QaResponseBody } from './types'
-import { Loading } from './Loading'
-import { hms2s } from './utils'
+import { QaRequestBody, QaAnswerSource, QaResponseBody } from '../../common/types'
+import { hms2s } from '../../common/utils'
+import { Loading } from '../Loading'
 
 
 interface QAProps {
@@ -22,47 +26,47 @@ interface QAProps {
     setQaLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const boxSx = {
+const QaContainer = styled(Box)({
     width: "100%",
     margin: "0 auto",
-}
+});
 
-const boxQuestionSx = {
+const QuestionContainer = styled(Box)({
     width: "90%",
     margin: "0 auto",
     marginBottom: "1em",
-}
+})
 
-const boxAnswerSx = {
+const AnswerContainer = styled(Box)({
     width: "85%",
     margin: "0 auto",
     marginBottom: "1em",
     // height: "300px",
     // overflowY: "scroll",
-}
+});
 
-const textFieldQuestionSx = {
+const QuestionTextField = styled(TextField)({
     width: "87%",
     verticalAlign: "bottom",
-}
+});
 
-const iconButtonSendSx = {
+const StyledIconButton = styled(IconButton)({
     verticalAlign: "bottom",
     marginLeft: "5px",
-}
+});
 
-const textFieldAnswerSx = {
+const AnswerTextField = styled(TextField)({
     width: "98%",
     margin: "0 auto",
     marginTop: "1em",
     // pointerEvents: "none",
-}
+});
 
-const boxToggleButton = {
+const ToggleButtonContainer = styled(Box)({
     marginBottom: "20px",
     marginLeft: '4%',
     textAlign: 'left',
-}
+});
 
 
 export function QA (props: QAProps) {
@@ -176,11 +180,10 @@ export function QA (props: QAProps) {
             )
         }
         return (
-            <TextField
+            <AnswerTextField
                 variant='outlined'
                 label={<Label />}
                 defaultValue={answer?.answer}
-                sx={textFieldAnswerSx}
                 multiline
                 id="qa-answer-01"
                 inputProps={{readOnly: true}}
@@ -222,9 +225,8 @@ export function QA (props: QAProps) {
         }
         const sourceList = sorted_sources.map((source: QaAnswerSource, idx: number) => {
             return (
-                <TextField
+                <AnswerTextField
                     key={idx}
-                    sx={textFieldAnswerSx}
                     label={<LabelLink idx={idx} source={source} />}
                     variant="outlined"
                     defaultValue={source.source}
@@ -254,9 +256,9 @@ export function QA (props: QAProps) {
     }
 
     return (
-        <Box sx={boxSx} >
-            <Box sx={boxQuestionSx} id="qa-box-02" >
-                <Box sx={boxToggleButton} >
+        <QaContainer>
+            <QuestionContainer id="qa-box-02" >
+                <ToggleButtonContainer>
                     <ToggleButtonGroup
                         value={alignment}
                         exclusive
@@ -266,45 +268,42 @@ export function QA (props: QAProps) {
                         <ToggleButton value="qa">QA</ToggleButton>
                         <ToggleButton value="retrieve">検索</ToggleButton>
                     </ToggleButtonGroup>
-                </Box>
+                </ToggleButtonContainer>
                 <Box>
-                    <TextField
+                    <QuestionTextField
                         label={<QuestionLebel/>}
                         variant="outlined"
                         placeholder={makePlaceholder()}
                         inputRef={questionRef}
                         multiline
                         rows={3}
-                        sx={textFieldQuestionSx}
                         onChange={onChangeHandlerQuestion}
                         onKeyDown={onKeyDownHandlerQuestion}
                         InputLabelProps={{shrink: true}}
                         defaultValue={question}
                     />
                     <ButtonGroup orientation='vertical'>
-                        <IconButton
-                            sx={iconButtonSendSx}
+                        <StyledIconButton
                             onClick={onClickHandlerClearQuestion}
                             size='small'
                         >
                             <Clear fontSize='medium' />
-                        </IconButton>
-                        <IconButton
-                            sx={iconButtonSendSx}
+                        </StyledIconButton>
+                        <StyledIconButton
                             onClick={onClickHandlerSendQuestion}
                             disabled={disabledSendButton}
                             size='small'
                         >
                             <Send fontSize='medium' />
-                        </IconButton>
+                        </StyledIconButton>
                     </ButtonGroup>
                 </Box>
-            </Box>
-            <Box sx={boxAnswerSx} id="qa-box-03" >
+            </QuestionContainer>
+            <AnswerContainer id="qa-box-03" >
                 {qaLoading && <Loading />}
                 {answer?.answer && <Answer />}
                 {answer && <Sources />}
-            </Box>
-        </Box>
+            </AnswerContainer>
+        </QaContainer>
     )
 }

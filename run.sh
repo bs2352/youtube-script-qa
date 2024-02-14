@@ -1,8 +1,26 @@
 #!/bin/bash
 
-source .env
-VENV_BIN=".venv/bin/"
+ENV_SRC="${HOME}/study/yts/.env"
+VID_SRC="${HOME}/study/yts/vid.txt"
+if [ ! -e ".env" -a -e $ENV_SRC ];
+then
+    ln $ENV_SRC
+fi
+if [ ! -e "vid.txt" -a -e $VID_SRC ];
+then
+    ln $VID_SRC
+fi
 
+source .env
+
+VENV_BIN=".venv/bin/"
+if [ ! -e ${VENV_BIN} ];
+then
+    pipenv sync
+    echo "Setup python venv done."
+    echo "Please close and open vscode, and run this script."
+    exit 0
+fi
 
 main() {
     case $1 in
