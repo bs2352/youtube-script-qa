@@ -2,7 +2,8 @@ import {
     Box, ToggleButton, ToggleButtonGroup,
     Table, TableBody, TableRow, TableCell,
     List, ListItem, Divider,
-    Link
+    Link,
+    styled
 } from '@mui/material'
 import { YouTubePlayer } from 'react-youtube'
 
@@ -34,53 +35,52 @@ interface TopicProps {
 }
 
 
-const boxSx = {
+const SummaryContainer = styled(Box)({
     width: "100%",
     margin: "0 auto",
-}
+});
 
-const boxSummarySx = {
+const SummaryInternalContainer = styled(Box)({
     width: "85%",
     margin: "0 auto",
     marginBottom: "1em",
-}
+});
 
-const boxToggleButtonSx = {
+const ToggleButtonContainer = styled(Box)({
     marginBottom: "10px",
     // marginLeft: '4%',
     textAlign: 'left',
-}
+});
 
-const boxContentSx = {
+const ContentContainer = styled(Box)({
     marginBottom: "20px",
     // marginLeft: '4%',
     textAlign: 'left',
-}
+});
 
-const tableSx = {
+const ConciseTable = styled(Table)({
     // width: "90%",
     margin: "0 auto"
-}
+});
 
-const tableRowSx = {
-    textAlign: "left",
-}
-
-const tableCellSx = {
+const ConciseValueTableCell = styled(TableCell)({
     border: "1px solid",
     borderColor: "darkgrey",
     padding: "1.0em",
     paddingRight: "1.0em",
-}
+});
 
-const tableCellTitleSx = {
+const ConciseTitleTableCell = styled(TableCell)({
     whiteSpace: "nowrap",
     fontWeight: "bold",
     backgroundColor: "lightgrey",
-    ...tableCellSx
-}
+    border: "1px solid",
+    borderColor: "darkgrey",
+    padding: "1.0em",
+    paddingRight: "1.0em",
+});
 
-const detailBoxSx = {
+const SummaryContentContainer = styled(Box)({
     margin: "0 auto",
     border: "1px solid",
     borderColor: "darkgrey",
@@ -89,55 +89,74 @@ const detailBoxSx = {
     paddingBottom: "0.5em",
     // height: "400px",
     // overflowY: "scroll",
-}
+});
 
-const listSx = {
+const SummaryList = styled(List)({
     marginTop: "0",
     // paddingTop: "5px"
-}
+});
 
-const listItemSx = {
+const DetailSummaryListItem = styled(ListItem)({
     margin: "100",
     // padding: "100",
-}
+});
 
-const dividerSx = {
+const DetailDivider = styled(Divider)({
     marginTop: "0em",
     marginBottom: "0em",
-}
+});
 
-const listItemTitleSx = {
+const AgendaTitleListItem = styled(ListItem)({
     fontWeight: "bold",
     textDecoration: "underline",
     textDecorationThickness: "10%",
-}
+});
 
-const listItemAbstractSx = {
+const AgendaAbstractListItem = styled(ListItem)({
     paddingLeft: "3em",
-}
+});
 
-const agendaDividerSx = {
+const AgendaDivider = styled(Divider)({
     marginTop: "1em",
-}
+});
+
+const TopicUl = styled('ul')({
+    marginTop: "0",
+    // paddingTop: "5px",
+    marginBottom: 0,
+    paddingTop: "5px",
+});
+
+const TopicLi = styled('li')({
+    margin: "100",
+    // padding: "100",
+});
 
 
 function Concise (props: {summary: SummaryType}) {
     const { summary } = props;
 
+    const ConciseElements = [
+        { title: "要約", value: summary.concise },
+        { title: "キーワード", value: summary.keyword.join(', ') },
+    ]
+
     return (
         <Box id="concide-box">
-            <Table sx={tableSx} id="concise-table-01">
+            <ConciseTable id="concise-table-01">
                 <TableBody>
-                    <TableRow sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>要約</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.concise}</TableCell>
-                    </TableRow>
-                    <TableRow  sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>キーワード</TableCell>
-                        <TableCell sx={tableCellSx}>{summary.keyword.join(', ')}</TableCell>
-                    </TableRow>
+                    {
+                        ConciseElements.map((item, idx) => {
+                            return (
+                                <TableRow key={`concise-tr-${idx}`}>
+                                    <ConciseTitleTableCell>{item.title}</ConciseTitleTableCell>
+                                    <ConciseValueTableCell>{item.value}</ConciseValueTableCell>
+                                </TableRow>
+                            )
+                        })
+                    }
                 </TableBody>
-            </Table>
+            </ConciseTable>
         </Box>
     );  
 
@@ -152,13 +171,13 @@ function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
     }
 
     return (
-        <Box sx={detailBoxSx} id="detail-box" >
-            <List sx={listSx} disablePadding >
+        <SummaryContentContainer id="detail-box" >
+            <SummaryList disablePadding >
                 {summary.detail.map((detail, idx) =>
                     {
                         return (
                             <Box key={`detail-${idx}`}>
-                                <ListItem key={`item-detail-summary-${idx}`} sx={listItemSx}>
+                                <DetailSummaryListItem key={`item-detail-summary-${idx}`}>
                                     <span>
                                         <span style={{fontWeight: "bold"}}>{`[${idx+1}/${summary.detail.length}] `}</span>
                                         {`(`}
@@ -172,15 +191,15 @@ function Detail (props: {summary: SummaryType, ytplayer: YouTubePlayer}) {
                                         {`) `}
                                         {detail.text}
                                     </span>
-                                </ListItem>
-                                { (idx < summary.detail.length - 1) && <Divider sx={dividerSx} /> }
+                                </DetailSummaryListItem>
+                                { (idx < summary.detail.length - 1) && <DetailDivider /> }
                             </Box>
                         )
                     })
                 }
-            </List>
-        </Box>
-    );  
+            </SummaryList>
+        </SummaryContentContainer>
+    );
 
 }
 
@@ -221,42 +240,39 @@ function Agenda (props: AgendaProps) {
     }
 
     return (
-        <Box >
-            <Box sx={detailBoxSx} id="agenda-box">
-                {agendaLoading && <Loading size={30} margin={'5px'} />}
-                <List id="agenda-list-01" sx={listSx} disablePadding >
-                    {summaryAgenda.map((agenda, aidx) => {
-                        return (
-                            <Box key={`agenda-${aidx}`}>
-                                <ListItem sx={listItemTitleSx}>
-                                    {agenda.title}
-                                    {
-                                        agenda.time.length > 0 && agenda.time[0].length > 0 &&
-                                        <TimeLink time={agenda.time[0]} />
-                                    }
-                                </ListItem>
-                                <List disablePadding >
-                                    {agenda.subtitle.map((subtitle, sidx) =>
-                                        <ListItem
-                                            key={`agenda-subtitle-${sidx}`}
-                                            sx={listItemAbstractSx}
-                                            disablePadding
-                                        >
-                                            {subtitle}
-                                            {
-                                                agenda.time.length > sidx + 1 && agenda.time[sidx+1].length > 0 &&
-                                                <TimeLink time={agenda.time[sidx+1]} />
-                                            }
-                                        </ListItem>
-                                    )}
-                                </List>
-                                { aidx < summaryAgenda.length -1 && <Divider sx={agendaDividerSx} /> }
-                            </Box>
-                        )
-                    })}
-                </List>
-            </Box>
-        </Box>
+        <SummaryContentContainer id="agenda-box">
+            {agendaLoading && <Loading size={30} margin={'5px'} />}
+            <SummaryList id="agenda-list-01" disablePadding >
+                {summaryAgenda.map((agenda, aidx) => {
+                    return (
+                        <Box key={`agenda-${aidx}`}>
+                            <AgendaTitleListItem>
+                                {agenda.title}
+                                {
+                                    agenda.time.length > 0 && agenda.time[0].length > 0 &&
+                                    <TimeLink time={agenda.time[0]} />
+                                }
+                            </AgendaTitleListItem>
+                            <List disablePadding >
+                                {agenda.subtitle.map((subtitle, sidx) =>
+                                    <AgendaAbstractListItem
+                                        key={`agenda-subtitle-${sidx}`}
+                                        disablePadding
+                                    >
+                                        {subtitle}
+                                        {
+                                            agenda.time.length > sidx + 1 && agenda.time[sidx+1].length > 0 &&
+                                            <TimeLink time={agenda.time[sidx+1]} />
+                                        }
+                                    </AgendaAbstractListItem>
+                                )}
+                            </List>
+                            { aidx < summaryAgenda.length -1 && <AgendaDivider /> }
+                        </Box>
+                    )
+                })}
+            </SummaryList>
+        </SummaryContentContainer>
     );  
 
 }
@@ -298,24 +314,22 @@ function Topic (props: TopicProps) {
     }
 
     return (
-        <Box >
-            <Box sx={detailBoxSx} id="topic-box">
-                {topicLoading && <Loading size={30} margin={'5px'} />}
-                <ul id="topic-ul" style={{...listSx, marginBottom: 0, paddingTop: "5px"}} >
-                    {summaryTopic.map((topic, tidx) =>{
-                        return (
-                            <li key={`topic-${tidx}`} style={listItemSx} >
-                                {topic.topic}
-                                {
-                                    topic.time.length > 0 &&
-                                    <TimeLink time={topic.time} />
-                                }
-                            </li>
-                        )
-                    })}
-                </ul>
-            </Box>
-        </Box>
+        <SummaryContentContainer id="topic-box">
+            {topicLoading && <Loading size={30} margin={'5px'} />}
+            <TopicUl id="topic-ul">
+                {summaryTopic.map((topic, tidx) =>{
+                    return (
+                        <TopicLi key={`topic-${tidx}`} >
+                            {topic.topic}
+                            {
+                                topic.time.length > 0 &&
+                                <TimeLink time={topic.time} />
+                            }
+                        </TopicLi>
+                    )
+                })}
+            </TopicUl>
+        </SummaryContentContainer>
     )
 }
 
@@ -346,9 +360,9 @@ export function Summary (props: SummaryProps) {
     }
 
     return (
-        <Box sx={boxSx}>
-            <Box sx={boxSummarySx} >
-                <Box sx={boxToggleButtonSx} >
+        <SummaryContainer>
+            <SummaryInternalContainer>
+                <ToggleButtonContainer>
                         <ToggleButtonGroup
                             value={alignment}
                             exclusive
@@ -360,8 +374,8 @@ export function Summary (props: SummaryProps) {
                             <ToggleButton value="agenda">目次</ToggleButton>
                             <ToggleButton value="topic">トピック</ToggleButton>
                         </ToggleButtonGroup>
-                </Box>
-                <Box sx={boxContentSx} >
+                </ToggleButtonContainer>
+                <ContentContainer>
                     {alignment === null || alignment === 'summary' &&
                         <Concise summary={summary.summary} />
                     }
@@ -378,8 +392,8 @@ export function Summary (props: SummaryProps) {
                             summaryTopic={summary.summary.topic} ytplayer={ytplayer} topicLoading={topicLoading}
                         />
                     }
-                </Box>
-            </Box>
-        </Box>
+                </ContentContainer>
+            </SummaryInternalContainer>
+        </SummaryContainer>
     );  
 }

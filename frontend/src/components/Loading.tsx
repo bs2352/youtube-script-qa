@@ -1,5 +1,6 @@
 // import { styled } from '@mui/material/styles'
-import { CircularProgress, Box } from '@mui/material';
+import { CircularProgress, Box, styled } from '@mui/material';
+import { grey } from '@mui/material/colors'
 
 // const SpinCircle = styled(
 //     () => {
@@ -30,27 +31,21 @@ interface LoadingProps {
     margin?: number | string;
 }
 
-interface circularProgressSxType {
-    margin: number | string;
-}
-
-const circularProgressSx: circularProgressSxType = {
-    margin: "30px",
-};
+const LoadingContainer = styled(Box)({
+    color: grey[500],
+});
 
 export function Loading(props: LoadingProps) {
     const { size, margin } = props;
 
-    if (margin !== undefined) {
-        circularProgressSx.margin = margin;
-    } else {
-        circularProgressSx.margin = "30px"; // デフォルト
-    }
+    const StyledircularProgress = styled(CircularProgress)({
+        margin: (margin === undefined) ? "30px" : margin,
+    })
 
     return (
         // <SpinCircle />
-        <Box sx={{ color: 'grey.500' }} >
-            <CircularProgress sx={circularProgressSx} color="inherit" size={size} />
-        </Box>
+        <LoadingContainer>
+            <StyledircularProgress color="inherit" size={size} />
+        </LoadingContainer>
     )
 }

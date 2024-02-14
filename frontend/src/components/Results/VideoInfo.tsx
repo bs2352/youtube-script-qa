@@ -1,4 +1,4 @@
-import { Box, Table, TableBody, TableRow, TableCell, Link } from '@mui/material';
+import { Box, Table, TableBody, TableRow, TableCell, Link, styled } from '@mui/material';
 
 import { Loading } from '../Loading';
 import { VideoInfoType } from "../../common/types"
@@ -17,32 +17,34 @@ interface VideInfoProps {
     videoInfoLoading: boolean;
 }
 
-const boxSx = {
+const VideoInfoContainer = styled(Box)({
     width: "100%",
     margin: "0 auto",
-}
+});
 
-const tableSx = {
+const VideoInfoTable = styled(Table)({
     width: "85%",
     margin: "0 auto"
-}
+});
 
-const tableRowSx = {
+const VideoInfoTableRow = styled(TableRow)({
     textAlign: "left",
-}
+});
 
-const tableCellSx = {
-    border: "1px solid",
-    borderColor: "darkgrey",
-    padding: "1.0em",
-}
-
-const tableCellTitleSx = {
+const TitleTableCell = styled(TableCell)({
     // whiteSpace: "nowrap",
     fontWeight: "bold",
     backgroundColor: "lightgrey",
-    ...tableCellSx
-}
+    border: "1px solid",
+    borderColor: "darkgrey",
+    padding: "1.0em",
+});
+
+const ValueTableCell = styled(TableCell)({
+    border: "1px solid",
+    borderColor: "darkgrey",
+    padding: "1.0em",
+});
 
 
 export function VideoInfo (props: VideInfoProps) {
@@ -54,34 +56,31 @@ export function VideoInfo (props: VideInfoProps) {
     if (!videoInfo) {
         return <></>
     }
+
+    const TableElements = [
+        { title: "タイトル", value: videoInfo.title },
+        { title: "チャンネル名", value: videoInfo.author },
+        { title: "時間", value: s2hms(videoInfo.lengthSeconds) },
+        { title: "URL", value: <Link href={videoInfo.url} target={`_blank`} >{videoInfo.url}</Link> },
+        { title: "Video ID", value: videoInfo.vid },
+    ]
+
     return (
-        <Box sx={boxSx} id="videoinfo-box-01">
-            <Table sx={tableSx} id="videoinfo-table-01">
+        <VideoInfoContainer id="videoinfo-box-01">
+            <VideoInfoTable id="videoinfo-table-01">
                 <TableBody>
-                    <TableRow sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>タイトル</TableCell>
-                        <TableCell sx={tableCellSx}>{videoInfo.title}</TableCell>
-                    </TableRow>
-                    <TableRow  sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>チャンネル名</TableCell>
-                        <TableCell sx={tableCellSx}>{videoInfo.author}</TableCell>
-                    </TableRow>
-                    <TableRow  sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>時間</TableCell>
-                        <TableCell sx={tableCellSx}>{s2hms(videoInfo.lengthSeconds)}</TableCell>
-                    </TableRow>
-                    <TableRow  sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>URL</TableCell>
-                        <TableCell sx={tableCellSx}>
-                            <Link href={videoInfo.url} target={`_blank`} >{videoInfo.url}</Link>
-                        </TableCell>
-                    </TableRow>
-                    <TableRow  sx={tableRowSx}>
-                        <TableCell sx={tableCellTitleSx}>Video ID</TableCell>
-                        <TableCell sx={tableCellSx}>{videoInfo.vid}</TableCell>
-                    </TableRow>
-               </TableBody>
-            </Table>
-		</Box>
+                    {
+                        TableElements.map((item, idx) => {
+                            return (
+                                <VideoInfoTableRow key={`key-tr-${idx}`}>
+                                    <TitleTableCell>{item.title}</TitleTableCell>
+                                    <ValueTableCell>{item.value}</ValueTableCell>
+                                </VideoInfoTableRow>
+                            )
+                        })
+                    }
+                </TableBody>
+           </VideoInfoTable>
+		</VideoInfoContainer>
 	)
 }
