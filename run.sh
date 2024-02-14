@@ -12,8 +12,15 @@ then
 fi
 
 source .env
-VENV_BIN=".venv/bin/"
 
+VENV_BIN=".venv/bin/"
+if [ ! -e ${VENV_BIN} ];
+then
+    pipenv sync
+    echo "Setup python venv done."
+    echo "Please close and open vscode, and run this script."
+    exit 0
+fi
 
 main() {
     case $1 in
