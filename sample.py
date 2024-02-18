@@ -1876,6 +1876,8 @@ def test_topic_from_transcripts ():
     from yts.types import YoutubeTranscriptType, TranscriptChunkModel
 
 # 以下は「{title}」というタイトルのYoutube動画の文字起こしです。
+# - 各トピックには以下のキーワードをできるだけ含めてください。
+#   2023年7月1日, 神奈川県新横浜, 横浜DeNA, 中日, 巨人, チケット, 滞在時間, 立ち見席, 実況, 試合の展開, 風景, 鉄道の情報, 東京ドーム, 回転ドア, 舞浜, 幕張, 観光地, 神宮球場, 広島, ヤクルト
     JP_TOPIC_PROMPT_TEMPLATE = """\
 以下の文章はYoutube動画の文字起こしです。
 この文字起こしを要約して重要なポイントだけをトピックとして抽出し、以下のフォーマットで出力してください。
@@ -1885,8 +1887,6 @@ def test_topic_from_transcripts ():
 - トピックは{max}個以内で抽出してください。
 - 各トピックは日本語で出力してください。
 - 各トピックは30文字程度で出力してください。
-- 各トピックには以下のキーワードをできるだけ含めてください。
-  2023年7月1日, 神奈川県新横浜, 横浜DeNA, 中日, 巨人, チケット, 滞在時間, 立ち見席, 実況, 試合の展開, 風景, 鉄道の情報, 東京ドーム, 回転ドア, 舞浜, 幕張, 観光地, 神宮球場, 広島, ヤクルト
 
 ## 出力例
 1. [0:02:10] トピック1
@@ -2001,6 +2001,9 @@ Please output in the following format.
         topic: str = (chain.invoke(input=args))["text"]
         return topic
 
+    def _get_max_topics (length: int) -> int:
+        hour = int(length / 3600)
+        return 10 + hour * 5
 
     MAX_TOPICS = 15
     vid = DEFAULT_VID
@@ -2034,10 +2037,13 @@ Please output in the following format.
     if len(contents) > 0:
         groups.append(contents)
     # max = MAX_TOPICS // len(groups) + 1
+    MAX_TOPICS = _get_max_topics(int(vinfo['lengthSeconds']))
+    # print(MAX_TOPICS); sys.exit(0)
     total_chunks = len(chunks)
     topics = []
     for group in groups:
         max = _to_int_with_round(MAX_TOPICS * (len(group)/total_chunks))
+        max = max if max > 0 else 1
         topic = _topic(group, max, vinfo["title"])
         topics.append(topic)
     # sys.exit(0)

@@ -39,7 +39,8 @@ EXCLUDE_KEYWORDS = [
     "セミナー", "企画", "チャンネル登録", "情報", "コラボ", "勉強会", "予定", "登録", "イベント",
     "メールマガジン",
 ]
-MAX_TOPICS = int(os.getenv("MAX_TOPIC", "15"))
+MAX_TOPICS_BASE = int(os.getenv("MAX_TOPIC_BASE", "10"))
+TOPICS_PER_HOUR = int(os.getenv("TOPIC_PER_HOUR", "5"))
 MAX_RETRY_COUNT = int(os.getenv("MAX_RETRY_COUNT", "3"))
 RETRY_INTERVAL = 5.0
 
@@ -604,6 +605,10 @@ class YoutubeSummarize:
             h, m = divmod(m, 60)
             return "%d:%02d:%02d" % (h, m, s)
 
+        def _get_max_topics () -> int:
+            hour = int(self.lengthSeconds / 3600)
+            return MAX_TOPICS_BASE + hour * TOPICS_PER_HOUR
+
         def _to_int_with_round (value: float) -> int:
                 int_val = int(value)
                 diff = value - int_val
@@ -658,12 +663,12 @@ class YoutubeSummarize:
             verbose=self.debug,
         )
 
+        max_topics = _get_max_topics()
         tasks = []
         for group in groups:
-            max: int = _to_int_with_round(MAX_TOPICS * (len(group)/len(chunks)))
             args: TopicArgType = {
                 "content": "\n".join(group),
-                "max": max,
+                "max": _to_int_with_round(max_topics * (len(group)/len(chunks))),
             }
             tasks.append(_topic(args))
 
