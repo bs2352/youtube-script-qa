@@ -32,7 +32,7 @@ class AgendaModel (BaseModel):
 
 class TopicModel (BaseModel):
     topic: str = Field("")
-    time: List[str] = Field([])
+    time: str = Field("")
 
 class SummaryResultModel (BaseModel):
     title: str = Field("")
