@@ -114,14 +114,15 @@ Keywords:
 """
 KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
-TOPIC_PROMPT_TEMPLATE = """以下の文章はYoutube動画の文字起こしです。
-この文字起こしを要約して重要なポイントだけをトピックとして抽出し、以下のフォーマットで出力してください。
+TOPIC_PROMPT_TEMPLATE = """\
+以下はあるYoutube動画の文字起こしを開始時刻順で並べたものです。
+これらの文字起こし中から重要なトピックだけをピックアップして以下のフォーマットで出力してください。
 
 ## 出力のフォーマット
-- 各トピックに対する開始時刻を出力してください。
 - トピックは{max}個以内で抽出してください。
 - 各トピックは日本語で出力してください。
 - 各トピックは30文字程度で出力してください。
+- 各トピックに対する開始時刻も合わせて出力してください。
 
 ## 出力例
 1. [0:02:10] トピック1
@@ -667,7 +668,7 @@ class YoutubeSummarize:
         tasks = []
         for group in groups:
             args: TopicArgType = {
-                "content": "\n".join(group),
+                "content": "\n\n".join(group),
                 "max": _to_int_with_round(max_topics * (len(group)/len(chunks))),
             }
             tasks.append(_topic(args))
