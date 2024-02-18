@@ -15,7 +15,6 @@ function App() {
     const [ ytplayer, setYtPlayer ] = useState<YouTubePlayer>();
     const [ summaryLoading, setSummaryLoading ] = useState<boolean>(false);
     const [ agendaLoading, setAgendaLoading ] = useState<boolean>(false);
-    const [ topicLoading, setTopicLoading ] = useState<boolean>(false);
     const [ qaLoading, setQaLoading ] = useState<boolean>(false);
     const [ refreshSummary, setRefreshSummary ] = useState<boolean>(false);
 
@@ -25,7 +24,7 @@ function App() {
             <InputVid
                 vid={vid}
                 setVid={setVid}
-                loading={ summaryLoading || agendaLoading || topicLoading || qaLoading }
+                loading={ summaryLoading || agendaLoading || qaLoading }
                 setRefreshSummary={setRefreshSummary}
             />
             <VideoArea
@@ -40,8 +39,6 @@ function App() {
                     setSummaryLoading={setSummaryLoading}
                     agendaLoading={agendaLoading}
                     setAgendaLoading={setAgendaLoading}
-                    topicLoading={topicLoading}
-                    setTopicLoading={setTopicLoading}
                     qaLoading={qaLoading}
                     setQaLoading={setQaLoading}
                     refreshSummary={refreshSummary}
