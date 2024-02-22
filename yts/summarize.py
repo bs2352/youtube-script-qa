@@ -115,8 +115,8 @@ Keywords:
 KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
 TOPIC_PROMPT_TEMPLATE = """\
-以下はあるYoutube動画の文字起こしを開始時刻順で並べたものです。
-これらの中から重要なトピックだけをピックアップして以下のフォーマットで出力してください。
+以下はあるYoutube動画の文字起こしとそれに含まれる重要なキーワードです。
+キーワードを参考にして文字起こしの中から重要なトピックだけを抽出し、以下のフォーマットで出力してください。
 
 ## 出力のフォーマット
 - トピックは{max}個以内で抽出してください。
@@ -137,10 +137,13 @@ TOPIC_PROMPT_TEMPLATE = """\
 ## 文字起こし
 {content}
 
+## キーワード
+{keyword}
+
 ## トピック（日本語で）
 """
 
-TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
+TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content", "max", "keyword"]
 
 
 class YoutubeSummarize:
@@ -289,7 +292,7 @@ class YoutubeSummarize:
         (concise_summary, agenda, keyword) = await self._arun_with_detail_summary(mode, detail_summary)
 
         # トピック抽出
-        topic = await self._aextract_topic(mode)
+        topic = await self._aextract_topic(mode, keyword)
 
         summary: SummaryResultModel = SummaryResultModel(
             title=self.title,
@@ -591,6 +594,7 @@ class YoutubeSummarize:
     async def _aextract_topic (
         self,
         mode: int = 0,
+        keyword: List[str] = []
     ) -> List[TopicModel]:
 
         if mode & MODE_TOPIC == 0:
@@ -599,6 +603,7 @@ class YoutubeSummarize:
         class TopicArgType (TypedDict):
             content: str
             max: int
+            keyword: str
 
         def _s2hms (seconds: float) -> str:
             seconds = math.floor(seconds)
@@ -635,7 +640,7 @@ class YoutubeSummarize:
 
         chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
             self.transcriptions,
-            maxlength = 300,
+            maxlength = 100,
             overlap_length = 0,
             id_prefix = self.vid
         )
@@ -670,6 +675,7 @@ class YoutubeSummarize:
             args: TopicArgType = {
                 "content": "\n\n".join(group),
                 "max": _to_int_with_round(max_topics * (len(group)/len(chunks))),
+                "keyword": ", ".join(keyword),
             }
             tasks.append(_topic(args))
 
