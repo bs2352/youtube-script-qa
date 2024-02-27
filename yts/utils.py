@@ -65,6 +65,8 @@ def setup_embedding_from_environment () -> EmbeddingType:
             **llm_args,
             "openai_api_key": os.environ['OPENAI_API_KEY'],
         }
+        if "OPENAI_LLM_EMBEDDING_MODEL_NAME" in os.environ.keys():
+            llm_args["model"] = os.environ["OPENAI_LLM_EMBEDDING_MODEL_NAME"]
     else:
         llm_args = {
             **llm_args,
