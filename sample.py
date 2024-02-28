@@ -1007,8 +1007,8 @@ def test_decorate_loading ():
 
 def embedding_async ():
     from langchain.embeddings import OpenAIEmbeddings
-    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
-    from llama_index.embeddings import LangchainEmbedding
+    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor # type: ignore
+    from llama_index.embeddings import LangchainEmbedding # type: ignore
     from yts.utils import setup_llm_from_environment, setup_embedding_from_environment
     import dotenv
 

@@ -8,10 +8,17 @@ import re
 from langchain_openai import (
     OpenAI, ChatOpenAI, OpenAIEmbeddings, AzureOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 )
+from llama_index.llms.openai import OpenAI as LlamaIndexOpenAI
+from llama_index.embeddings.openai import OpenAIEmbedding as LlamaIndexOpenAIEmbeddings
+from llama_index.llms.azure_openai import AzureOpenAI as LlamaIndexAzureOpenAI
+from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding as LlamaIndexAzureOpenAIEmbeddings
 import tiktoken
 
-from .types import LLMType, EmbeddingType, TranscriptChunkModel, YoutubeTranscriptType
-
+from .types import (
+    LLMType, EmbeddingType,
+    LlamaIndexLLMType, LlamaIndexEmbeddingType,
+    TranscriptChunkModel, YoutubeTranscriptType
+)
 
 RE_TRANACRIPT_FILTER = re.compile('|'.join([
     '\\[音楽\\]', '\\[拍手\\]'
@@ -77,6 +84,53 @@ def setup_embedding_from_environment () -> EmbeddingType:
             "azure_deployment":   os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
         }
         llm_class = AzureOpenAIEmbeddings
+    return llm_class(**llm_args)
+
+
+def setup_llamaindex_llm_from_environment () -> LlamaIndexLLMType:
+    llm_class: Type[LlamaIndexLLMType] = LlamaIndexOpenAI
+    llm_args: Dict[str, Any] = {
+        "temperature": float(os.environ['LLM_TEMPERATURE']),
+        "timeout": int(os.environ['LLM_REQUEST_TIMEOUT']),
+    }
+    if "OPENAI_API_KEY" in os.environ.keys():
+        llm_args = {
+            **llm_args,
+            "api_key": os.environ['OPENAI_API_KEY'],
+            "model": os.environ['OPENAI_LLM_MODEL_NAME']
+        }
+    else:
+        llm_args = {
+            **llm_args,
+            "engin":          os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
+            "azure_endpoint": os.environ['AZURE_OPENAI_API_BASE'],
+            "api_key":        os.environ['AZURE_OPENAI_API_KEY'],
+            "api_version":    os.environ['AZURE_LLM_OPENAI_API_VERSION'],
+        }
+        llm_class = LlamaIndexAzureOpenAI
+
+    return  llm_class(**llm_args)
+
+
+def setup_llamaindex_embedding_from_environment () -> LlamaIndexEmbeddingType:
+    llm_args: Dict[str, Any] = {}
+    llm_class = LlamaIndexOpenAIEmbeddings
+    if "OPENAI_API_KEY" in os.environ.keys():
+        llm_args = {
+            **llm_args,
+            "api_key": os.environ['OPENAI_API_KEY'],
+        }
+        if "OPENAI_LLM_EMBEDDING_MODEL_NAME" in os.environ.keys():
+            llm_args["model"] = os.environ["OPENAI_LLM_EMBEDDING_MODEL_NAME"]
+    else:
+        llm_args = {
+            **llm_args,
+            "api_key":     os.environ['AZURE_OPENAI_API_KEY'],
+            "azure_endpoint":     os.environ['AZURE_OPENAI_API_BASE'],
+            "api_version": os.environ['AZURE_EMBEDDING_OPENAI_API_VERSION'],
+            "azure_deployment":   os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
+        }
+        llm_class = LlamaIndexAzureOpenAIEmbeddings
     return llm_class(**llm_args)
 
 
