@@ -5,8 +5,16 @@ from langchain_openai import (
     OpenAI, ChatOpenAI, OpenAIEmbeddings, AzureOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 )
 
+from llama_index.llms.openai import OpenAI as LlamaIndexOpenAI
+from llama_index.embeddings.openai import OpenAIEmbedding as LlamaIndexOpenAIEmbeddings
+from llama_index.llms.azure_openai import AzureOpenAI as LlamaIndexAzureOpenAI
+from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding as LlamaIndexAzureOpenAIEmbeddings
+
+
 LLMType: TypeAlias = OpenAI | ChatOpenAI | AzureOpenAI | AzureChatOpenAI
 EmbeddingType: TypeAlias = OpenAIEmbeddings | AzureOpenAIEmbeddings
+LlamaIndexLLMType: TypeAlias = LlamaIndexOpenAI | LlamaIndexAzureOpenAI
+LlamaIndexEmbeddingType: TypeAlias = LlamaIndexOpenAIEmbeddings | LlamaIndexAzureOpenAIEmbeddings
 
 
 class TranscriptChunkModel (BaseModel):
@@ -32,7 +40,7 @@ class AgendaModel (BaseModel):
 
 class TopicModel (BaseModel):
     topic: str = Field("")
-    time: List[str] = Field([])
+    time: str = Field("")
 
 class SummaryResultModel (BaseModel):
     title: str = Field("")

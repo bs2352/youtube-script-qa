@@ -19,7 +19,6 @@ interface SummaryProps {
     setAlignment: React.Dispatch<React.SetStateAction<string>>;
     summaryLoading: boolean;
     agendaLoading: boolean;
-    topicLoading: boolean;
 }
 
 interface AgendaProps {
@@ -31,7 +30,6 @@ interface AgendaProps {
 interface TopicProps {
     summaryTopic: TopicType[];
     ytplayer: YouTubePlayer;
-    topicLoading: boolean;
 }
 
 
@@ -279,7 +277,7 @@ function Agenda (props: AgendaProps) {
 
 
 function Topic (props: TopicProps) {
-    const { summaryTopic, ytplayer, topicLoading } = props;
+    const { summaryTopic, ytplayer } = props;
 
     const onClickHandlerTimeLink = (start_str: string) => {
         if (start_str.slice(-1) === "*") {
@@ -289,42 +287,31 @@ function Topic (props: TopicProps) {
         ytplayer.seekTo(start, true);
     }
 
-    const TimeLink = (props: {time: string[]}) => {
+    const TimeLink = (props: {time: string}) => {
         const { time } = props;
         return (
             <span style={{marginLeft: 10}}>
-                {`(`}
-                {time.map((t, tidx) => {
-                    return (
-                        <span key={`time-${tidx}`}>
-                            <Link
-                                href="#"
-                                underline="hover"
-                                onClick={()=>onClickHandlerTimeLink(t)}
-                            >
-                                {t}
-                            </Link>
-                            {tidx < time.length - 1 && ", "}
-                        </span>
-                    )
-                })}
-                {`)`}
+                {'('}
+                <Link
+                    href="#"
+                    underline="hover"
+                    onClick={()=>onClickHandlerTimeLink(time)}
+                >
+                    {time}
+                </Link>
+                {') '}
             </span>
         )
     }
 
     return (
         <SummaryContentContainer id="topic-box">
-            {topicLoading && <Loading size={30} margin={'5px'} />}
             <TopicUl id="topic-ul">
                 {summaryTopic.map((topic, tidx) =>{
                     return (
                         <TopicLi key={`topic-${tidx}`} >
+                            <TimeLink time={topic.time} />
                             {topic.topic}
-                            {
-                                topic.time.length > 0 &&
-                                <TimeLink time={topic.time} />
-                            }
                         </TopicLi>
                     )
                 })}
@@ -341,7 +328,6 @@ export function Summary (props: SummaryProps) {
         alignment, setAlignment,
         summaryLoading,
         agendaLoading,
-        topicLoading,
     } = props;
 
     const onChangeHandlerToggleMode = (
@@ -389,7 +375,7 @@ export function Summary (props: SummaryProps) {
                     }
                     {alignment === 'topic' &&
                         <Topic
-                            summaryTopic={summary.summary.topic} ytplayer={ytplayer} topicLoading={topicLoading}
+                            summaryTopic={summary.summary.topic} ytplayer={ytplayer}
                         />
                     }
                 </ContentContainer>

@@ -1007,8 +1007,8 @@ def test_decorate_loading ():
 
 def embedding_async ():
     from langchain.embeddings import OpenAIEmbeddings
-    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
-    from llama_index.embeddings import LangchainEmbedding
+    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor # type: ignore
+    from llama_index.embeddings import LangchainEmbedding # type: ignore
     from yts.utils import setup_llm_from_environment, setup_embedding_from_environment
     import dotenv
 
@@ -1637,7 +1637,7 @@ async def _atest_agenda_similarity ():
         #     return reviewed_likely_summary
 
         def __compare_with_neiborhood (
-            likely_summary: List[int], similarities_list: List[numpy.ndarray],
+            likely_summary: List[int], similarities_list: List[numpy.ndarray]
         ) -> List[int]:
 
             def __get_next_summary (base_index: int, likely_summary: List[int]) -> int:
@@ -1864,8 +1864,216 @@ def test_get_info ():
     print(vinfo)
 
 
+def test_topic_from_transcripts ():
+    from typing import List, Dict
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from pytube import YouTube
+    import json, math, re
+    from decimal import Decimal
+    from langchain.chains import LLMChain
+    from langchain.prompts import PromptTemplate
+    from yts.utils import divide_transcriptions_into_chunks, setup_llm_from_environment, count_tokens
+    from yts.types import YoutubeTranscriptType, TranscriptChunkModel
+
+# 以下は「{title}」というタイトルのYoutube動画の文字起こしです。
+# - 各トピックには以下のキーワードをできるだけ含めてください。
+#   2023年7月1日, 神奈川県新横浜, 横浜DeNA, 中日, 巨人, チケット, 滞在時間, 立ち見席, 実況, 試合の展開, 風景, 鉄道の情報, 東京ドーム, 回転ドア, 舞浜, 幕張, 観光地, 神宮球場, 広島, ヤクルト
+    JP_TOPIC_PROMPT_TEMPLATE = """\
+以下の文章はYoutube動画の文字起こしです。
+この文字起こしを要約して重要なポイントだけをトピックとして抽出し、以下のフォーマットで出力してください。
+
+## 出力のフォーマット
+- 各トピックに対する開始時刻を出力してください。
+- トピックは{max}個以内で抽出してください。
+- 各トピックは日本語で出力してください。
+- 各トピックは30文字程度で出力してください。
+
+## 出力例
+1. [0:02:10] トピック1
+2. [0:09:15] トピック2
+3. [0:21:55] トピック3
+
+## 文字起こしのフォーマット
+[開始時刻1] 文字起こし1
+[開始時刻2] 文字起こし2
+[開始時刻3] 文字起こし3
+
+## 文字起こし
+{content}
+
+## トピック（日本語で）
+"""
+    EN_TOPIC_PROMPT_TEMPLATE = """\
+Below is a transcription for a Youtube video titled "{title}".
+Please summarize this transcription, extract only the important points as topics, and output in the following format.
+
+## Format of output
+- Please output the start time for each topic.
+- Please extract no more than {max} topics.
+- Each topic must be in Japanese.
+
+## Output Example
+1. [0:02:10] Topic 1
+2. [0:09:15] Topic 2
+3. [0:21:55] Topic 3
+
+## Format of transcription
+[start_time_1] Transcription 1
+[start_time_2] Transcription 2
+[start_time_3] Transcription 3
+
+## Transcription
+{content}
+
+## Topic (in Japanese)
+"""
+    TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content", "max", "title"]
+
+    TOPIC_CHECK_PROMPT_TEMPLATE = """\
+The following are topics extracted from a Youtube video titled "{title}".
+Please combine consective topics with similar content into one topic and modified into compact topics with no duplicates.
+Please output in the following format.
+
+## Format of output
+- Output the start time for each topic.
+- Each topic must be in Japanese.
+
+## Output Example
+1. [0:02:10] Topic 1
+2. [0:09:15] Topic 2
+3. [0:21:55] Topic 3
+
+## Topic
+{content}
+
+## Modified topics
+"""
+    TOPIC_CHECK_PROMPT_TEMPLATE_VARIABLES = ["content", "title"]
+
+    def _topic (contents: list[str], max, title):
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=JP_TOPIC_PROMPT_TEMPLATE,
+            # template=EN_TOPIC_PROMPT_TEMPLATE,
+            input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            # verbose=True,
+        )
+        args: Dict[str, str|int] = {
+            "content": "\n".join(contents),
+            "max": max,
+            "title": title,
+        }
+        topic: str = (chain.invoke(input=args))["text"]
+        return topic
+
+    def _s2hms (seconds: float) -> str:
+        seconds = math.floor(seconds)
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return "%d:%02d:%02d" % (h, m, s)
+
+    def _to_int_with_round (value: float) -> int:
+        int_val = int(value)
+        diff = value - int_val
+        if diff >= 0.5:
+            int_val += 1
+        return int_val
+
+    def _modify_topic (contents: str, title):
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=TOPIC_CHECK_PROMPT_TEMPLATE,
+            input_variables=TOPIC_CHECK_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            # verbose=True,
+        )
+        args: Dict[str, str|int] = {
+            "content": contents,
+            "title": title,
+        }
+        topic: str = (chain.invoke(input=args))["text"]
+        return topic
+
+    def _get_max_topics (length: int) -> int:
+        hour = int(length / 3600)
+        return 10 + hour * 5
+
+    MAX_TOPICS = 15
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    url: str = f'https://www.youtube.com/watch?v={vid}'
+    vinfo = YouTube(url).vid_info["videoDetails"]
+    DEFAULT_TRANSCRIPT_LANGUAGES = ["ja", "en", "en-US"]
+    transcripts: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(vid, languages=DEFAULT_TRANSCRIPT_LANGUAGES)
+    chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+        transcripts,
+        maxlength = 300,
+        overlap_length = 0,
+        id_prefix = vid
+    )
+
+    tokens = 0
+    contents = []
+    groups = []
+    for idx, chunk in enumerate(chunks):
+        start_time = _s2hms(chunk.start)
+        end_time = _s2hms(chunks[idx+1].start if idx+1 < len(chunks) else chunk.start + chunk.duration)
+        # transcript = f'[{start_time}-{end_time}] {chunk.text}'.replace("\n", " ")
+        transcript = f'[{start_time}] {chunk.text}'.replace("\n", " ")
+        if tokens + count_tokens(transcript) > 12000:
+            groups.append(contents)
+            tokens = 0
+            contents = []
+        tokens += count_tokens(transcript)
+        contents.append(transcript)
+    if len(contents) > 0:
+        groups.append(contents)
+    # max = MAX_TOPICS // len(groups) + 1
+    MAX_TOPICS = _get_max_topics(int(vinfo['lengthSeconds']))
+    # print(MAX_TOPICS); sys.exit(0)
+    total_chunks = len(chunks)
+    topics = []
+    for group in groups:
+        max = _to_int_with_round(MAX_TOPICS * (len(group)/total_chunks))
+        max = max if max > 0 else 1
+        topic = _topic(group, max, vinfo["title"])
+        topics.append(topic)
+    # sys.exit(0)
+    result = {
+        "topics": []
+    }
+    for topic in topics:
+        result["topics"].append(topic)
+    print("\n".join(result["topics"]))
+    sys.exit(0)
+
+    # mofied_topic = _modify_topic("\n".join(result["topics"]), vinfo["title"])
+    # print("------\n", mofied_topic)
+
+    def _add (modify_topic: List[str], topic: str):
+        idx, time, text = re.split(r"\s+", topic, maxsplit=2)
+        for mtopic in modify_topic:
+            midx, mtime, mtext = re.split(r"\s+", mtopic, maxsplit=2)
+            if text == mtext:
+                return
+        modify_topic.append(f'{len(modify_topic)+1}. {time} {text}')
+
+    modify_topic = []
+    for topics in result["topics"]:
+        for topic in topics.split("\n"):
+            _add(modify_topic, topic)
+    print("-------------\n", "\n".join(modify_topic))
+
 if __name__ == "__main__":
-    get_transcription()
+    # get_transcription()
     # divide_topic()
     # get_topic()
     # get_topic_from_summary()
@@ -1884,3 +2092,4 @@ if __name__ == "__main__":
     # test_function()
     # test_agenda_similarity()
     # test_get_info()
+    test_topic_from_transcripts()
