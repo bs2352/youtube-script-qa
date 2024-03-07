@@ -360,7 +360,7 @@ class YoutubeQA:
             "content": self.summary,
             "title": self.title
         }
-        answer: str = await chain.arun(**args)
+        answer: str = (await chain.ainvoke(input=args))["text"]
         return answer
 
 
