@@ -12,7 +12,6 @@ export default defineConfig({
       '/transcript': 'http://localhost:8080',
       "/sample": 'http://localhost:8080',
       "/agenda": 'http://localhost:8080',
-      "/topic": 'http://localhost:8080',
       "/info": 'http://localhost:8080',
     }
   }
