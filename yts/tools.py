@@ -589,7 +589,7 @@ class YoutubeTopicTimeTable:
             summary_priority = _mk_summary_priority(likely_summary[idx], similarities_list[idx])
             starts = _select_valid_starts(tmp_starts, summary_priority, summary)
             starts = _aggregate_starts(starts)
-            topic.time = starts
+            topic.time = starts[0] # トピック抽出方法の変更によりエラーを消すため暫定対応（バグあり）
 
         if store:
             summary_file: str = f'{os.environ["SUMMARY_STORE_DIR"]}/{vid}'
