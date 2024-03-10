@@ -46,6 +46,8 @@ def setup_llm_from_environment () -> LLMType:
         }
         if os.environ['OPENAI_LLM_MODEL_NAME'].startswith("gpt-"):
             llm_class = ChatOpenAI
+            # seed設定 ref.https://github.com/langchain-ai/langchain/issues/13177
+            # llm_args["model_kwargs"] = {"seed": 1234567890}
     else:
         llm_args = {
             **llm_args,
