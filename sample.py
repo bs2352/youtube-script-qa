@@ -2072,6 +2072,99 @@ Please output in the following format.
             _add(modify_topic, topic)
     print("-------------\n", "\n".join(modify_topic))
 
+
+def test_separate_context_with_embedding_similarity():
+    from typing import List, Dict
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from pytube import YouTube
+    from yts.utils import divide_transcriptions_into_chunks, setup_embedding_from_environment
+    from yts.types import YoutubeTranscriptType, TranscriptChunkModel
+    import numpy
+    import math
+
+    def _cosine_similarity(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
+        return numpy.dot(a, b) / (numpy.linalg.norm(a) * numpy.linalg.norm(b))
+
+    def _s2hms (seconds: float) -> str:
+        seconds = math.floor(seconds)
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return "%d:%02d:%02d" % (h, m, s)
+
+    # def _sum (list: List[float]) -> float:
+    #     return sum(list)
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    url: str = f'https://www.youtube.com/watch?v={vid}'
+    vinfo = YouTube(url).vid_info["videoDetails"]
+    DEFAULT_TRANSCRIPT_LANGUAGES = ["ja", "en", "en-US"]
+    transcripts: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(vid, languages=DEFAULT_TRANSCRIPT_LANGUAGES)
+    chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+        transcripts,
+        # maxlength = 500,
+        maxlength = 300,
+        # maxlength = 200,
+        overlap_length = 0,
+        # overlap_length = 3,
+        id_prefix = vid
+    )
+
+    texts = [ chunk.text for chunk in chunks]
+    llm_embeddings = setup_embedding_from_environment()
+    async def aembed_documents ():
+        return await llm_embeddings.aembed_documents(texts)
+    embeddings = asyncio.run(aembed_documents())
+    # print(len(chunks), len(embeddings))
+    # print(embeddings[0])
+
+    similarities: List[float] = []
+    for idx, chunk in enumerate(chunks):
+        cur_embedding = embeddings[idx]
+        # next_embedding = embeddings[idx+1] if idx+1 < len(chunks) else embeddings[idx]
+        # similarity = float(_cosine_similarity(numpy.array(cur_embedding), numpy.array(next_embedding)))
+        next_embeddings = []
+        # for i in range(0, 3):
+        for i in range(0, 5):
+            if idx + i + 1 >= len(chunks):
+                break
+            next_embeddings.append(embeddings[idx+i+1])
+        cur_similarities = [
+            float(_cosine_similarity(numpy.array(cur_embedding), numpy.array(next_embedding))) for next_embedding in next_embeddings
+        ] if len(next_embeddings) > 0 else []
+        # print(cur_similarities)
+        similarity = sum(cur_similarities) / len(cur_similarities) if len(cur_similarities) > 0 else 1.0
+        similarities.append(similarity)
+    mean_similarity = sum(similarities) / len(similarities)
+    prev_sim: float = 0.0
+    for idx, sim in enumerate(similarities):
+        cur_chunk = chunks[idx]
+        next_chunk = chunks[idx+1] if idx+1 < len(chunks) else chunks[idx]
+        text = cur_chunk.text.replace("\n", " ")
+        text2 = next_chunk.text.replace("\n", " ")
+        hms = _s2hms(cur_chunk.start)
+        hms2 = _s2hms(next_chunk.start)
+        next_sim = similarities[idx+1] if idx+1 < len(similarities) else similarities[idx]
+        # print(f'[{sim:.3f}]\n-- [{hms}] {text}\n-- [{hms2}]{text2}'); sys.stdout.flush()
+        # if sim < mean_similarity:
+        # if sim < 0.5:
+        # if sim < mean_similarity * 0.8:
+        # if sim < mean_similarity * 0.6:
+        #     print(f'[{sim:.3f}] [{hms}]\n- {text}\n- {text2}')
+        # if sim < mean_similarity * 0.8:
+        #     warning = sim
+        # print(f'[{sim:.3f}]\n-- [{hms}] {text}\n-- [{hms2}]{text2}'); sys.stdout.flush()
+        if prev_sim > sim and sim < next_sim:
+            # if sim < mean_similarity * 0.7:
+            if sim < mean_similarity * 0.8:
+            # if sim < mean_similarity * 0.9:
+                print(f'# [{sim:.3f}] [{hms2}]\n-- [{hms}] {text}\n-- [{hms2}]{text2}'); sys.stdout.flush()
+                # print(f'# [{sim:.3f}] [{hms2}]\n-- [{hms2}]{text2}'); sys.stdout.flush()
+        prev_sim = sim
+    print(mean_similarity)
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -2092,4 +2185,5 @@ if __name__ == "__main__":
     # test_function()
     # test_agenda_similarity()
     # test_get_info()
-    test_topic_from_transcripts()
+    # test_topic_from_transcripts()
+    test_separate_context_with_embedding_similarity()
