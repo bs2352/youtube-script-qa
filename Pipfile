@@ -16,6 +16,9 @@ uvicorn = {extras = ["standard"], version = "*"}
 gunicorn = "*"
 llama-index-llms-azure-openai = "*"
 llama-index-embeddings-azure-openai = "*"
+langchain-aws = "*"
+boto3 = "*"
+anthropic = "*"
 
 [dev-packages]
 scikit-learn = "*"
