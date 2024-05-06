@@ -2373,7 +2373,7 @@ Several functions are provided to answer questions.
 
 ## Functions
 name: answer_question_about_specific_things
-description: Answer questions about specific things mentioned in a given video. Effective for questions asking what, where, when, why and how.
+description: Answer questions about specific things mentioned in a given video. It is effective for questions that ask what, where, when, why, and how, or that ask for explanations about specific things.
 
 name: answer_question_about_general_content
 description: View the entire video and Answer questions about the general content of a given video. Effective for summarizing and extracting topics.
