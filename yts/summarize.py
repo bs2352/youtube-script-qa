@@ -126,8 +126,9 @@ TOPIC_PROMPT_TEMPLATE = """\
 3. 開始時刻とトピックを出力する
 
 ## トピック抽出の条件
--  {max}個くらいのトピックを抽出すること。
+- トピックは最大で{max}個までとする。
 - トピックは30文字以内で見出しとなるように分かりやすく簡潔に要約すること。
+- 関連するトピックが連続する場合は1つにまとめること。
 - トピックは日本語で出力すること。
 
 ## 出力のフォーマット
@@ -609,8 +610,8 @@ class YoutubeSummarize:
             return "%d:%02d:%02d" % (h, m, s)
 
         def _get_max_topics () -> int:
-            hour = int(self.lengthSeconds / 3600)
-            return MAX_TOPICS_BASE + hour * TOPICS_PER_HOUR
+            hour = self.lengthSeconds / 3600
+            return MAX_TOPICS_BASE + int((hour - 1) * TOPICS_PER_HOUR)
 
         def _to_int_with_round (value: float) -> int:
                 int_val = int(value)
