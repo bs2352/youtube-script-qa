@@ -19,6 +19,7 @@ llama-index-embeddings-azure-openai = "*"
 langchain-aws = "*"
 boto3 = "*"
 anthropic = "*"
+llama-index-llms-bedrock = "*"
 
 [dev-packages]
 scikit-learn = "*"

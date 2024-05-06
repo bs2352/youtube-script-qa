@@ -2363,6 +2363,52 @@ def test_topic_from_transcripts2():
         print("---------", args["topic2"], sep="\n")
 
 
+def test_which_run_mode_with_bedrock():
+    from yts.utils import setup_llm_from_environment
+    from langchain.chains import LLMChain
+    from langchain.prompts import PromptTemplate
+
+    WHICH_RUN_MODE_PROMPT_TEMPLATE  = """You are an excellent AI assistant that answers questions.
+Several functions are provided to answer questions.
+
+## Functions
+name: answer_question_about_specific_things
+description: Answer questions about specific things mentioned in a given video. Effective for questions asking what, where, when, why and how.
+
+name: answer_question_about_general_content
+description: View the entire video and Answer questions about the general content of a given video. Effective for summarizing and extracting topics.
+
+Which function would you use to answer the following questions?
+Please answer only the function name of the function you will use.
+If the question is not in English, please convert it to English before thinking about it.
+
+## Question
+{question}
+
+## Function to use
+"""
+    WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES = ["question"]
+
+    llm = setup_llm_from_environment()
+    prompt = PromptTemplate(
+        template=WHICH_RUN_MODE_PROMPT_TEMPLATE,
+        input_variables=WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES,
+    )
+    chain = LLMChain(
+        llm=llm,
+        prompt=prompt,
+        # verbose=self.debug,
+    )
+    while True:
+        question = input("input question: ")
+        args = {
+            "question": question,
+        }
+        print(prompt.format(**args))
+        result = chain.predict(**args)
+        print("---", result, "---")
+
+
 if __name__ == "__main__":
     # get_transcription()
     # divide_topic()
@@ -2385,4 +2431,5 @@ if __name__ == "__main__":
     # test_get_info()
     # test_topic_from_transcripts()
     # test_separate_context_with_embedding_similarity()
-    test_topic_from_transcripts2()
+    # test_topic_from_transcripts2()
+    test_which_run_mode_with_bedrock()

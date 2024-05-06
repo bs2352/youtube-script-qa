@@ -10,11 +10,12 @@ from llama_index.llms.openai import OpenAI as LlamaIndexOpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding as LlamaIndexOpenAIEmbeddings
 from llama_index.llms.azure_openai import AzureOpenAI as LlamaIndexAzureOpenAI
 from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding as LlamaIndexAzureOpenAIEmbeddings
+from llama_index.llms.bedrock import Bedrock as LlamaIndexBedrock
 
 
 LLMType: TypeAlias = OpenAI | ChatOpenAI | AzureOpenAI | AzureChatOpenAI | ChatBedrock
 EmbeddingType: TypeAlias = OpenAIEmbeddings | AzureOpenAIEmbeddings
-LlamaIndexLLMType: TypeAlias = LlamaIndexOpenAI | LlamaIndexAzureOpenAI
+LlamaIndexLLMType: TypeAlias = LlamaIndexOpenAI | LlamaIndexAzureOpenAI | LlamaIndexBedrock
 LlamaIndexEmbeddingType: TypeAlias = LlamaIndexOpenAIEmbeddings | LlamaIndexAzureOpenAIEmbeddings
 
 
