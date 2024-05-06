@@ -296,7 +296,7 @@ class YoutubeQA:
                 "functions": WHICH_RUN_MODE_FUNCTIONS
             },
             output_key="function",
-            verbose=True
+            verbose=self.debug
         )
         result: LLMResult = await chain.agenerate([{"title": self.title, "question": query}])
         generation: ChatGeneration = result.generations[0][0] # type: ignore
@@ -328,7 +328,7 @@ class YoutubeQA:
         chain = LLMChain(
             llm=llm,
             prompt=prompt,
-            verbose=True
+            verbose=self.debug
         )
         args: Dict[str, Any] = {
             "functions": functions,
