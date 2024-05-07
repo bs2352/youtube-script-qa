@@ -20,6 +20,7 @@ langchain-aws = "*"
 boto3 = "*"
 anthropic = "*"
 llama-index-llms-bedrock = "*"
+llama-index-embeddings-bedrock = "*"
 
 [dev-packages]
 scikit-learn = "*"

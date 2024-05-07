@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3edd59b88c3c24c80bbd93977cd3b8d1d799f361b6aa2d5a0fa6fecc29db4704"
+            "sha256": "08d075d05771abe9f6656f1859ec4eb6897342b73360aedf32942e51644d9451"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -852,6 +852,14 @@
             ],
             "index": "pypi",
             "version": "==0.1.9"
+        },
+        "llama-index-embeddings-bedrock": {
+            "hashes": [
+                "sha256:8e83898aff3e7ef49fcb2587e29930273769987a4945fb4282bfc257a8f4caa1",
+                "sha256:d7ebdb93f7e15adb892800eb1c835f7fb2992ad0ea71c65e2e878ee84c330a16"
+            ],
+            "index": "pypi",
+            "version": "==0.1.5"
         },
         "llama-index-embeddings-openai": {
             "hashes": [
