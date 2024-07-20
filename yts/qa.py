@@ -45,7 +45,7 @@ WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES = ["title", "question"]
 WHICH_RUN_MODE_FUNCTIONS = [
     {
         "name": "answer_question_about_specific_things",
-        "description": "Answer questions about specific things mentioned in a given video. Effective for questions asking what, where, when, why and how.",
+        "description": "Answer questions about specific things mentioned in a given video. It is effective for questions that ask what, where, when, why, and how, or that ask for explanations about specific things.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -80,6 +80,23 @@ WHICH_RUN_MODE_FUNCTIONS = [
         }
     },
 ]
+WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK  = """You are an excellent AI assistant that answers questions.
+Several functions are provided to answer questions.
+
+## Functions
+{functions}
+
+Which function would you use to answer the following questions?
+Please answer only the function name of the function you will use.
+If the question is not in English, please convert it to English before thinking about it.
+
+## Question
+{question}
+
+## Function to use
+"""
+WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK_VARIABLES = ["functions", "question"]
+
 
 
 QA_SUMMARIZE_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
@@ -256,6 +273,15 @@ class YoutubeQA:
 
 
     async def _awhich_run_mode (self, query: str) -> int:
+        llm_type: str = os.environ['LLM_TYPE']
+        if llm_type == "openai" or llm_type == "azure":
+            return await self._awhich_run_mode_with_function_calling(query)
+        if llm_type == "aws":
+            return await self._awhich_run_mode_with_completion(query)
+        return RUN_MODE_SUMMARY
+
+
+    async def _awhich_run_mode_with_function_calling (self, query: str) -> int:
         if query == "":
             return RUN_MODE_SUMMARY
         llm = setup_llm_from_environment()
@@ -270,7 +296,7 @@ class YoutubeQA:
                 "functions": WHICH_RUN_MODE_FUNCTIONS
             },
             output_key="function",
-            verbose=True
+            verbose=self.debug
         )
         result: LLMResult = await chain.agenerate([{"title": self.title, "question": query}])
         generation: ChatGeneration = result.generations[0][0] # type: ignore
@@ -279,6 +305,37 @@ class YoutubeQA:
         if "function_call" in message:
             func_name = message["function_call"]["name"]
 
+        mode = RUN_MODE_SEARCH if func_name == WHICH_RUN_MODE_FUNCTIONS[0]["name"] else \
+               RUN_MODE_SUMMARY
+        self._debug(f"QA mode = {mode}", flush=True)
+
+        return mode
+
+
+    async def _awhich_run_mode_with_completion (self, query: str) -> int:
+        if query == "":
+            return RUN_MODE_SUMMARY
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK,
+            input_variables=WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK_VARIABLES
+        )
+        functions = ""
+        for function in WHICH_RUN_MODE_FUNCTIONS:
+            functions += f'name: {function["name"]}\n'
+            functions += f'description: {function["description"]}\n\n'
+        functions = functions.strip()
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            verbose=self.debug
+        )
+        args: Dict[str, Any] = {
+            "functions": functions,
+            "question": query
+        }
+        func_name: str = (await chain.ainvoke(input=args))['text'].strip()
+        self._debug(f"func_name = {func_name}", flush=True)
         mode = RUN_MODE_SEARCH if func_name == WHICH_RUN_MODE_FUNCTIONS[0]["name"] else \
                RUN_MODE_SUMMARY
         self._debug(f"QA mode = {mode}", flush=True)
