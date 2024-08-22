@@ -132,3 +132,4 @@ $ gunicorn -c gunicorn_config.py restapi:app
 
 #### 備考
 * vid.txtにVideoIDを1行1エントリ形式で記載しておくとトップ画面で選択できるようになる。開発用の隠し機能。
+* test
