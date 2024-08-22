@@ -4,7 +4,7 @@ import { YouTubePlayer } from 'react-youtube'
 
 import {
     SummaryRequestBody, SummaryResponseBody, TranscriptType, QaResponseBody, VideoInfoType,
-    AgendaType, TopicType,
+    AgendaType,
 } from "../common/types"
 import { VideoInfo } from './Results/VideoInfo'
 import { Summary } from './Results/Summary'
@@ -25,8 +25,6 @@ interface ResultProps {
     setSummaryLoading: React.Dispatch<React.SetStateAction<boolean>>;
     agendaLoading: boolean;
     setAgendaLoading: React.Dispatch<React.SetStateAction<boolean>>;
-    topicLoading: boolean;
-    setTopicLoading: React.Dispatch<React.SetStateAction<boolean>>;
     qaLoading: boolean;
     setQaLoading: React.Dispatch<React.SetStateAction<boolean>>;
     refreshSummary: boolean;
@@ -68,7 +66,6 @@ export function Result (props: ResultProps) {
         vid, ytplayer,
         summaryLoading, setSummaryLoading,
         agendaLoading, setAgendaLoading,
-        topicLoading, setTopicLoading,
         qaLoading, setQaLoading,
         refreshSummary, setRefreshSummary,
     } = props;
@@ -233,40 +230,6 @@ export function Result (props: ResultProps) {
         })
     }
 
-    const fetch_topic = () => {
-        setTopicLoading(true);
-        const requestBody: SummaryRequestBody = {
-            vid: vid,
-        }
-        fetch(
-            '/topic',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            }
-        )
-        .then((res => {
-            if (!res.ok) {
-                throw new Error(res.statusText);
-            }
-            return res.json();
-        }))
-        .then((res => {
-            setSummary(res);
-        }))
-        .catch((err) => {
-            const errmessage: string = `トピックのタイムテーブル作成中にエラーが発生しました。${err}`;
-            console.error(errmessage);
-            alert(errmessage);
-        })
-        .finally(() => {
-            setTopicLoading(false);
-        })
-    }
-
     // vidが変化したら概要、要約、字幕を取得する
     useEffect(() => {
         clearResult();
@@ -301,12 +264,6 @@ export function Result (props: ResultProps) {
             if (agendaLoading === false) {
                 fetch_agenda();
                 return;
-            }
-        }
-        const summaryTopic: TopicType[] = summary.summary.topic;
-        if (!(summaryTopic.length > 0 && summaryTopic[0].time.length > 0)) {
-            if (topicLoading === false) {
-                fetch_topic();
             }
         }
     }, [summary])
@@ -346,7 +303,6 @@ export function Result (props: ResultProps) {
                     setAlignment={setSummaryAlignment}
                     summaryLoading={summaryLoading}
                     agendaLoading={agendaLoading}
-                    topicLoading={topicLoading}
                 />
             </TabPanel>
             <TabPanel value={value} index={2}>

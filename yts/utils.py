@@ -8,10 +8,20 @@ import re
 from langchain_openai import (
     OpenAI, ChatOpenAI, OpenAIEmbeddings, AzureOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 )
+from langchain_aws import ChatBedrock, BedrockEmbeddings
+from llama_index.llms.openai import OpenAI as LlamaIndexOpenAI
+from llama_index.embeddings.openai import OpenAIEmbedding as LlamaIndexOpenAIEmbeddings
+from llama_index.llms.azure_openai import AzureOpenAI as LlamaIndexAzureOpenAI
+from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding as LlamaIndexAzureOpenAIEmbeddings
+from llama_index.llms.bedrock import Bedrock as LlamaIndexBedrock
+from llama_index.embeddings.bedrock import BedrockEmbedding as LlamaIndexBedrockEmbeddings
 import tiktoken
 
-from .types import LLMType, EmbeddingType, TranscriptChunkModel, YoutubeTranscriptType
-
+from .types import (
+    LLMType, EmbeddingType,
+    LlamaIndexLLMType, LlamaIndexEmbeddingType,
+    TranscriptChunkModel, YoutubeTranscriptType
+)
 
 RE_TRANACRIPT_FILTER = re.compile('|'.join([
     '\\[音楽\\]', '\\[拍手\\]'
@@ -25,56 +35,161 @@ END_SENTENCE_TOKENS = tuple(set([
 
 
 def setup_llm_from_environment () -> LLMType:
-    llm_class: Type[LLMType] = OpenAI
-    llm_args: Dict[str, Any] = {
-        "client": None,
-        "temperature": float(os.environ['LLM_TEMPERATURE']),
-        "request_timeout": int(os.environ['LLM_REQUEST_TIMEOUT']),
-    }
-    if "OPENAI_API_KEY" in os.environ.keys():
-        llm_args = {
-            **llm_args,
-            "openai_api_key": os.environ['OPENAI_API_KEY'],
-            "model":          os.environ['OPENAI_LLM_MODEL_NAME']
-        }
+    llm_type: str = os.environ['LLM_TYPE']
+    llm_class: Type[LLMType] | None = None
+    llm_args: Dict[str, Any] = {}
+
+    if llm_type == "openai":
+        llm_class =  OpenAI
         if os.environ['OPENAI_LLM_MODEL_NAME'].startswith("gpt-"):
             llm_class = ChatOpenAI
-    else:
+            # seed設定 ref.https://github.com/langchain-ai/langchain/issues/13177
+            # llm_args["model_kwargs"] = {"seed": 1234567890}
         llm_args = {
-            **llm_args,
+            "client":          None,
+            "temperature":     float(os.environ['LLM_TEMPERATURE']),
+            "request_timeout": int(os.environ['LLM_REQUEST_TIMEOUT']),
+            "openai_api_key":  os.environ['OPENAI_API_KEY'],
+            "model":           os.environ['OPENAI_LLM_MODEL_NAME'],
+        }
+    elif llm_type == "azure":
+        llm_class = AzureOpenAI
+        if os.environ['AZURE_LLM_DEPLOYMENT_NAME'].startswith("gpt-"):
+            llm_class = AzureChatOpenAI
+        llm_args = {
+            "client":             None,
+            "temperature":        float(os.environ['LLM_TEMPERATURE']),
+            "request_timeout":    int(os.environ['LLM_REQUEST_TIMEOUT']),
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
             "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
             "azure_endpoint":     os.environ['AZURE_OPENAI_API_BASE'],
             "openai_api_version": os.environ['AZURE_LLM_OPENAI_API_VERSION'],
             "azure_deployment":   os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
         }
-        llm_class = AzureOpenAI
-        if os.environ['AZURE_LLM_DEPLOYMENT_NAME'].startswith("gpt-"):
-            llm_class = AzureChatOpenAI
+    elif llm_type == "aws":
+        llm_class = ChatBedrock
+        llm_args = {
+            "model_id":    os.environ['AWS_BEDROCK_MODEL_ID'],
+            "region_name": os.environ['AWS_BEDROCK_REGION_NAME'],
+            "model_kwargs": {
+                "temperature": float(os.environ['LLM_TEMPERATURE']),
+            }
+        }
+        os.environ["AWS_ACCESS_KEY_ID"] = os.environ['AWS_BEDROCK_ACCESS_KEY_ID']
+        os.environ["AWS_SECRET_ACCESS_KEY"] = os.environ['AWS_BEDROCK_SECRET_ACCESS_KEY']
+        # os.environ["AWS_DEFAULT_REGION"] = os.environ['AWS_BEDROCK_REGION_NAME']
+    else:
+        raise Exception(f'Invalid LLMTYPE. {llm_type}')
 
     return  llm_class(**llm_args)
 
 
 def setup_embedding_from_environment () -> EmbeddingType:
-    llm_args: Dict[str, Any] = {
-        "client": None
-    }
-    llm_class = OpenAIEmbeddings
-    if "OPENAI_API_KEY" in os.environ.keys():
+    llm_type: str = os.environ['LLM_TYPE']
+    llm_class: Type[EmbeddingType] | None = None
+    llm_args: Dict[str, Any] = {}
+
+    if llm_type == "openai":
+        llm_class = OpenAIEmbeddings
         llm_args = {
-            **llm_args,
+            "client": None,
             "openai_api_key": os.environ['OPENAI_API_KEY'],
         }
-    else:
+        if "OPENAI_LLM_EMBEDDING_MODEL_NAME" in os.environ.keys():
+            llm_args["model"] = os.environ["OPENAI_LLM_EMBEDDING_MODEL_NAME"]
+    elif llm_type == "azure":
+        llm_class = AzureOpenAIEmbeddings
         llm_args = {
-            **llm_args,
+            "client":             None,
             "openai_api_type":    os.environ['AZURE_OPENAI_API_TYPE'],
             "openai_api_key":     os.environ['AZURE_OPENAI_API_KEY'],
             "azure_endpoint":     os.environ['AZURE_OPENAI_API_BASE'],
             "openai_api_version": os.environ['AZURE_EMBEDDING_OPENAI_API_VERSION'],
             "azure_deployment":   os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
         }
-        llm_class = AzureOpenAIEmbeddings
+    elif llm_type == "aws":
+        llm_class = BedrockEmbeddings
+        llm_args = {
+            "model_id":    os.environ['AWS_BEDROCK_EMBEDDING_MODEL_ID'],
+            "region_name": os.environ['AWS_BEDROCK_REGION_NAME'],
+        }
+        os.environ["AWS_ACCESS_KEY_ID"] = os.environ['AWS_BEDROCK_ACCESS_KEY_ID']
+        os.environ["AWS_SECRET_ACCESS_KEY"] = os.environ['AWS_BEDROCK_SECRET_ACCESS_KEY']
+        # os.environ["AWS_DEFAULT_REGION"] = os.environ['AWS_BEDROCK_REGION_NAME']
+    else:
+        raise Exception(f'Invalid LLMTYPE. {llm_type}')
+    return llm_class(**llm_args)
+
+
+def setup_llamaindex_llm_from_environment () -> LlamaIndexLLMType:
+    llm_type: str = os.environ['LLM_TYPE']
+    llm_class: Type[LlamaIndexLLMType] | None = None
+    llm_args: Dict[str, Any] = {}
+
+    if llm_type == "openai":
+        llm_class =  LlamaIndexOpenAI
+        llm_args = {
+            "temperature": float(os.environ['LLM_TEMPERATURE']),
+            "timeout":     int(os.environ['LLM_REQUEST_TIMEOUT']),
+            "api_key":     os.environ['OPENAI_API_KEY'],
+            "model":       os.environ['OPENAI_LLM_MODEL_NAME']
+        }
+    elif llm_type == "azure":
+        llm_class = LlamaIndexAzureOpenAI
+        llm_args = {
+            "temperature":    float(os.environ['LLM_TEMPERATURE']),
+            "timeout":        int(os.environ['LLM_REQUEST_TIMEOUT']),
+            "engin":          os.environ['AZURE_LLM_DEPLOYMENT_NAME'],
+            "azure_endpoint": os.environ['AZURE_OPENAI_API_BASE'],
+            "api_key":        os.environ['AZURE_OPENAI_API_KEY'],
+            "api_version":    os.environ['AZURE_LLM_OPENAI_API_VERSION'],
+        }
+    elif llm_type == "aws":
+        llm_class = LlamaIndexBedrock
+        llm_args = {
+            "model":                 os.environ['AWS_BEDROCK_MODEL_ID'],
+            "aws_access_key_id":     os.environ['AWS_BEDROCK_ACCESS_KEY_ID'],
+            "aws_secret_access_key": os.environ['AWS_BEDROCK_SECRET_ACCESS_KEY'],
+            # "aws_region_name":       os.environ['AWS_BEDROCK_REGION_NAME'],
+            "region_name":           os.environ['AWS_BEDROCK_REGION_NAME'],
+            "temperature":           float(os.environ['LLM_TEMPERATURE']),
+        }
+    else:
+        raise Exception(f'Invalid LLMTYPE. {llm_type}')
+
+    return  llm_class(**llm_args)
+
+
+def setup_llamaindex_embedding_from_environment () -> LlamaIndexEmbeddingType:
+    llm_type: str = os.environ['LLM_TYPE']
+    llm_class: Type[LlamaIndexEmbeddingType] | None = None
+    llm_args: Dict[str, Any] = {}
+
+    if llm_type == "openai":
+        llm_class = LlamaIndexOpenAIEmbeddings
+        llm_args = {
+            "api_key": os.environ['OPENAI_API_KEY'],
+        }
+        if "OPENAI_LLM_EMBEDDING_MODEL_NAME" in os.environ.keys():
+            llm_args["model"] = os.environ["OPENAI_LLM_EMBEDDING_MODEL_NAME"]
+    elif llm_type == "azure":
+        llm_class = LlamaIndexAzureOpenAIEmbeddings
+        llm_args = {
+            "api_key":          os.environ['AZURE_OPENAI_API_KEY'],
+            "azure_endpoint":   os.environ['AZURE_OPENAI_API_BASE'],
+            "api_version":      os.environ['AZURE_EMBEDDING_OPENAI_API_VERSION'],
+            "azure_deployment": os.environ['AZURE_EMBEDDING_LLM_DEPLOYMENT_NAME'],
+        }
+    elif llm_type == "aws":
+        llm_class = LlamaIndexBedrockEmbeddings
+        llm_args = {
+            "model":                 os.environ['AWS_BEDROCK_EMBEDDING_MODEL_ID'],
+            "aws_access_key_id":     os.environ['AWS_BEDROCK_ACCESS_KEY_ID'],
+            "aws_secret_access_key": os.environ['AWS_BEDROCK_SECRET_ACCESS_KEY'],
+            "region_name":           os.environ['AWS_BEDROCK_REGION_NAME'],
+        }
+    else:
+        raise Exception(f'Invalid LLMTYPE. {llm_type}')
     return llm_class(**llm_args)
 
 

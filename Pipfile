@@ -14,6 +14,13 @@ nltk = "*"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 gunicorn = "*"
+llama-index-llms-azure-openai = "*"
+llama-index-embeddings-azure-openai = "*"
+langchain-aws = "*"
+boto3 = "*"
+anthropic = "*"
+llama-index-llms-bedrock = "*"
+llama-index-embeddings-bedrock = "*"
 
 [dev-packages]
 scikit-learn = "*"

@@ -33,7 +33,7 @@ export type AgendaType = {
 
 export type TopicType = {
     topic: string;
-    time: string[];
+    time: string;
 }
 
 export type SampleVideoInfo = {

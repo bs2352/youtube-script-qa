@@ -5,6 +5,7 @@ import json
 import asyncio
 import time
 import re
+import math
 from concurrent.futures import ThreadPoolExecutor
 from tenacity import retry, stop_after_attempt, wait_fixed, RetryError, retry_if_not_result
 
@@ -17,7 +18,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 
 from .types import LLMType, TranscriptChunkModel, YoutubeTranscriptType
-from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks
+from .utils import setup_llm_from_environment, divide_transcriptions_into_chunks, count_tokens
 from .types import SummaryResultModel, AgendaModel, DetailSummary, TopicModel
 
 
@@ -38,6 +39,8 @@ EXCLUDE_KEYWORDS = [
     "セミナー", "企画", "チャンネル登録", "情報", "コラボ", "勉強会", "予定", "登録", "イベント",
     "メールマガジン",
 ]
+MAX_TOPICS_BASE = int(os.getenv("MAX_TOPIC_BASE", "10"))
+TOPICS_PER_HOUR = int(os.getenv("TOPIC_PER_HOUR", "5"))
 MAX_RETRY_COUNT = int(os.getenv("MAX_RETRY_COUNT", "3"))
 RETRY_INTERVAL = 5.0
 
@@ -111,20 +114,39 @@ Keywords:
 """
 KEYWORD_PROMPT_TEMPLATE_VARIABLES = ["content", "max"]
 
-TOPIC_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
+TOPIC_PROMPT_TEMPLATE = """\
+あなたは優秀な編集者です。
+ある動画から視聴者の興味を引くトピックを抽出することを仕事としています。
+次の手順でトピックを抽出し、トピックとその開始時刻を指定されたフォーマットで出力してください。
+トピックを抽出するときは以下の条件を守ってください。
 
-タイトル：
-{title}
+## 手順
+1. 「## 概要」に続く内容を参照してトピックを抽出する
+2. 「## 文字起こし」に続く内容を参照してトピックの開始時刻を求める
+3. 開始時刻とトピックを出力する
 
-内容：
-{content}
+## トピック抽出の条件
+- トピックは最大で{max}個までとする。
+- トピックは30文字以内で見出しとなるように分かりやすく簡潔に要約すること。
+- 関連するトピックが連続する場合は1つにまとめること。
+- トピックは日本語で出力すること。
 
-質問：
-トピックを箇条書きで列挙してください。
+## 出力のフォーマット
+1. [開始時刻1] トピック1
+2. [開始時刻2] トピック2
+3. [開始時刻3] トピック3
 
-回答：
+## 概要
+{abstract}
+
+## 文字起こし
+{transcript}
+
+## トピック（日本語で）
+1. [
 """
-TOPIC_PROMPT_TEMPLATE_VARIABLES = ["title", "content"]
+
+TOPIC_PROMPT_TEMPLATE_VARIABLES = ["max", "abstract", "transcript"]
 
 
 class YoutubeSummarize:
@@ -147,6 +169,7 @@ class YoutubeSummarize:
         self.title: str = video_info['title']
         self.author: str = video_info['author']
         self.lengthSeconds: int = int(video_info['lengthSeconds'])
+        self.transcriptions: List[YoutubeTranscriptType] = []
 
         self.llm: LLMType = setup_llm_from_environment()
 
@@ -189,7 +212,7 @@ class YoutubeSummarize:
         if mode & MODE_TOPIC > 0:
             print("[Topic]")
             for topic in summary.topic:
-                print(f'- {topic.topic}')
+                print(f'- {topic.topic} [{topic.time}]')
             print("")
         if mode & MODE_DETAIL > 0:
             detail_summary: List[str] = [ s.text for s in summary.detail]
@@ -260,10 +283,15 @@ class YoutubeSummarize:
         if mode & MODE_DETAIL == 0:
             mode |= MODE_DETAIL
 
+        # 字幕を取得
+        self.transcriptions = YouTubeTranscriptApi.get_transcript(
+            video_id=self.vid, languages=["ja", "en", "en-US"]
+        )
+
         # 詳細な要約
         detail_summary: List[DetailSummary] = await self._summarize_in_detail()
 
-        # 簡潔な要約、トピック抽出、キーワード抽出、トピック抽出（非同期で並行処理）
+        # 簡潔な要約、トピック抽出、キーワード抽出（非同期で並行処理）
         (concise_summary, agenda, keyword, topic) = await self._arun_with_detail_summary(mode, detail_summary)
 
         summary: SummaryResultModel = SummaryResultModel(
@@ -303,13 +331,10 @@ class YoutubeSummarize:
                 overlap_length: int = 10, step_overlap: int = 2,
                 min_chunks: int = 5,
         ) -> List[TranscriptChunkModel]:
-            transcriptions: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(
-                video_id=self.vid, languages=["ja", "en", "en-US"]
-            )
             chunks: List[TranscriptChunkModel] | None = None
             while True:
                 chunks = divide_transcriptions_into_chunks(
-                    transcriptions,
+                    self.transcriptions,
                     maxlength = maxlength,
                     overlap_length = overlap_length,
                     id_prefix = self.vid
@@ -330,7 +355,7 @@ class YoutubeSummarize:
         chain: BaseCombineDocumentsChain = _prepare_summarize_chain()
         chunks: List[TranscriptChunkModel] = _prepare_transcriptions()
 
-        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups_evenly(chunks, 5)
+        chunk_groups: List[List[TranscriptChunkModel]] = self._divide_chunks_into_N_groups(chunks, 5, 12000)
         tasks = [
             chain.ainvoke(
                 input={"input_documents": [Document(page_content=chunk.text) for chunk in chunks]}
@@ -357,14 +382,14 @@ class YoutubeSummarize:
         tasks.append(self._summarize_concisely(summaries, mode & MODE_CONCISE > 0))
         tasks.append(self._extract_keyword(summaries, mode & MODE_KEYWORD > 0))
         tasks.append(self._extract_agenda(summaries, mode & MODE_AGENDA > 0))
-        tasks.append(self._extract_topic(summaries, mode & MODE_TOPIC > 0))
+        tasks.append(self._extract_topic(detail_summary, mode & MODE_TOPIC > 0))
 
         results: List[Any] = await asyncio.gather(*tasks)
 
         concise_summary: str      = results[0]
         keyword: List[str]        = results[1]
         agenda: List[AgendaModel] = results[2]
-        topic: List[str]          = results[3]
+        topic: List[TopicModel]   = results[3]
 
         return (concise_summary, agenda, keyword, topic)
 
@@ -570,28 +595,105 @@ class YoutubeSummarize:
 
     async def _extract_topic (
         self,
-        detail_summary: List[str],
-        enable: bool = True
+        detail_summary: List[DetailSummary] = [],
+        enable: bool = True,
     ) -> List[TopicModel]:
-        def _trim_topic (topic: str) -> str:
-            return  re.sub(r"^[\d\-]+\.?", "", topic.strip()).strip()
+        class TopicArgType (TypedDict):
+            max: int
+            abstract: str
+            transcript: str
+
+        def _s2hms (seconds: float) -> str:
+            seconds = math.floor(seconds)
+            m, s = divmod(seconds, 60)
+            h, m = divmod(m, 60)
+            return "%d:%02d:%02d" % (h, m, s)
+
+        def _get_max_topics () -> int:
+            hour = self.lengthSeconds / 3600
+            return MAX_TOPICS_BASE + int((hour - 1) * TOPICS_PER_HOUR)
+
+        def _to_int_with_round (value: float) -> int:
+                int_val = int(value)
+                diff = value - int_val
+                if diff >= 0.5:
+                    int_val += 1
+                return int_val
 
         @retry(
             stop=stop_after_attempt(MAX_RETRY_COUNT),
             wait=wait_fixed(RETRY_INTERVAL),
         )
-        async def _topic () -> List[TopicModel]:
-            result: str = (await chain.ainvoke(input=args))["text"]
-            topic: List[TopicModel] = [
-                TopicModel(topic=_trim_topic(topic), time=[]) for topic in result.split("\n")
-            ]
-            return topic
+        async def _topic (args: TopicArgType) -> List[TopicModel]:
+            result: str = (await chain.ainvoke(input=args))["text"] # type: ignore
+            if not re.match(r"^1. \[", result):
+                result = "1. [" + result
+            topics: List[TopicModel] = []
+            for result in result.split("\n"):
+                if result.strip() == "":
+                    continue
+                if result.startswith("#") is True:
+                    break
+                try:
+                    _, time, topic = re.split(r"\s+", result, maxsplit=2)
+                except:
+                    continue
+                time = re.sub(r"[\[\]]", "", time)
+                topics.append(TopicModel(topic=topic, time=time))
+            return topics
+
+        def _mk_args (max: int, abstract: str, transcript: str) -> TopicArgType:
+            return {
+                "max": max,
+                "abstract": abstract,
+                "transcript": transcript,
+            }
 
 
         if enable is False:
             return []
 
-        # 準備
+        chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+            self.transcriptions,
+            maxlength = 100,
+            overlap_length = 0,
+            id_prefix = self.vid
+        )
+        contents: List[str] = []
+        groups: List[List[str]] = []
+        s_idx: int = 0
+        s_endtime: float = detail_summary[s_idx + 1].start if s_idx + 1 < len(detail_summary) else self.lengthSeconds
+        for chunk in chunks:
+            start_time: str = _s2hms(chunk.start)
+            transcript: str = f'[{start_time}] {chunk.text}'.replace("\n", " ")
+            if chunk.start >= s_endtime:
+                groups.append(contents)
+                contents = []
+                s_idx += 1
+                s_endtime = detail_summary[s_idx + 1].start if s_idx + 1 < len(detail_summary) else self.lengthSeconds
+            contents.append(transcript)
+        if len(contents) > 0:
+            groups.append(contents)
+
+        max_topics = _get_max_topics()
+        tokens: int = 0
+        transcript: str = ""
+        abstract: str = ""
+        max: int = 0
+        args_list: List[TopicArgType] = []
+        for group, summary in zip(groups, detail_summary):
+            tmp_transcript: str = "\n\n".join(group)
+            add_tokens: int = count_tokens(summary.text) + count_tokens(tmp_transcript)
+            if tokens > 0 and tokens + add_tokens > 14000:
+                args_list.append(_mk_args(max, abstract, transcript))
+                transcript = ""; abstract = ""; max = 0; tokens = 0 # 初期化
+            max += _to_int_with_round(max_topics * (len(group)/len(chunks)))
+            transcript += "\n\n" + tmp_transcript
+            abstract += "\n" + summary.text
+            tokens += count_tokens(summary.text) + count_tokens(tmp_transcript)
+        if transcript != "" and abstract != "":
+            args_list.append(_mk_args(max, abstract, transcript))
+
         prompt = PromptTemplate(
             template=TOPIC_PROMPT_TEMPLATE,
             input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
@@ -601,19 +703,40 @@ class YoutubeSummarize:
             prompt=prompt,
             verbose=self.debug,
         )
-        args: Dict[str, str|int] = {
-            "title":  self.title,
-            "content": "\n".join(detail_summary),
-        }
-        self.tmp_topic = []
-        topic: List[TopicModel] = []
+        tasks = [ _topic(args) for args in args_list ]
 
         try:
-            topic = await _topic()
+            results: List[Any] = await asyncio.gather(*tasks)
+            topics: List[TopicModel] = []
+            for result in results:
+                topics.extend(result)
         except Exception as e:
             raise e
 
-        return topic
+        return topics
+
+
+    def _divide_chunks_into_N_groups (
+            self,
+            chunks: List[TranscriptChunkModel] = [],
+            group_num: int = 5,
+            max_tokens: int = 12000,
+    ) -> List[List[TranscriptChunkModel]]:
+        groups: List[List[TranscriptChunkModel]] = []
+        while True:
+            is_ok: bool = True
+            groups = self._divide_chunks_into_N_groups_evenly(chunks, group_num)
+            for group in groups:
+                tokens: int = 0
+                for chunk in group:
+                    tokens += count_tokens(chunk.text)
+                if tokens > max_tokens:
+                    is_ok = False
+                    break
+            if is_ok:
+                break
+            group_num += 1
+        return groups
 
 
     def _divide_chunks_into_N_groups_evenly (
@@ -641,7 +764,7 @@ class YoutubeSummarize:
         return groups
 
 
-    def _divide_chunks_into_N_groups (
+    def _divide_chunks_into_N_groups_1 (
         self,
         chunks: List[TranscriptChunkModel] = [],
         group_num: int = 5

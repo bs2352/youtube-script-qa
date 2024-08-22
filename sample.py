@@ -1007,8 +1007,8 @@ def test_decorate_loading ():
 
 def embedding_async ():
     from langchain.embeddings import OpenAIEmbeddings
-    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
-    from llama_index.embeddings import LangchainEmbedding
+    from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor # type: ignore
+    from llama_index.embeddings import LangchainEmbedding # type: ignore
     from yts.utils import setup_llm_from_environment, setup_embedding_from_environment
     import dotenv
 
@@ -1637,7 +1637,7 @@ async def _atest_agenda_similarity ():
         #     return reviewed_likely_summary
 
         def __compare_with_neiborhood (
-            likely_summary: List[int], similarities_list: List[numpy.ndarray],
+            likely_summary: List[int], similarities_list: List[numpy.ndarray]
         ) -> List[int]:
 
             def __get_next_summary (base_index: int, likely_summary: List[int]) -> int:
@@ -1864,8 +1864,553 @@ def test_get_info ():
     print(vinfo)
 
 
+def test_topic_from_transcripts ():
+    from typing import List, Dict
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from pytube import YouTube
+    import json, math, re
+    from decimal import Decimal
+    from langchain.chains import LLMChain
+    from langchain.prompts import PromptTemplate
+    from yts.utils import divide_transcriptions_into_chunks, setup_llm_from_environment, count_tokens
+    from yts.types import YoutubeTranscriptType, TranscriptChunkModel
+
+# 以下は「{title}」というタイトルのYoutube動画の文字起こしです。
+# - 各トピックには以下のキーワードをできるだけ含めてください。
+#   2023年7月1日, 神奈川県新横浜, 横浜DeNA, 中日, 巨人, チケット, 滞在時間, 立ち見席, 実況, 試合の展開, 風景, 鉄道の情報, 東京ドーム, 回転ドア, 舞浜, 幕張, 観光地, 神宮球場, 広島, ヤクルト
+    JP_TOPIC_PROMPT_TEMPLATE = """\
+以下の文章はYoutube動画の文字起こしです。
+この文字起こしを要約して重要なポイントだけをトピックとして抽出し、以下のフォーマットで出力してください。
+
+## 出力のフォーマット
+- 各トピックに対する開始時刻を出力してください。
+- トピックは{max}個以内で抽出してください。
+- 各トピックは日本語で出力してください。
+- 各トピックは30文字程度で出力してください。
+
+## 出力例
+1. [0:02:10] トピック1
+2. [0:09:15] トピック2
+3. [0:21:55] トピック3
+
+## 文字起こしのフォーマット
+[開始時刻1] 文字起こし1
+[開始時刻2] 文字起こし2
+[開始時刻3] 文字起こし3
+
+## 文字起こし
+{content}
+
+## トピック（日本語で）
+"""
+    EN_TOPIC_PROMPT_TEMPLATE = """\
+Below is a transcription for a Youtube video titled "{title}".
+Please summarize this transcription, extract only the important points as topics, and output in the following format.
+
+## Format of output
+- Please output the start time for each topic.
+- Please extract no more than {max} topics.
+- Each topic must be in Japanese.
+
+## Output Example
+1. [0:02:10] Topic 1
+2. [0:09:15] Topic 2
+3. [0:21:55] Topic 3
+
+## Format of transcription
+[start_time_1] Transcription 1
+[start_time_2] Transcription 2
+[start_time_3] Transcription 3
+
+## Transcription
+{content}
+
+## Topic (in Japanese)
+"""
+    TOPIC_PROMPT_TEMPLATE_VARIABLES = ["content", "max", "title"]
+
+    TOPIC_CHECK_PROMPT_TEMPLATE = """\
+The following are topics extracted from a Youtube video titled "{title}".
+Please combine consective topics with similar content into one topic and modified into compact topics with no duplicates.
+Please output in the following format.
+
+## Format of output
+- Output the start time for each topic.
+- Each topic must be in Japanese.
+
+## Output Example
+1. [0:02:10] Topic 1
+2. [0:09:15] Topic 2
+3. [0:21:55] Topic 3
+
+## Topic
+{content}
+
+## Modified topics
+"""
+    TOPIC_CHECK_PROMPT_TEMPLATE_VARIABLES = ["content", "title"]
+
+    def _topic (contents: list[str], max, title):
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=JP_TOPIC_PROMPT_TEMPLATE,
+            # template=EN_TOPIC_PROMPT_TEMPLATE,
+            input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            # verbose=True,
+        )
+        args: Dict[str, str|int] = {
+            "content": "\n".join(contents),
+            "max": max,
+            "title": title,
+        }
+        topic: str = (chain.invoke(input=args))["text"]
+        return topic
+
+    def _s2hms (seconds: float) -> str:
+        seconds = math.floor(seconds)
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return "%d:%02d:%02d" % (h, m, s)
+
+    def _to_int_with_round (value: float) -> int:
+        int_val = int(value)
+        diff = value - int_val
+        if diff >= 0.5:
+            int_val += 1
+        return int_val
+
+    def _modify_topic (contents: str, title):
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=TOPIC_CHECK_PROMPT_TEMPLATE,
+            input_variables=TOPIC_CHECK_PROMPT_TEMPLATE_VARIABLES,
+        )
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            # verbose=True,
+        )
+        args: Dict[str, str|int] = {
+            "content": contents,
+            "title": title,
+        }
+        topic: str = (chain.invoke(input=args))["text"]
+        return topic
+
+    def _get_max_topics (length: int) -> int:
+        hour = int(length / 3600)
+        return 10 + hour * 5
+
+    MAX_TOPICS = 15
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    url: str = f'https://www.youtube.com/watch?v={vid}'
+    vinfo = YouTube(url).vid_info["videoDetails"]
+    DEFAULT_TRANSCRIPT_LANGUAGES = ["ja", "en", "en-US"]
+    transcripts: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(vid, languages=DEFAULT_TRANSCRIPT_LANGUAGES)
+    chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+        transcripts,
+        maxlength = 300,
+        overlap_length = 0,
+        id_prefix = vid
+    )
+
+    tokens = 0
+    contents = []
+    groups = []
+    for idx, chunk in enumerate(chunks):
+        start_time = _s2hms(chunk.start)
+        end_time = _s2hms(chunks[idx+1].start if idx+1 < len(chunks) else chunk.start + chunk.duration)
+        # transcript = f'[{start_time}-{end_time}] {chunk.text}'.replace("\n", " ")
+        transcript = f'[{start_time}] {chunk.text}'.replace("\n", " ")
+        if tokens + count_tokens(transcript) > 12000:
+            groups.append(contents)
+            tokens = 0
+            contents = []
+        tokens += count_tokens(transcript)
+        contents.append(transcript)
+    if len(contents) > 0:
+        groups.append(contents)
+    # max = MAX_TOPICS // len(groups) + 1
+    MAX_TOPICS = _get_max_topics(int(vinfo['lengthSeconds']))
+    # print(MAX_TOPICS); sys.exit(0)
+    total_chunks = len(chunks)
+    topics = []
+    for group in groups:
+        max = _to_int_with_round(MAX_TOPICS * (len(group)/total_chunks))
+        max = max if max > 0 else 1
+        topic = _topic(group, max, vinfo["title"])
+        topics.append(topic)
+    # sys.exit(0)
+    result = {
+        "topics": []
+    }
+    for topic in topics:
+        result["topics"].append(topic)
+    print("\n".join(result["topics"]))
+    sys.exit(0)
+
+    # mofied_topic = _modify_topic("\n".join(result["topics"]), vinfo["title"])
+    # print("------\n", mofied_topic)
+
+    def _add (modify_topic: List[str], topic: str):
+        idx, time, text = re.split(r"\s+", topic, maxsplit=2)
+        for mtopic in modify_topic:
+            midx, mtime, mtext = re.split(r"\s+", mtopic, maxsplit=2)
+            if text == mtext:
+                return
+        modify_topic.append(f'{len(modify_topic)+1}. {time} {text}')
+
+    modify_topic = []
+    for topics in result["topics"]:
+        for topic in topics.split("\n"):
+            _add(modify_topic, topic)
+    print("-------------\n", "\n".join(modify_topic))
+
+
+def test_separate_context_with_embedding_similarity():
+    from typing import List, Dict
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from pytube import YouTube
+    from yts.utils import divide_transcriptions_into_chunks, setup_embedding_from_environment
+    from yts.types import YoutubeTranscriptType, TranscriptChunkModel
+    import numpy
+    import math
+
+    def _cosine_similarity(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
+        return numpy.dot(a, b) / (numpy.linalg.norm(a) * numpy.linalg.norm(b))
+
+    def _s2hms (seconds: float) -> str:
+        seconds = math.floor(seconds)
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return "%d:%02d:%02d" % (h, m, s)
+
+    # def _sum (list: List[float]) -> float:
+    #     return sum(list)
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    url: str = f'https://www.youtube.com/watch?v={vid}'
+    vinfo = YouTube(url).vid_info["videoDetails"]
+    DEFAULT_TRANSCRIPT_LANGUAGES = ["ja", "en", "en-US"]
+    transcripts: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(vid, languages=DEFAULT_TRANSCRIPT_LANGUAGES)
+    chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+        transcripts,
+        # maxlength = 500,
+        maxlength = 300,
+        # maxlength = 200,
+        overlap_length = 0,
+        # overlap_length = 3,
+        id_prefix = vid
+    )
+
+    texts = [ chunk.text for chunk in chunks]
+    llm_embeddings = setup_embedding_from_environment()
+    async def aembed_documents ():
+        return await llm_embeddings.aembed_documents(texts)
+    embeddings = asyncio.run(aembed_documents())
+    # print(len(chunks), len(embeddings))
+    # print(embeddings[0])
+
+    similarities: List[float] = []
+    for idx, chunk in enumerate(chunks):
+        cur_embedding = embeddings[idx]
+        # next_embedding = embeddings[idx+1] if idx+1 < len(chunks) else embeddings[idx]
+        # similarity = float(_cosine_similarity(numpy.array(cur_embedding), numpy.array(next_embedding)))
+        next_embeddings = []
+        # for i in range(0, 3):
+        for i in range(0, 5):
+            if idx + i + 1 >= len(chunks):
+                break
+            next_embeddings.append(embeddings[idx+i+1])
+        cur_similarities = [
+            float(_cosine_similarity(numpy.array(cur_embedding), numpy.array(next_embedding))) for next_embedding in next_embeddings
+        ] if len(next_embeddings) > 0 else []
+        # print(cur_similarities)
+        similarity = sum(cur_similarities) / len(cur_similarities) if len(cur_similarities) > 0 else 1.0
+        similarities.append(similarity)
+    mean_similarity = sum(similarities) / len(similarities)
+    prev_sim: float = 0.0
+    for idx, sim in enumerate(similarities):
+        cur_chunk = chunks[idx]
+        next_chunk = chunks[idx+1] if idx+1 < len(chunks) else chunks[idx]
+        text = cur_chunk.text.replace("\n", " ")
+        text2 = next_chunk.text.replace("\n", " ")
+        hms = _s2hms(cur_chunk.start)
+        hms2 = _s2hms(next_chunk.start)
+        next_sim = similarities[idx+1] if idx+1 < len(similarities) else similarities[idx]
+        # print(f'[{sim:.3f}]\n-- [{hms}] {text}\n-- [{hms2}]{text2}'); sys.stdout.flush()
+        # if sim < mean_similarity:
+        # if sim < 0.5:
+        # if sim < mean_similarity * 0.8:
+        # if sim < mean_similarity * 0.6:
+        #     print(f'[{sim:.3f}] [{hms}]\n- {text}\n- {text2}')
+        # if sim < mean_similarity * 0.8:
+        #     warning = sim
+        # print(f'[{sim:.3f}]\n-- [{hms}] {text}\n-- [{hms2}]{text2}'); sys.stdout.flush()
+        if prev_sim > sim and sim < next_sim:
+            # if sim < mean_similarity * 0.7:
+            if sim < mean_similarity * 0.8:
+            # if sim < mean_similarity * 0.9:
+                print(f'# [{sim:.3f}] [{hms2}]\n-- [{hms}] {text}\n-- [{hms2}]{text2}'); sys.stdout.flush()
+                # print(f'# [{sim:.3f}] [{hms2}]\n-- [{hms2}]{text2}'); sys.stdout.flush()
+        prev_sim = sim
+    print(mean_similarity)
+
+
+def test_topic_from_transcripts2():
+    import math
+    from typing import List, TypedDict
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from pytube import YouTube
+    from yts.utils import divide_transcriptions_into_chunks, count_tokens, setup_llm_from_environment
+    from yts.types import YoutubeTranscriptType, TranscriptChunkModel, DetailSummary
+    from yts.summarize import YoutubeSummarize
+    from langchain.chains import LLMChain
+    from langchain.prompts import PromptTemplate
+
+    MAX_TOPICS_BASE = 10
+    TOPICS_PER_HOUR = 5
+
+    class TopicArgType (TypedDict):
+        max: int
+        abstract: str
+        transcript: str
+        topic: str|None
+        topic2: str|None
+
+    def _s2hms (seconds: float) -> str:
+        seconds = math.floor(seconds)
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return "%d:%02d:%02d" % (h, m, s)
+
+    def _get_max_topics (lengthSeconds: int) -> int:
+        hour = int(lengthSeconds / 3600)
+        return MAX_TOPICS_BASE + hour * TOPICS_PER_HOUR
+
+    def _to_int_with_round (value: float) -> int:
+            int_val = int(value)
+            diff = value - int_val
+            if diff >= 0.5:
+                int_val += 1
+            return int_val
+
+    def _mk_args (max: int, abstract: str, transcript: str) -> TopicArgType:
+        return {
+            "max": max,
+            "abstract": abstract,
+            "transcript": transcript,
+            "topic": None,
+            "topic2": None,
+        }
+
+    vid = DEFAULT_VID
+    if len(sys.argv) >= 2:
+        vid = sys.argv[1]
+    detail_summary: List[DetailSummary] = YoutubeSummarize.summary(vid).detail # type: ignore
+
+    url: str = f'https://www.youtube.com/watch?v={vid}'
+    vinfo = YouTube(url).vid_info["videoDetails"]
+    DEFAULT_TRANSCRIPT_LANGUAGES = ["ja", "en", "en-US"]
+    transcripts: List[YoutubeTranscriptType] = YouTubeTranscriptApi.get_transcript(vid, languages=DEFAULT_TRANSCRIPT_LANGUAGES)
+    chunks: List[TranscriptChunkModel] = divide_transcriptions_into_chunks(
+        transcripts,
+        maxlength = 100,
+        overlap_length = 0,
+        id_prefix = vid
+    )
+    video_lengthSeconds: int = int(vinfo['lengthSeconds'])
+
+    contents: List[str] = []
+    groups: List[List[str]] = []
+    s_idx: int = 0
+    s_endtime: float = detail_summary[s_idx + 1].start if s_idx + 1 < len(detail_summary) else video_lengthSeconds
+    for chunk in chunks:
+        start_time: str = _s2hms(chunk.start)
+        transcript: str = f'[{start_time}] {chunk.text}'.replace("\n", " ")
+        if chunk.start >= s_endtime:
+            groups.append(contents)
+            contents = []
+            s_idx += 1
+            s_endtime = detail_summary[s_idx + 1].start if s_idx + 1 < len(detail_summary) else video_lengthSeconds
+        contents.append(transcript)
+    if len(contents) > 0:
+        groups.append(contents)
+
+    max_topics = _get_max_topics(video_lengthSeconds)
+    tokens: int = 0
+    transcript: str = ""
+    abstract: str = ""
+    max: int = 0
+    args_list: List[TopicArgType] = []
+    for group, summary in zip(groups, detail_summary):
+        tmp_transcript: str = "\n\n".join(group)
+        add_tokens: int = count_tokens(summary.text) + count_tokens(tmp_transcript)
+        if tokens > 0 and tokens + add_tokens > 14000:
+            args_list.append(_mk_args(max, abstract, transcript))
+            transcript = ""; abstract = ""; max = 0; tokens = 0 # 初期化
+        max += _to_int_with_round(max_topics * (len(group)/len(chunks)))
+        transcript += ("\n\n" if transcript != "" else "") + tmp_transcript
+        abstract += ("\n" if abstract != "" else "") + summary.text
+        tokens += count_tokens(summary.text) + count_tokens(tmp_transcript)
+    if transcript != "" and abstract != "":
+        args_list.append(_mk_args(max, abstract, transcript))
+
+    # for args in args_list:
+    #     print("---------------")
+    #     print("transcript", count_tokens(args["transcript"]))
+    #     print("abstract", count_tokens(args["abstract"]))
+    #     print("max", args["max"])
+    #     print(args["abstract"])
+
+    TOPIC_PROMPT_TEMPLATE = """\
+あなたは優秀な編集者です。
+ある動画から視聴者の興味を引くトピックを抽出することを仕事としています。
+以下の概要からトピックを抽出し、指定されたフォーマットで出力してください。
+
+## 概要
+{abstract}
+
+## 出力のフォーマット
+- {max}個くらいのトピックを抽出すること。
+- 各トピックは日本語で出力すること。
+- 各トピックは30文字以内で簡潔に要約すること。
+
+## 出力例
+1. トピック1
+2. トピック2
+3. トピック3
+
+## トピック（日本語で）
+"""
+
+    TOPIC_PROMPT_TEMPLATE_VARIABLES = ["max", "abstract"]
+
+    prompt = PromptTemplate(
+        template=TOPIC_PROMPT_TEMPLATE,
+        input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES,
+    )
+    chain = LLMChain(
+        llm=setup_llm_from_environment(),
+        prompt=prompt,
+        # verbose=True,
+        verbose=False,
+    )
+    for args in args_list:
+        args["topic"] = chain.invoke(
+            input={"max": args["max"], "abstract": args["abstract"]}
+        )["text"].strip()
+    # for args in args_list:
+    #     print("---------", args["topic"])
+
+    TOPIC_PROMPT_TEMPLATE_2 = """\
+あなたは優秀な編集者です。
+ある動画から視聴者の興味を引くトピックを抽出することを仕事としています。
+以下にこの動画のトピックと文字起こしを記載しています。
+トピックは、1行に1個ずつ、時間順に連番を付与して記載されています。そして開始時刻は先頭に[]で囲んで記載されています。
+
+## 指示
+トピックに関して話されている時間帯の最初の時刻を開始時刻とします。
+文字起こしとそれに付与された開始時刻を参考にして記載された全てのトピックについて開始時刻を割り当ててください。
+そしてトピックと開始時刻を指定されたフォーマットで出力してください。
+
+## トピック
+{topic}
+
+## 文字起こし
+{transcript}
+
+## 出力のフォーマット
+- 以下の出力例のように、連番、開始時刻、トピックの順に出力すること。
+- 連番は1から始まること。
+- 開始時刻は文字起こしに付与された時刻を利用すること。
+- 開始時刻は[]で囲んで出力すること。
+
+## 出力例
+1. [開始時刻1] トピック1
+2. [開始時刻2] トピック2
+3. [開始時刻3] トピック3
+
+## トピックと開始時刻（日本語で）
+"""
+
+    TOPIC_PROMPT_TEMPLATE_VARIABLES_2 = ["topic", "transcript"]
+
+    prompt = PromptTemplate(
+        template=TOPIC_PROMPT_TEMPLATE_2,
+        input_variables=TOPIC_PROMPT_TEMPLATE_VARIABLES_2,
+    )
+    chain = LLMChain(
+        llm=setup_llm_from_environment(),
+        prompt=prompt,
+        # verbose=True,
+        verbose=False,
+    )
+    for args in args_list:
+        args["topic2"] = chain.invoke(
+            input={"topic": args["topic"], "transcript": args["transcript"]}
+        )["text"].strip()
+    for args in args_list:
+        print("=========", args["topic"], sep="\n")
+        print("---------", args["topic2"], sep="\n")
+
+
+def test_which_run_mode_with_bedrock():
+    from yts.utils import setup_llm_from_environment
+    from langchain.chains import LLMChain
+    from langchain.prompts import PromptTemplate
+
+    WHICH_RUN_MODE_PROMPT_TEMPLATE  = """You are an excellent AI assistant that answers questions.
+Several functions are provided to answer questions.
+
+## Functions
+name: answer_question_about_specific_things
+description: Answer questions about specific things mentioned in a given video. It is effective for questions that ask what, where, when, why, and how, or that ask for explanations about specific things.
+
+name: answer_question_about_general_content
+description: View the entire video and Answer questions about the general content of a given video. Effective for summarizing and extracting topics.
+
+Which function would you use to answer the following questions?
+Please answer only the function name of the function you will use.
+If the question is not in English, please convert it to English before thinking about it.
+
+## Question
+{question}
+
+## Function to use
+"""
+    WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES = ["question"]
+
+    llm = setup_llm_from_environment()
+    prompt = PromptTemplate(
+        template=WHICH_RUN_MODE_PROMPT_TEMPLATE,
+        input_variables=WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES,
+    )
+    chain = LLMChain(
+        llm=llm,
+        prompt=prompt,
+        # verbose=self.debug,
+    )
+    while True:
+        question = input("input question: ")
+        args = {
+            "question": question,
+        }
+        print(prompt.format(**args))
+        result = chain.predict(**args)
+        print("---", result, "---")
+
+
 if __name__ == "__main__":
-    get_transcription()
+    # get_transcription()
     # divide_topic()
     # get_topic()
     # get_topic_from_summary()
@@ -1884,3 +2429,7 @@ if __name__ == "__main__":
     # test_function()
     # test_agenda_similarity()
     # test_get_info()
+    # test_topic_from_transcripts()
+    # test_separate_context_with_embedding_similarity()
+    # test_topic_from_transcripts2()
+    test_which_run_mode_with_bedrock()

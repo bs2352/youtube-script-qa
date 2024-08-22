@@ -7,15 +7,13 @@ import time
 import asyncio
 import shutil
 
-from llama_index import GPTVectorStoreIndex, Document, ServiceContext, LLMPredictor
-from llama_index.embeddings import LangchainEmbedding
-from llama_index.indices.query.base import BaseQueryEngine
-from llama_index.response.schema import RESPONSE_TYPE
-from llama_index.schema import NodeWithScore
-from llama_index.llms import ChatMessage, MessageRole
-from llama_index.prompts import ChatPromptTemplate
-from llama_index.retrievers import BaseRetriever
-from llama_index.llms.langchain import LangChainLLM
+from llama_index.core import VectorStoreIndex, Document, ServiceContext
+from llama_index.core.base.base_query_engine import BaseQueryEngine
+from llama_index.core.base.response.schema import RESPONSE_TYPE
+from llama_index.core.schema import NodeWithScore
+from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.prompts import ChatPromptTemplate
+from llama_index.core.retrievers import BaseRetriever
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 from langchain.chains import LLMChain
@@ -23,7 +21,11 @@ from langchain.prompts import PromptTemplate
 from langchain.schema import LLMResult, ChatGeneration
 
 from .types import TranscriptChunkModel, YoutubeTranscriptType, SummaryResultModel, SourceModel
-from .utils import setup_llm_from_environment, setup_embedding_from_environment, divide_transcriptions_into_chunks
+from .utils import (
+    setup_llm_from_environment,
+    setup_llamaindex_llm_from_environment, setup_llamaindex_embedding_from_environment,
+    divide_transcriptions_into_chunks
+)
 from .summarize import YoutubeSummarize
 
 import nest_asyncio
@@ -43,7 +45,7 @@ WHICH_RUN_MODE_PROMPT_TEMPLATE_VARIABLES = ["title", "question"]
 WHICH_RUN_MODE_FUNCTIONS = [
     {
         "name": "answer_question_about_specific_things",
-        "description": "Answer questions about specific things mentioned in a given video. Effective for questions asking what, where, when, why and how.",
+        "description": "Answer questions about specific things mentioned in a given video. It is effective for questions that ask what, where, when, why, and how, or that ask for explanations about specific things.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -78,6 +80,23 @@ WHICH_RUN_MODE_FUNCTIONS = [
         }
     },
 ]
+WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK  = """You are an excellent AI assistant that answers questions.
+Several functions are provided to answer questions.
+
+## Functions
+{functions}
+
+Which function would you use to answer the following questions?
+Please answer only the function name of the function you will use.
+If the question is not in English, please convert it to English before thinking about it.
+
+## Question
+{question}
+
+## Function to use
+"""
+WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK_VARIABLES = ["functions", "question"]
+
 
 
 QA_SUMMARIZE_PROMPT_TEMPLATE = """以下に記載する動画のタイトルと内容から質問に回答してください。
@@ -120,7 +139,7 @@ class YoutubeQA:
         self.index_dir: str = f'{os.environ["INDEX_STORE_DIR"]}/{self.vid}'
         self.service_context: ServiceContext = self._setup_llm()
 
-        self.index: Optional[GPTVectorStoreIndex] = None
+        self.index: Optional[VectorStoreIndex] = None
         self.query_response: Optional[RESPONSE_TYPE] = None
 
         self.summary: Optional[str] = None
@@ -130,12 +149,9 @@ class YoutubeQA:
 
 
     def _setup_llm (self) -> ServiceContext:
-        llm = setup_llm_from_environment()
-        embedding = setup_embedding_from_environment()
-        embedding_llm: LangchainEmbedding = LangchainEmbedding(embedding)
         service_context: ServiceContext = ServiceContext.from_defaults(
-            embed_model = embedding_llm,
-            llm=LangChainLLM(llm=llm),
+            embed_model = setup_llamaindex_embedding_from_environment(),
+            llm=setup_llamaindex_llm_from_environment(),
         )
         return service_context
 
@@ -147,7 +163,7 @@ class YoutubeQA:
         return
 
 
-    def _prepare_index (self) -> Optional[GPTVectorStoreIndex]:
+    def _prepare_index (self) -> Optional[VectorStoreIndex]:
         if self.index is not None:
             return self.index
         if os.path.isdir(self.index_dir):
@@ -159,16 +175,16 @@ class YoutubeQA:
         return self._create_index()
 
 
-    def _load_index (self) -> GPTVectorStoreIndex:
-        from llama_index import StorageContext, load_index_from_storage
+    def _load_index (self) -> VectorStoreIndex:
+        from llama_index.core import StorageContext, load_index_from_storage
         self._debug(f'load index from {self.index_dir} ...', end="", flush=True)
         storage_context: StorageContext = StorageContext.from_defaults(persist_dir=self.index_dir)
-        index: GPTVectorStoreIndex = load_index_from_storage(storage_context, service_context=self.service_context) # type: ignore
+        index: VectorStoreIndex = load_index_from_storage(storage_context, service_context=self.service_context) # type: ignore
         self._debug("fin", flush=True)
         return index
 
 
-    def _create_index (self) -> GPTVectorStoreIndex:
+    def _create_index (self) -> VectorStoreIndex:
 
         # 本にある楽ちんバージョン（使わない）
         # テキストしか取得できず、また後々開始時刻も利用したいのでチャンク分割を自作する
@@ -197,7 +213,7 @@ class YoutubeQA:
         documents = [
             Document(text=chunk.text.replace("\n", " "), doc_id=chunk.id) for chunk in chunks
         ]
-        index: GPTVectorStoreIndex = GPTVectorStoreIndex.from_documents(
+        index: VectorStoreIndex = VectorStoreIndex.from_documents(
             documents,
             service_context=self.service_context,
             # show_progress=self.debug,
@@ -257,6 +273,15 @@ class YoutubeQA:
 
 
     async def _awhich_run_mode (self, query: str) -> int:
+        llm_type: str = os.environ['LLM_TYPE']
+        if llm_type == "openai" or llm_type == "azure":
+            return await self._awhich_run_mode_with_function_calling(query)
+        if llm_type == "aws":
+            return await self._awhich_run_mode_with_completion(query)
+        return RUN_MODE_SUMMARY
+
+
+    async def _awhich_run_mode_with_function_calling (self, query: str) -> int:
         if query == "":
             return RUN_MODE_SUMMARY
         llm = setup_llm_from_environment()
@@ -271,7 +296,7 @@ class YoutubeQA:
                 "functions": WHICH_RUN_MODE_FUNCTIONS
             },
             output_key="function",
-            verbose=True
+            verbose=self.debug
         )
         result: LLMResult = await chain.agenerate([{"title": self.title, "question": query}])
         generation: ChatGeneration = result.generations[0][0] # type: ignore
@@ -280,6 +305,37 @@ class YoutubeQA:
         if "function_call" in message:
             func_name = message["function_call"]["name"]
 
+        mode = RUN_MODE_SEARCH if func_name == WHICH_RUN_MODE_FUNCTIONS[0]["name"] else \
+               RUN_MODE_SUMMARY
+        self._debug(f"QA mode = {mode}", flush=True)
+
+        return mode
+
+
+    async def _awhich_run_mode_with_completion (self, query: str) -> int:
+        if query == "":
+            return RUN_MODE_SUMMARY
+        llm = setup_llm_from_environment()
+        prompt = PromptTemplate(
+            template=WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK,
+            input_variables=WHICH_RUN_MODE_PROMPT_TEMPLATE_BEDROCK_VARIABLES
+        )
+        functions = ""
+        for function in WHICH_RUN_MODE_FUNCTIONS:
+            functions += f'name: {function["name"]}\n'
+            functions += f'description: {function["description"]}\n\n'
+        functions = functions.strip()
+        chain = LLMChain(
+            llm=llm,
+            prompt=prompt,
+            verbose=self.debug
+        )
+        args: Dict[str, Any] = {
+            "functions": functions,
+            "question": query
+        }
+        func_name: str = (await chain.ainvoke(input=args))['text'].strip()
+        self._debug(f"func_name = {func_name}", flush=True)
         mode = RUN_MODE_SEARCH if func_name == WHICH_RUN_MODE_FUNCTIONS[0]["name"] else \
                RUN_MODE_SUMMARY
         self._debug(f"QA mode = {mode}", flush=True)
@@ -361,7 +417,7 @@ class YoutubeQA:
             "content": self.summary,
             "title": self.title
         }
-        answer: str = await chain.arun(**args)
+        answer: str = (await chain.ainvoke(input=args))["text"]
         return answer
 
 
